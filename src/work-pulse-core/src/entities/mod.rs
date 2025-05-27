@@ -1,7 +1,13 @@
 use std::fmt::Display;
 
+use chrono::{NaiveDate, NaiveTime};
 use thiserror::Error;
 use uuid::Uuid;
+
+// There are two use cases for the activity:
+//   1. The user starts the activity and then stops it later.
+//   2. The user records an activity that was done in the past.
+// How to model the two use cases in the domain with entities?
 
 /// Errors that can occur when working with `ActivityId`.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
@@ -51,6 +57,12 @@ impl Display for ActivityId {
 pub struct Activity {
     /// The unique identifier for the activity.
     id: ActivityId,
+
+    /// The date when the activity was performed.
+    date: NaiveDate,
+
+    /// The time when the activity started.
+    start_time: NaiveTime,
 }
 
 impl Activity {
@@ -59,12 +71,39 @@ impl Activity {
     /// # Arguments
     /// 
     /// - `id`: The unique identifier for the activity.
-    pub fn new(id: ActivityId) -> Self {
-        Self { id }
+    /// - `date`: The date when the activity was performed.
+    /// - `start_time`: The time when the activity started.
+    pub fn new(id: ActivityId, date: NaiveDate, start_time: NaiveTime) -> Self {
+        Self { id, date, start_time }
     }
 
     /// Returns the unique identifier for the activity.
     pub fn id(&self) -> &ActivityId {
         &self.id
     }
+
+    /// Returns the date when the activity was performed.
+    pub fn date(&self) -> &NaiveDate {
+        &self.date
+    }
+
+    /// Returns the time when the activity started.
+    pub fn start_time(&self) -> &NaiveTime {
+        &self.start_time
+    }
 }
+
+
+/// Represents a list of activities.
+/// 
+/// It is used to record activities that the user did during his working day.
+pub struct ActivitiesList;
+
+/// Represents a tracker for activities.
+/// 
+/// It is used to track an activity that the user is currently doing. Supports
+/// starting, stopping, suspending, and resuming activities.
+/// 
+/// The ActivityTracker is recording the activity after it is finished in the
+/// ActivitiesList.
+pub struct ActivityTracker;
