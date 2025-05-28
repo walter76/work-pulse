@@ -1,0 +1,86 @@
+use std::fmt::Display;
+
+use thiserror::Error;
+use uuid::Uuid;
+
+/// Errors that can occur when working with `PamCategoryId`.
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
+pub enum PamCategoryIdError {
+    /// The given string is not a valid PAM category id.
+    #[error("The provided string is not a valid PAM category id: {0}")]
+    NotAValidId(String),
+}
+
+/// The unique identifier for an PAM category.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PamCategoryId(pub Uuid);
+
+impl PamCategoryId {
+    /// Creates a new `PamCategoryId` with a random UUID.
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+
+    /// Parses a string into an `PamCategoryId`.
+    /// 
+    /// Returns an error if an invalid UUID is provided.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `s`: A string slice that represents a UUID.
+    pub fn parse_str(s: &str) -> Result<Self, PamCategoryIdError> {
+        Uuid::parse_str(s)
+            .map(Self)
+            .map_err(|_| PamCategoryIdError::NotAValidId(s.to_string()))
+    }
+}
+
+impl Display for PamCategoryId {
+    /// Formats the `PamCategoryId` as a string.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `f`: A mutable reference to a formatter.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Represents a category for PAM.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PamCategory {
+    /// The unique identifier for the PAM category.
+    pub id: PamCategoryId,
+
+    /// The name of the PAM category.
+    pub name: String,
+}
+
+impl PamCategory {
+    /// Creates a new `PamCategory` with a random ID.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `name`: The name of the PAM category.
+    pub fn new(name: String) -> Self {
+        Self {
+            id: PamCategoryId::new(),
+            name,
+        }
+    }
+
+    /// Creates a new `PamCategory` with a specific ID.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `id`: The unique identifier for the PAM category.
+    /// - `name`: The name of the PAM category.
+    pub fn with_id(id: PamCategoryId, name: String) -> Self {
+        Self { id, name }
+    }
+
+    /// Returns the name of the PAM category.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
