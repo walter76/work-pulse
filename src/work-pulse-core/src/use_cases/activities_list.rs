@@ -1,4 +1,4 @@
-use super::activity::Activity;
+use crate::entities::activity::Activity;
 
 /// Represents a list of activities.
 /// 

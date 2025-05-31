@@ -1,4 +1,3 @@
-pub mod activities_list;
 pub mod activity;
 pub mod pam;
 
