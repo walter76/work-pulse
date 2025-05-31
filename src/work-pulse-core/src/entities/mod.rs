@@ -1,3 +1,4 @@
+pub mod activities_list;
 pub mod activity;
 pub mod pam;
 
@@ -5,11 +6,6 @@ pub mod pam;
 //   1. The user starts the activity and then stops it later.
 //   2. The user records an activity that was done in the past.
 // How to model the two use cases in the domain with entities?
-
-/// Represents a list of activities.
-/// 
-/// It is used to record activities that the user did during his working day.
-pub struct ActivitiesList;
 
 /// Represents a tracker for activities.
 /// 
