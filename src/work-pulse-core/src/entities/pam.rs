@@ -23,11 +23,13 @@ impl PamCategoryId {
 
     /// Parses a string into an `PamCategoryId`.
     /// 
-    /// Returns an error if an invalid UUID is provided.
-    /// 
     /// # Arguments
     /// 
     /// - `s`: A string slice that represents a UUID.
+    /// 
+    /// # Returns
+    /// 
+    /// A `Result` containing the `PamCategoryId` if successful, or a `PamCategoryIdError` if the string is not a valid UUID.
     pub fn parse_str(s: &str) -> Result<Self, PamCategoryIdError> {
         Uuid::parse_str(s)
             .map(Self)
@@ -50,10 +52,10 @@ impl Display for PamCategoryId {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PamCategory {
     /// The unique identifier for the PAM category.
-    pub id: PamCategoryId,
+    id: PamCategoryId,
 
     /// The name of the PAM category.
-    pub name: String,
+    name: String,
 }
 
 impl PamCategory {
@@ -77,6 +79,11 @@ impl PamCategory {
     /// - `name`: The name of the PAM category.
     pub fn with_id(id: PamCategoryId, name: String) -> Self {
         Self { id, name }
+    }
+
+    /// Returns the unique identifier of the PAM category.
+    pub fn id(&self) -> &PamCategoryId {
+        &self.id
     }
 
     /// Returns the name of the PAM category.

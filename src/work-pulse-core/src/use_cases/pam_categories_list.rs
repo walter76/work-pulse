@@ -1,17 +1,22 @@
-use crate::entities::pam::PamCategory;
+use std::sync::{Arc, Mutex};
+
+use crate::{adapters::PamCategoriesListRepository, entities::pam::PamCategory};
 
 /// Represents a list of all PAM categories.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PamCategoriesList {
     /// The list of PAM categories.
-    categories: Vec<PamCategory>,
+    repository: Arc<Mutex<dyn PamCategoriesListRepository>>,
 }
 
 impl PamCategoriesList {
     /// Creates a new `PamCategoriesList`.
-    pub fn new() -> Self {
+    /// 
+    /// # Arguments
+    /// 
+    /// - `repository`: An `Arc<Mutex<dyn PamCategoriesListRepository>>` that provides access to the PAM categories repository.
+    pub fn new(repository: Arc<Mutex<dyn PamCategoriesListRepository>>) -> Self {
         Self {
-            categories: vec![],
+            repository,
         }
     }
 
@@ -23,45 +28,54 @@ impl PamCategoriesList {
     pub fn create(&mut self, category_name: &str) {
         // TODO Avoid creating categories with the same name.
 
-        let category = PamCategory::new(category_name.to_string());
-        self.categories.push(category);
+        let mut repo = self.repository.lock().unwrap();
+        repo.add(PamCategory::new(category_name.to_string()));
     }
 
     /// Returns the list of PAM categories.
-    pub fn categories(&self) -> &[PamCategory] {
-        &self.categories
+    pub fn categories(&self) -> Vec<PamCategory> {
+        let repo = self.repository.lock().unwrap();
+        repo.get_all()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::infra::repositories::InMemoryPamCategoriesListRepository;
+
     use super::*;
 
     #[test]
     fn pam_categories_list_create_should_add_category() {
-        let mut categories_list = PamCategoriesList::new();
+        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let mut categories_list = PamCategoriesList::new(repository);
+
         let category_name = "Test Category";
         categories_list.create(category_name);
 
         assert_eq!(categories_list.categories().len(), 1);
-        assert_eq!(categories_list.categories()[0].name, category_name);
+        assert_eq!(categories_list.categories()[0].name(), category_name);
     }
 
     #[test]
     fn pam_categories_list_should_return_empty_when_no_categories() {
-        let categories_list = PamCategoriesList::new();
+        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let categories_list = PamCategoriesList::new(repository);
+
         assert!(categories_list.categories().is_empty());
     }
 
     #[test]
     fn pam_categories_list_should_return_all_categories() {
-        let mut categories_list = PamCategoriesList::new();
+        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let mut categories_list = PamCategoriesList::new(repository);
+        
         categories_list.create("Category 1");
         categories_list.create("Category 2");
 
         let categories = categories_list.categories();
         assert_eq!(categories.len(), 2);
-        assert_eq!(categories[0].name, "Category 1");
-        assert_eq!(categories[1].name, "Category 2");
+        assert_eq!(categories[0].name(), "Category 1");
+        assert_eq!(categories[1].name(), "Category 2");
     }    
 }
