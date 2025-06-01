@@ -1,0 +1,15 @@
+[package]
+name = "work-pulse-service"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.8.4"
+hyper = { version = "1.6.0", features = ["full"] }
+serde = { version = "1.0.219", features = ["derive"] }
+tokio = { version = "1.45.1", features = ["full"] }
+tower = "0.5.2"
+utoipa = { version = "5.3.1", features = ["axum_extras"] }
+utoipa-axum = "0.2.0"
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+work-pulse-core = { version = "0.1.0", path = "../work-pulse-core" }

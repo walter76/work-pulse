@@ -1,5 +1,6 @@
 [workspace]
 resolver = "1"
 members = [
-    "work-pulse-core"
+    "work-pulse-core",
+    "work-pulse-service"
 ]
