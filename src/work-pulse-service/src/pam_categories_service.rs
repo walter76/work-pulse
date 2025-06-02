@@ -1,7 +1,13 @@
-use axum::Json;
+use std::sync::Arc;
+
+use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
+use work_pulse_core::{infra::repositories::RepositoryFactory, use_cases::pam_categories_list::PamCategoriesList};
+
+type Store = Mutex<PamCategoriesList>;
 
 /// The PAM Category.
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
@@ -14,9 +20,12 @@ struct PamCategory {
     name: String,
 }
 
-pub(super) fn router() -> OpenApiRouter {
+pub(super) fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
+    let store = Arc::new(Mutex::new(PamCategoriesList::new(repository_factory.pam_categories_list_repository.clone())));
+
     OpenApiRouter::new()
-        .routes(routes![list_pam_categories])
+        .routes(routes!(list_pam_categories))
+        .with_state(store)
 }
 
 /// Lists all PAM categories.
@@ -29,17 +38,16 @@ pub(super) fn router() -> OpenApiRouter {
     ),
     tag = "PAM Categories"
 )]
-async fn list_pam_categories() -> Json<Vec<PamCategory>> {
-    let categories = vec![
-        PamCategory {
-            id: "1".to_string(),
-            name: "Current Version".to_string(),
-        },
-        PamCategory {
-            id: "2".to_string(),
-            name: "Previous Version".to_string(),
-        },
-    ];
+async fn list_pam_categories(State(store): State<Arc<Store>>) -> Json<Vec<PamCategory>> {
+    let pam_categories_list = store.lock().await;
+
+    let categories = pam_categories_list
+        .categories()
+        .iter()
+        .map(|category| PamCategory {
+            id: category.id().to_string(),
+            name: category.name().to_string(),
+        }).collect::<Vec<_>>().into();
 
     Json(categories)
 }
