@@ -15,9 +15,15 @@ impl PamCategoriesList {
     /// 
     /// - `repository`: An `Arc<Mutex<dyn PamCategoriesListRepository>>` that provides access to the PAM categories repository.
     pub fn new(repository: Arc<Mutex<dyn PamCategoriesListRepository>>) -> Self {
-        Self {
-            repository,
-        }
+        // FIXME Remove this test data creation
+        let mut pam_categories_list = Self { repository };
+
+        pam_categories_list.create("Current Version");
+        pam_categories_list.create("SWA Trainer");
+        pam_categories_list.create("Techno Cluster");
+        pam_categories_list.create("Other");
+
+        pam_categories_list
     }
 
     /// Adds a PAM category to the list.

@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use uuid::Uuid;
 
 use crate::{adapters::PamCategoriesListRepository, entities::pam::{PamCategory, PamCategoryId}};
@@ -62,5 +64,19 @@ impl PamCategoriesListRepository for InMemoryPamCategoriesListRepository {
     fn add(&mut self, category: PamCategory) {
         let record = PamCategoryRecord::from_entity(category);
         self.categories.push(record);
+    }
+}
+
+pub struct RepositoryFactory {
+    pub pam_categories_list_repository: Arc<Mutex<dyn PamCategoriesListRepository>>,
+}
+
+impl RepositoryFactory {
+    pub fn new() -> Self {
+        let pam_categories_list_repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+
+        Self {
+            pam_categories_list_repository,
+        }
     }
 }
