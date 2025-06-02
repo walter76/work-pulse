@@ -1,15 +1,16 @@
+mod services;
+
 use std::net::{Ipv4Addr, SocketAddr};
-
 use std::io::Error;
-
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
+
 use work_pulse_core::infra::repositories::RepositoryFactory;
 
-mod pam_categories_service;
+use services::pam_categories_service;
 
 mod prelude {
     pub const PAM_CATEGORIES_SERVICE_TAG: &str = "pam-categories-service";

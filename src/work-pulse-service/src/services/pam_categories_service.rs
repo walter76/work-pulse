@@ -20,7 +20,7 @@ struct PamCategory {
     name: String,
 }
 
-pub(super) fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
+pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     let store = Arc::new(Mutex::new(PamCategoriesList::new(repository_factory.pam_categories_list_repository.clone())));
 
     OpenApiRouter::new()
