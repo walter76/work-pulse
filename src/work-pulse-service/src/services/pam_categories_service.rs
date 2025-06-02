@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
-use axum::{extract::State, Json};
+use axum::{extract::State, response::IntoResponse, Json};
+use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{infra::repositories::RepositoryFactory, use_cases::pam_categories_list::PamCategoriesList};
+
+use crate::prelude::PAM_CATEGORIES_SERVICE_TAG;
 
 type Store = Mutex<PamCategoriesList>;
 
@@ -24,7 +27,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     let store = Arc::new(Mutex::new(PamCategoriesList::new(repository_factory.pam_categories_list_repository.clone())));
 
     OpenApiRouter::new()
-        .routes(routes!(list_pam_categories))
+        .routes(routes!(list_pam_categories, create_pam_category))
         .with_state(store)
 }
 
@@ -34,7 +37,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     path = "",
     tag = PAM_CATEGORIES_SERVICE_TAG,
     responses(
-        (status = 200, description = "List all PAM categories", body = [PamCategory])
+        (status = 200, description = "List all PAM categories successfully", body = [PamCategory])
     ),
     tag = "PAM Categories"
 )]
@@ -50,4 +53,25 @@ async fn list_pam_categories(State(store): State<Arc<Store>>) -> Json<Vec<PamCat
         }).collect::<Vec<_>>().into();
 
     Json(categories)
+}
+
+/// Creates a new PAM category.
+#[utoipa::path(
+    post,
+    path = "",
+    tag = PAM_CATEGORIES_SERVICE_TAG,
+    request_body = PamCategory,
+    responses(
+        (status = 201, description = "New PAM category successfully created", body = PamCategory)
+    ),
+)]
+async fn create_pam_category(
+    State(store): State<Arc<Store>>,
+    Json(new_category): Json<PamCategory>,
+) -> impl IntoResponse {
+    let mut pam_categories_list = store.lock().await;
+
+    pam_categories_list.create(new_category.name.as_str());
+
+    (StatusCode::CREATED, Json(new_category)).into_response()
 }
