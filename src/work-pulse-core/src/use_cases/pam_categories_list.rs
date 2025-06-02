@@ -31,11 +31,15 @@ impl PamCategoriesList {
     /// # Arguments
     /// 
     /// - `category_name`: The name of the PAM category to add.
-    pub fn create(&mut self, category_name: &str) {
+    pub fn create(&mut self, category_name: &str) -> PamCategory {
         // TODO Avoid creating categories with the same name.
 
+        let pam_category = PamCategory::new(category_name.to_string());
+
         let mut repo = self.repository.lock().unwrap();
-        repo.add(PamCategory::new(category_name.to_string()));
+        repo.add(pam_category.clone());
+
+        pam_category
     }
 
     /// Returns the list of PAM categories.
