@@ -71,7 +71,13 @@ async fn create_pam_category(
 ) -> impl IntoResponse {
     let mut pam_categories_list = store.lock().await;
 
-    pam_categories_list.create(new_category.name.as_str());
+    let pam_category = pam_categories_list.create(new_category.name.as_str());
 
-    (StatusCode::CREATED, Json(new_category)).into_response()
+    (
+        StatusCode::CREATED,
+        Json(PamCategory {
+            id: pam_category.id().to_string(),
+            name: pam_category.name().to_string(),
+        })
+    ).into_response()
 }
