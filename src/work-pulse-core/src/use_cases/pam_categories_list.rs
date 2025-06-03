@@ -1,6 +1,16 @@
 use std::sync::{Arc, Mutex};
 
+use thiserror::Error;
+
 use crate::{adapters::PamCategoriesListRepository, entities::pam::PamCategory};
+
+/// Represents an error that can occur while managing PAM categories.
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
+pub enum PamCategoriesListError {
+    /// A PAM category with the specified name already exists.
+    #[error("A PAM category with the name '{0}' already exists.")]
+    PamCategoryAlreadyExists(String),
+}
 
 /// Represents a list of all PAM categories.
 pub struct PamCategoriesList {
@@ -27,10 +37,10 @@ impl PamCategoriesList {
         // FIXME Remove this test data creation
         let mut pam_categories_list = Self { repository };
 
-        pam_categories_list.create("Current Version");
-        pam_categories_list.create("SWA Trainer");
-        pam_categories_list.create("Techno Cluster");
-        pam_categories_list.create("Other");
+        pam_categories_list.create("Current Version").unwrap();
+        pam_categories_list.create("SWA Trainer").unwrap();
+        pam_categories_list.create("Techno Cluster").unwrap();
+        pam_categories_list.create("Other").unwrap();
 
         pam_categories_list
     }
@@ -40,18 +50,32 @@ impl PamCategoriesList {
     /// # Arguments
     /// 
     /// - `category_name`: The name of the PAM category to add.
-    pub fn create(&mut self, category_name: &str) -> PamCategory {
-        // TODO Avoid creating categories with the same name.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(PamCategory)`: If the category was successfully created.
+    /// - `Err(PamCategoriesListError)`: If a category with the same name already exists.
+    pub fn create(&mut self, category_name: &str) -> Result<PamCategory, PamCategoriesListError> {
+        let mut repo = self.repository.lock().unwrap();
+
+        // Check if a category with the same name already exists.
+        if repo.get_all().iter()
+            .find(|category| category.name() == category_name)
+            .is_some() {
+            return Err(PamCategoriesListError::PamCategoryAlreadyExists(category_name.to_string()));
+        }
 
         let pam_category = PamCategory::new(category_name.to_string());
-
-        let mut repo = self.repository.lock().unwrap();
         repo.add(pam_category.clone());
 
-        pam_category
+        Ok(pam_category)
     }
 
     /// Returns the list of PAM categories.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Vec<PamCategory>`: A vector containing all PAM categories.
     pub fn categories(&self) -> Vec<PamCategory> {
         let repo = self.repository.lock().unwrap();
         repo.get_all()
@@ -70,12 +94,25 @@ mod tests {
         let mut categories_list = PamCategoriesList::new(repository);
 
         let category_name = "Test Category";
-        categories_list.create(category_name);
+        categories_list.create(category_name).unwrap();
 
         assert_eq!(categories_list.categories().len(), 1);
         assert_eq!(categories_list.categories()[0].name(), category_name);
     }
 
+    #[test]
+    fn pam_categories_list_create_should_fail_when_category_exists() {
+        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let mut categories_list = PamCategoriesList::new(repository);
+
+        let category_name = "Test Category";
+        categories_list.create(category_name).unwrap();
+
+        let result = categories_list.create(category_name);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), PamCategoriesListError::PamCategoryAlreadyExists(category_name.to_string()));
+    }
+    
     #[test]
     fn pam_categories_list_should_return_empty_when_no_categories() {
         let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
@@ -89,8 +126,8 @@ mod tests {
         let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
         
-        categories_list.create("Category 1");
-        categories_list.create("Category 2");
+        categories_list.create("Category 1").unwrap();
+        categories_list.create("Category 2").unwrap();
 
         let categories = categories_list.categories();
         assert_eq!(categories.len(), 2);

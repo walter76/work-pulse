@@ -63,7 +63,8 @@ async fn list_pam_categories(State(store): State<Arc<Store>>) -> Json<Vec<PamCat
     tag = PAM_CATEGORIES_SERVICE_TAG,
     request_body = PamCategory,
     responses(
-        (status = 201, description = "New PAM category successfully created", body = PamCategory)
+        (status = 201, description = "New PAM category successfully created", body = PamCategory),
+        (status = 500, description = "Internal server error", body = String)
     ),
 )]
 async fn create_pam_category(
@@ -72,13 +73,16 @@ async fn create_pam_category(
 ) -> impl IntoResponse {
     let mut pam_categories_list = store.lock().await;
 
-    let pam_category = pam_categories_list.create(new_category.name.as_str());
-
-    (
-        StatusCode::CREATED,
-        Json(PamCategory {
-            id: pam_category.id().to_string(),
-            name: pam_category.name().to_string(),
-        })
-    ).into_response()
+    match pam_categories_list.create(new_category.name.as_str()) {
+        Ok(pam_category) => (
+            StatusCode::CREATED,
+            Json(PamCategory {
+                id: pam_category.id().to_string(),
+                name: pam_category.name().to_string(),
+            })
+            ).into_response(),
+        Err(err) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response()
+        }
+    }
 }
