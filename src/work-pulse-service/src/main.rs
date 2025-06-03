@@ -4,6 +4,8 @@ use std::net::{Ipv4Addr, SocketAddr};
 use std::io::Error;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
@@ -26,6 +28,13 @@ async fn main() -> Result<(), Error>{
     )]
     struct ApiDoc;
 
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::new(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "debug".into()),
+        ))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
     let repository_factory = RepositoryFactory::new();
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
@@ -40,7 +49,10 @@ async fn main() -> Result<(), Error>{
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
-    let router = router.layer(cors);
+    
+    let router = router
+        .layer(cors)
+        .layer(TraceLayer::new_for_http());
 
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 8080));
     let listener = TcpListener::bind(&address).await?;
