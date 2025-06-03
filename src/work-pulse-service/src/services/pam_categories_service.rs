@@ -24,7 +24,8 @@ struct PamCategory {
 }
 
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    let store = Arc::new(Mutex::new(PamCategoriesList::new(repository_factory.pam_categories_list_repository.clone())));
+    // FIXME Remove this temporary generation of test data
+    let store = Arc::new(Mutex::new(PamCategoriesList::with_test_data(repository_factory.pam_categories_list_repository.clone())));
 
     OpenApiRouter::new()
         .routes(routes!(list_pam_categories, create_pam_category))
