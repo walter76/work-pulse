@@ -15,6 +15,15 @@ impl PamCategoriesList {
     /// 
     /// - `repository`: An `Arc<Mutex<dyn PamCategoriesListRepository>>` that provides access to the PAM categories repository.
     pub fn new(repository: Arc<Mutex<dyn PamCategoriesListRepository>>) -> Self {
+        Self { repository }
+    }
+
+    /// Creates a new `PamCategoriesList` with test data.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `repository`: An `Arc<Mutex<dyn PamCategoriesListRepository>>` that provides access to the PAM categories repository.
+    pub fn with_test_data(repository: Arc<Mutex<dyn PamCategoriesListRepository>>) -> Self {
         // FIXME Remove this test data creation
         let mut pam_categories_list = Self { repository };
 

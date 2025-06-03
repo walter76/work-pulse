@@ -112,9 +112,11 @@ mod tests {
 
     #[test]
     fn pam_category_id_parse_str_should_fail_with_invalid_id() {
-        let invalid_id_str = "invalid-id";
-        let result = PamCategoryId::parse_str(invalid_id_str);
+        let invalid_id = "invalid-id";
+        let result = PamCategoryId::parse_str(invalid_id);
+
         assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), PamCategoryIdError::NotAValidId(invalid_id.to_string()));
     }
 
     #[test]

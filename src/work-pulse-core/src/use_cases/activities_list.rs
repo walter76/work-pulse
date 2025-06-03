@@ -42,8 +42,8 @@ mod tests {
     fn test_add_activity() {
         let mut activities_list = ActivitiesList::new();
         let activity = Activity::new(
-            NaiveDate::from_ymd(2023, 10, 1),
-            NaiveTime::from_hms(9, 0, 0),
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
             PamCategoryId::new(),
             "Test Task".to_string(),
         );

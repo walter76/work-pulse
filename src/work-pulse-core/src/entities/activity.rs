@@ -170,3 +170,64 @@ impl Activity {
         self.task = task;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn activity_id_new_should_create_activity_with_id() {
+        let id = ActivityId::new();
+        assert!(id.0.is_nil() == false);
+    }
+
+    #[test]
+    fn activity_id_parse_str_should_parse_valid_id() {
+        let unique_id = Uuid::new_v4();
+        let activity_id = ActivityId::parse_str(unique_id.to_string().as_str()).unwrap();
+
+        assert_eq!(unique_id, activity_id.0);
+    }
+
+    #[test]
+    fn activity_id_parse_str_should_fail_with_invalid_id() {
+        let invalid_id = "invalid-uuid";
+        let result = ActivityId::parse_str(invalid_id);
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ActivityIdError::NotAValidId(invalid_id.to_string()));
+    }
+
+    #[test]
+    fn activity_new_should_create_activity_with_random_id() {
+        let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date");
+        let start_time = NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time");
+        let pam_category_id = PamCategoryId::new();
+        let task = "Test Task".to_string();
+
+        let activity = Activity::new(date, start_time, pam_category_id.clone(), task.clone());
+
+        assert!(activity.id().0.is_nil() == false);
+        assert_eq!(activity.date(), &date);
+        assert_eq!(activity.start_time(), &start_time);
+        assert_eq!(activity.pam_category_id(), &pam_category_id);
+        assert_eq!(activity.task(), task);
+    }
+
+    #[test]
+    fn activity_with_id_should_create_activity_with_specific_id() {
+        let id = ActivityId::new();
+        let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date");
+        let start_time = NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time");
+        let pam_category_id = PamCategoryId::new();
+        let task = "Test Task".to_string();
+
+        let activity = Activity::with_id(id.clone(), date, start_time, pam_category_id.clone(), task.clone());
+
+        assert_eq!(activity.id(), &id);
+        assert_eq!(activity.date(), &date);
+        assert_eq!(activity.start_time(), &start_time);
+        assert_eq!(activity.pam_category_id(), &pam_category_id);
+        assert_eq!(activity.task(), task);
+    }
+}
