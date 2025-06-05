@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;
 
-use crate::{adapters::PamCategoriesListRepository, entities::pam::{PamCategory, PamCategoryId}};
+use crate::{adapters::{PamCategoriesListRepository, PamCategoriesListRepositoryError}, entities::pam::{PamCategory, PamCategoryId}};
 
 /// Represents a record for a `PamCategory`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -64,6 +64,16 @@ impl PamCategoriesListRepository for InMemoryPamCategoriesListRepository {
     fn add(&mut self, category: PamCategory) {
         let record = PamCategoryRecord::from_entity(category);
         self.categories.push(record);
+    }
+
+    fn update(&mut self, category: PamCategory) -> Result<(), PamCategoriesListRepositoryError> {
+        if let Some(record) = self.categories.iter_mut().find(|r| r.id == category.id().0) {
+            *record = PamCategoryRecord::from_entity(category);
+
+            Ok(())
+        } else {
+            Err(PamCategoriesListRepositoryError::NotFound(category.id().clone()))
+        }
     }
 }
 

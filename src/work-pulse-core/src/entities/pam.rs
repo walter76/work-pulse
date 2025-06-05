@@ -90,6 +90,15 @@ impl PamCategory {
     pub fn name(&self) -> &str {
         &self.name
     }
+
+    /// Sets the name of the PAM category.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `name`: The new name for the PAM category.
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
 }
 
 #[cfg(test)]
@@ -136,5 +145,14 @@ mod tests {
 
         assert_eq!(category.name, category_name);
         assert_eq!(category.id, unique_id);
+    }
+
+    #[test]
+    fn pam_category_set_name_should_update_category_name() {
+        let mut category = PamCategory::new("Initial Name".to_string());
+        let new_name = "Updated Name".to_string();
+        category.set_name(new_name.clone());
+
+        assert_eq!(category.name, new_name);
     }
 }

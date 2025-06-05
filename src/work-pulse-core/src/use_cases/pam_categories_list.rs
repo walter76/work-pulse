@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use thiserror::Error;
 
-use crate::{adapters::PamCategoriesListRepository, entities::pam::PamCategory};
+use crate::{adapters::PamCategoriesListRepository, entities::pam::{PamCategory, PamCategoryId}};
 
 /// Represents an error that can occur while managing PAM categories.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
@@ -10,6 +10,10 @@ pub enum PamCategoriesListError {
     /// A PAM category with the specified name already exists.
     #[error("A PAM category with the name '{0}' already exists.")]
     PamCategoryAlreadyExists(String),
+
+    /// A PAM category with the ID does not exists.
+    #[error("PAM category with the ID `{0}` does not exists.")]
+    NotFound(PamCategoryId),    
 }
 
 /// Represents a list of all PAM categories.
@@ -80,6 +84,25 @@ impl PamCategoriesList {
         let repo = self.repository.lock().unwrap();
         repo.get_all()
     }
+
+    /// Updates an existing PAM category in the list.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `category`: The `PamCategory` instance with updated information to be saved in the repository.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(())`: If the category was successfully updated.
+    /// - `Err(PamCategoriesListError)`: If the category with the specified ID does not exist.
+    pub fn update(&mut self, category: PamCategory) -> Result<(), PamCategoriesListError> {
+        let mut repo = self.repository.lock().unwrap();
+
+        let category_id = category.id().clone();
+        repo.update(category).map_err(|_| PamCategoriesListError::NotFound(category_id))?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -133,5 +156,36 @@ mod tests {
         assert_eq!(categories.len(), 2);
         assert_eq!(categories[0].name(), "Category 1");
         assert_eq!(categories[1].name(), "Category 2");
-    }    
+    }
+
+    #[test]
+    fn pam_categories_list_update_should_modify_existing_category() {
+        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let mut categories_list = PamCategoriesList::new(repository);
+
+        let category_name = "Original Category";
+        let mut category = categories_list.create(category_name).unwrap();
+        
+        let updated_name = "Updated Category";
+        category.set_name(updated_name.to_string());
+        
+        categories_list.update(category).unwrap();
+
+        let categories = categories_list.categories();
+        let actual_name = categories.first().map(|c| c.name()).unwrap();
+        assert_eq!(actual_name, updated_name);
+    }
+
+    #[test]
+    fn pam_categories_list_update_should_fail_when_category_not_found() {
+        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let mut categories_list = PamCategoriesList::new(repository);
+
+        let category = PamCategory::with_id(PamCategoryId::new(), "Non-existent Category".to_string());
+        let category_id = category.id().clone();
+        
+        let result = categories_list.update(category);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), PamCategoriesListError::NotFound(category_id));
+    }
 }
