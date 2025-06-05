@@ -54,7 +54,10 @@ async fn main() -> Result<(), Error>{
         .layer(cors)
         .layer(TraceLayer::new_for_http());
 
-    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 8080));
+    let address = SocketAddr::from(([127, 0, 0, 1], 8080));
+    tracing::info!("Starting server at http://{}", address);
+    tracing::info!("OpenAPI documentation available at: http://{}/swagger-ui", address);
+
     let listener = TcpListener::bind(&address).await?;
     axum::serve(listener, router.into_make_service()).await
 }
