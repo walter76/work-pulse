@@ -1,6 +1,6 @@
 mod services;
 
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 use std::io::Error;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};

@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{extract::{Path, State}, response::IntoResponse, Json};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
-use work_pulse_core::{infra::repositories::RepositoryFactory, use_cases::pam_categories_list::PamCategoriesList};
+use work_pulse_core::{entities::pam::PamCategoryId, infra::repositories::RepositoryFactory, use_cases::pam_categories_list::PamCategoriesList};
 
 use crate::prelude::PAM_CATEGORIES_SERVICE_TAG;
 
@@ -29,6 +29,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 
     OpenApiRouter::new()
         .routes(routes!(list_pam_categories, create_pam_category))
+        .routes(routes!(delete_pam_category))
         .with_state(store)
 }
 
@@ -84,5 +85,31 @@ async fn create_pam_category(
         Err(err) => {
             (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response()
         }
+    }
+}
+
+/// Deletes a PAM category by ID.
+#[utoipa::path(
+    delete,
+    path = "/{id}",
+    tag = PAM_CATEGORIES_SERVICE_TAG,
+    responses(
+        (status = 204, description = "PAM category successfully deleted"),
+        (status = 400, description = "Invalid request", body = String),
+        (status = 500, description = "Internal server error", body = String)
+    ),
+)]
+async fn delete_pam_category(
+    Path(id): Path<String>,
+    State(store): State<Arc<Store>>,
+) -> impl IntoResponse {
+    let mut pam_categories_list = store.lock().await;
+
+    match PamCategoryId::parse_str(&id) {
+        Ok(category_id) => match pam_categories_list.delete(category_id) {
+            Ok(_) => StatusCode::NO_CONTENT.into_response(),
+            Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
+        },
+        Err(_) => (StatusCode::BAD_REQUEST, Json("Invalid category ID format".to_string())).into_response(),
     }
 }
