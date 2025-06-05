@@ -46,4 +46,15 @@ pub trait PamCategoriesListRepository: Send + Sync {
     /// 
     /// `Result<(), PamCategoriesListRepositoryError>` indicating success or failure of the update operation.
     fn update(&mut self, category: PamCategory) -> Result<(), PamCategoriesListRepositoryError>;
+
+    /// Deletes a PAM category from the repository.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `id`: The unique identifier of the PAM category to be deleted.
+    /// 
+    /// # Returns
+    /// 
+    /// `Result<(), PamCategoriesListRepositoryError>` indicating success or failure of the delete operation.
+    fn delete(&mut self, id: PamCategoryId) -> Result<(), PamCategoriesListRepositoryError>;
 }

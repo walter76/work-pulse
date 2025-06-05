@@ -103,6 +103,24 @@ impl PamCategoriesList {
 
         Ok(())
     }
+
+    /// Deletes a PAM category from the list.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `id`: The unique identifier of the PAM category to be deleted.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(())`: If the category was successfully deleted.
+    /// - `Err(PamCategoriesListError)`: If the category with the specified ID does not exist.
+    pub fn delete(&mut self, id: PamCategoryId) -> Result<(), PamCategoriesListError> {
+        let mut repo = self.repository.lock().unwrap();
+
+        repo.delete(id.clone()).map_err(|_| PamCategoriesListError::NotFound(id))?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -187,5 +205,30 @@ mod tests {
         let result = categories_list.update(category);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), PamCategoriesListError::NotFound(category_id));
+    }
+
+    #[test]
+    fn pam_categories_list_delete_should_remove_existing_category() {
+        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let mut categories_list = PamCategoriesList::new(repository);
+
+        let category_name = "Category to Delete";
+        let category = categories_list.create(category_name).unwrap();
+        
+        categories_list.delete(category.id().clone()).unwrap();
+
+        assert!(categories_list.categories().is_empty());
+    }
+
+    #[test]
+    fn pam_categories_list_delete_should_fail_when_category_not_found() {
+        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let mut categories_list = PamCategoriesList::new(repository);
+
+        let non_existent_id = PamCategoryId::new();
+        
+        let result = categories_list.delete(non_existent_id.clone());
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), PamCategoriesListError::NotFound(non_existent_id));
     }
 }

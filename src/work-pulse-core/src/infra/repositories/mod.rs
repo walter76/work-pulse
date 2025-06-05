@@ -75,6 +75,15 @@ impl PamCategoriesListRepository for InMemoryPamCategoriesListRepository {
             Err(PamCategoriesListRepositoryError::NotFound(category.id().clone()))
         }
     }
+
+    fn delete(&mut self, id: PamCategoryId) -> Result<(), PamCategoriesListRepositoryError> {
+        if let Some(pos) = self.categories.iter().position(|r| r.id == id.0) {
+            self.categories.remove(pos);
+            Ok(())
+        } else {
+            Err(PamCategoriesListRepositoryError::NotFound(id))
+        }
+    }
 }
 
 pub struct RepositoryFactory {
