@@ -29,6 +29,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 
     OpenApiRouter::new()
         .routes(routes!(list_pam_categories, create_pam_category))
+        .routes(routes!(update_pam_category))
         .routes(routes!(delete_pam_category))
         .with_state(store)
 }
@@ -88,11 +89,52 @@ async fn create_pam_category(
     }
 }
 
+/// Updates an existing PAM category.
+#[utoipa::path(
+    put,
+    path = "",
+    tag = PAM_CATEGORIES_SERVICE_TAG,
+    request_body = PamCategory,
+    responses(
+        (status = 200, description = "PAM category successfully updated", body = PamCategory),
+        (status = 400, description = "Invalid request", body = String),
+        (status = 404, description = "PAM category not found", body = String),
+        (status = 500, description = "Internal server error", body = String)
+    ),
+)]
+async fn update_pam_category(
+    State(store): State<Arc<Store>>,
+    Json(updated_category): Json<PamCategory>,
+) -> impl IntoResponse {
+    let mut pam_categories_list = store.lock().await;
+
+    let category_id = match PamCategoryId::parse_str(&updated_category.id) {
+        Ok(id) => id,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json("Invalid category ID format".to_string())).into_response(),
+    };
+
+    let updated_category = work_pulse_core::entities::pam::PamCategory::with_id(category_id, updated_category.name.clone());
+
+    match pam_categories_list.update(updated_category.clone()) {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(PamCategory {
+                id: updated_category.id().to_string(),
+                name: updated_category.name().to_string(),
+            })
+        ).into_response(),
+        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
+    }
+}
+
 /// Deletes a PAM category by ID.
 #[utoipa::path(
     delete,
     path = "/{id}",
     tag = PAM_CATEGORIES_SERVICE_TAG,
+    params(
+        ("id" = String, Path, description = "The unique identifier of the PAM category to delete")
+    ),
     responses(
         (status = 204, description = "PAM category successfully deleted"),
         (status = 400, description = "Invalid request", body = String),
