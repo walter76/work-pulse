@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Button, Input, Sheet, Table, Typography } from '@mui/joy'
+import { Button, IconButton, Input, Sheet, Table, Typography } from '@mui/joy'
+import { Add, Delete, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
 const PamCategoriesConfiguration = () => {
@@ -38,9 +39,27 @@ const PamCategoriesConfiguration = () => {
       // Reset the input field after creating the category
       setCategoryName('')
 
+      // Refresh the categories list after creation
+      refreshCategories()
+
       console.log(`Category "${categoryName}" created successfully!`)
     } catch (error) {
       console.error('Error creating category:', error)
+    }
+  }
+
+  const deleteCategory = async (categoryId) => {
+    console.log(`Deleting category with ID: ${categoryId}`)
+
+    try {
+      await axios.delete(`http://localhost:8080/api/v1/pam-categories/${categoryId}`)
+    
+      // Refresh the categories list after deletion
+      refreshCategories()
+    
+      console.log(`Category with ID ${categoryId} deleted successfully!`)
+    } catch (error) {
+      console.error(`Error deleting category with ID ${categoryId}:`, error)
     }
   }
 
@@ -58,7 +77,7 @@ const PamCategoriesConfiguration = () => {
           value={categoryName}
           onChange={(e) => setCategoryName(e.target.value)}
         />
-        <Button onClick={createCategory}>
+        <Button startDecorator={<Add/>} onClick={createCategory}>
           Add Category
         </Button>
       </Sheet>
@@ -70,7 +89,7 @@ const PamCategoriesConfiguration = () => {
 
         <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
           <Typography>Number of Records: {categories.length}</Typography>
-          <Button onClick={refreshCategories}>
+          <Button startDecorator={<Refresh />} onClick={refreshCategories}>
             Refresh Categories
           </Button>
         </Sheet>
@@ -79,12 +98,22 @@ const PamCategoriesConfiguration = () => {
           <thead>
             <tr>
               <th>Category Name</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {categories.map((category) => (
               <tr key={category.id}>
                 <td>{category.name}</td>
+                <td>
+                  <IconButton 
+                    aria-label="Delete PAM Category"
+                    color="danger"
+                    variant="soft"
+                    onClick={() => deleteCategory(category.id)}>
+                    <Delete />
+                  </IconButton>
+                </td>
               </tr>
             ))}
           </tbody>
