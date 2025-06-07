@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Box, Button, Card, CardContent, Input, Table, Typography } from '@mui/joy'
+import { Button, Input, Sheet, Table, Typography } from '@mui/joy'
 import axios from 'axios'
 
 const App = () => {
@@ -45,56 +45,52 @@ const App = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 5, margin: 5 }}>
+    <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5, margin: 5 }}>
       <Typography level="h2">
         PAM Categories Configuration
       </Typography>
 
-      <Card variant="outlined" sx={{ margin: 2 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Input
-              required
-              id="category-name"
-              placeholder="Category Name"
-              value={categoryName}
-              onChange={(e) => setCategoryName(e.target.value)}
-            />
-            <Button onClick={createCategory}>
-              Add Category
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+      <Sheet variant="outlined" sx={{ display: 'flex', gap: 2, padding: 2 }}>
+        <Input
+          required
+          id="category-name"
+          placeholder="Category Name"
+          value={categoryName}
+          onChange={(e) => setCategoryName(e.target.value)}
+        />
+        <Button onClick={createCategory}>
+          Add Category
+        </Button>
+      </Sheet>
 
-      <Card variant="outlined" sx={{ margin: 2 }}>
-        <CardContent>
-          <Typography level="h3">
-            Categories List
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2}}>
-            <Typography>Number of Records: {categories.length}</Typography>
-            <Button onClick={refreshCategories}>
-              Refresh Categories
-            </Button>
-          </Box>
-          <Table>
-            <thead>
-              <tr>
-                <th>Category Name</th>
+      <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
+        <Typography level="h3">
+          Categories List
+        </Typography>
+
+        <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
+          <Typography>Number of Records: {categories.length}</Typography>
+          <Button onClick={refreshCategories}>
+            Refresh Categories
+          </Button>
+        </Sheet>
+
+        <Table>
+          <thead>
+            <tr>
+              <th>Category Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map((category) => (
+              <tr key={category.id}>
+                <td>{category.name}</td>
               </tr>
-            </thead>
-            <tbody>
-              {categories.map((category) => (
-                <tr key={category.id}>
-                  <td>{category.name}</td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </CardContent>
-      </Card>
-    </Box>
+            ))}
+          </tbody>
+        </Table>
+      </Sheet>
+    </Sheet>
   )
 }
 
