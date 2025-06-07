@@ -10,7 +10,7 @@ const App = () => {
     console.log('Refreshing categories...')
 
     try {
-      const response = await axios.get('/api/categories')
+      const response = await axios.get('http://localhost:8080/api/v1/pam-categories')
 
       setCategories(response.data)
 
@@ -30,7 +30,7 @@ const App = () => {
     console.log(`Creating category: ${categoryName}`)
 
     try {
-      const response = await axios.post('/api/categories', {
+      const response = await axios.post('http://localhost:8080/api/v1/pam-categories', {
         id: '',
         name: categoryName,
       })
