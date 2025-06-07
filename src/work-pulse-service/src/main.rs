@@ -1,6 +1,6 @@
 mod services;
 
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, SocketAddr};
 use std::io::Error;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
@@ -54,7 +54,7 @@ async fn main() -> Result<(), Error>{
         .layer(cors)
         .layer(TraceLayer::new_for_http());
 
-    let address = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 8080));
     tracing::info!("Starting server at http://{}", address);
     tracing::info!("OpenAPI documentation available at: http://{}/swagger-ui", address);
 
