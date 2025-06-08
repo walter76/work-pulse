@@ -13,7 +13,10 @@ use utoipa_swagger_ui::SwaggerUi;
 use services::pam_categories_service;
 use work_pulse_core::infra::repositories::in_memory::RepositoryFactory;
 
+use crate::services::activities_list_service;
+
 mod prelude {
+    pub const ACTIVITIES_LIST_SERVICE_TAG: &str = "activities-list-service";
     pub const PAM_CATEGORIES_SERVICE_TAG: &str = "pam-categories-service";
 }
 
@@ -22,6 +25,7 @@ async fn main() -> Result<(), Error>{
     #[derive(OpenApi)]
     #[openapi(
         tags(
+            (name = prelude::ACTIVITIES_LIST_SERVICE_TAG, description = "Activities List Service"),
             (name = prelude::PAM_CATEGORIES_SERVICE_TAG, description = "PAM Categories Service")
         )
     )]
@@ -38,6 +42,7 @@ async fn main() -> Result<(), Error>{
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api/v1/pam-categories", pam_categories_service::router(&repository_factory))
+        .nest("/api/v1/activities", activities_list_service::router(&repository_factory))
         .split_for_parts();
 
     let router = router

@@ -41,8 +41,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     tag = PAM_CATEGORIES_SERVICE_TAG,
     responses(
         (status = 200, description = "List all PAM categories successfully", body = [PamCategory])
-    ),
-    tag = "PAM Categories"
+    )
 )]
 async fn list_pam_categories(State(store): State<Arc<Store>>) -> Json<Vec<PamCategory>> {
     let pam_categories_list = store.lock().await;
