@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use axum::{extract::State, Json};
+use axum::{extract::State, response::IntoResponse, Json};
+use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
@@ -87,14 +88,14 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     let store = Arc::new(Mutex::new(ActivitiesList::new(repository_factory.activities_list_repository.clone())));
 
     OpenApiRouter::new()
-        .routes(routes!(list_activities))
+        .routes(routes!(list_activities, create_activity))
         .with_state(store)
 }
 
 /// Lists all activities.
 #[utoipa::path(
     get,
-    path = "/activities",
+    path = "",
     tag = ACTIVITIES_LIST_SERVICE_TAG,
     responses(
         (status = 200, description = "List all activities successfully", body = Vec<Activity>),
@@ -110,6 +111,42 @@ async fn list_activities(State(store): State<Arc<Store>>) -> Json<Vec<Activity>>
         .collect();
 
     Json(activities)
+}
+
+/// Creates a new Activity.
+#[utoipa::path(
+    post,
+    path = "",
+    tag = ACTIVITIES_LIST_SERVICE_TAG,
+    request_body = Activity,
+    responses(
+        (status = 201, description = "New Activity successfully created", body = Activity),
+        (status = 500, description = "Internal server error", body = String)
+    ),
+)]
+async fn create_activity(
+    State(store): State<Arc<Store>>,
+    Json(new_activity): Json<Activity>,
+) -> impl IntoResponse {
+    let mut activities_list = store.lock().await;
+
+    let date = new_activity.date.parse().expect("Invalid date format");
+    let start_time = new_activity.start_time.parse().expect("Invalid start time format");
+    let end_time = new_activity.end_time.as_ref().map(|t| t.parse().expect("Invalid end time format"));
+    let pam_category_id = PamCategoryId::parse_str(new_activity.pam_category_id.as_str()).expect("Invalid PAM category ID format");
+
+    let activity = activities_list.record(
+        date,
+        start_time,
+        end_time,
+        pam_category_id,
+        new_activity.task.clone(),
+    );
+
+    (
+        StatusCode::CREATED,
+        Json(Activity::from_entity(&activity)),
+    )
 }
 
 #[cfg(test)]
