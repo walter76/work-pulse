@@ -16,11 +16,29 @@ type Store = Mutex<PamCategoriesList>;
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
 struct PamCategory {
     /// The unique identifier for the category.
-    id: String,
+    id: Option<String>,
 
     /// The name of the category.
     #[schema(example = "Current Version")]
     name: String,
+}
+
+impl PamCategory {
+    /// Converts a `work_pulse_core::entities::pam::PamCategory` entity to a `PamCategory` DTO.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `entity`: A reference to the `work_pulse_core::entities::pam::PamCategory` entity.
+    /// 
+    /// # Returns
+    /// 
+    /// - A `PamCategory` DTO containing the data from the entity.
+    fn from_entity(entity: &work_pulse_core::entities::pam::PamCategory) -> Self {
+        Self {
+            id: Some(entity.id().to_string()),
+            name: entity.name().to_string(),
+        }
+    }
 }
 
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
@@ -49,10 +67,8 @@ async fn list_pam_categories(State(store): State<Arc<Store>>) -> Json<Vec<PamCat
     let categories = pam_categories_list
         .categories()
         .iter()
-        .map(|category| PamCategory {
-            id: category.id().to_string(),
-            name: category.name().to_string(),
-        }).collect::<Vec<_>>().into();
+        .map(PamCategory::from_entity)
+        .collect();
 
     Json(categories)
 }
@@ -76,15 +92,14 @@ async fn create_pam_category(
 
     match pam_categories_list.create(new_category.name.as_str()) {
         Ok(pam_category) => (
-            StatusCode::CREATED,
-            Json(PamCategory {
-                id: pam_category.id().to_string(),
-                name: pam_category.name().to_string(),
-            })
+                StatusCode::CREATED,
+                Json(PamCategory::from_entity(&pam_category))
             ).into_response(),
-        Err(err) => {
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response()
-        }
+        Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(err.to_string())
+            ).into_response()
+        
     }
 }
 
@@ -107,22 +122,32 @@ async fn update_pam_category(
 ) -> impl IntoResponse {
     let mut pam_categories_list = store.lock().await;
 
-    let category_id = match PamCategoryId::parse_str(&updated_category.id) {
+    if updated_category.id.is_none() {
+        return (
+                StatusCode::BAD_REQUEST,
+                Json("Category ID is required".to_string())
+            ).into_response();
+    }
+
+    let category_id = match PamCategoryId::parse_str(&updated_category.id.unwrap()) {
         Ok(id) => id,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json("Invalid category ID format".to_string())).into_response(),
+        Err(_) => return (
+                StatusCode::BAD_REQUEST,
+                Json("Invalid category ID format".to_string())
+            ).into_response(),
     };
 
     let updated_category = work_pulse_core::entities::pam::PamCategory::with_id(category_id, updated_category.name.clone());
 
     match pam_categories_list.update(updated_category.clone()) {
         Ok(_) => (
-            StatusCode::OK,
-            Json(PamCategory {
-                id: updated_category.id().to_string(),
-                name: updated_category.name().to_string(),
-            })
-        ).into_response(),
-        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
+                StatusCode::OK,
+                Json(PamCategory::from_entity(&updated_category))
+            ).into_response(),
+        Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(err.to_string())
+            ).into_response(),
     }
 }
 
@@ -149,8 +174,14 @@ async fn delete_pam_category(
     match PamCategoryId::parse_str(&id) {
         Ok(category_id) => match pam_categories_list.delete(category_id) {
             Ok(_) => StatusCode::NO_CONTENT.into_response(),
-            Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
+            Err(err) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(err.to_string())
+                ).into_response(),
         },
-        Err(_) => (StatusCode::BAD_REQUEST, Json("Invalid category ID format".to_string())).into_response(),
+        Err(_) => (
+                StatusCode::BAD_REQUEST,
+                Json("Invalid category ID format".to_string())
+            ).into_response(),
     }
 }

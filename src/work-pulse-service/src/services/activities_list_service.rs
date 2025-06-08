@@ -17,7 +17,7 @@ type Store = Mutex<ActivitiesList>;
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
 struct Activity {
     /// The unique identifier for the activity.
-    id: String,
+    id: Option<String>,
 
     /// The date when the activity was performed in ISO 8601 format (YYYY-MM-DD).
     #[schema(example = "2023-01-10")]
@@ -51,7 +51,7 @@ impl Activity {
     /// - An `Activity` DTO containing the data from the entity.
     fn from_entity(entity: &work_pulse_core::entities::activity::Activity) -> Self {
         Self {
-            id: entity.id().to_string(),
+            id: Some(entity.id().to_string()),
             date: entity.date().to_string(),
             start_time: entity.start_time().to_string(),
             end_time: entity.end_time().map(|t| t.to_string()),
@@ -69,7 +69,7 @@ impl Activity {
         // TODO Handle potential parsing errors more gracefully
 
         let mut activity = work_pulse_core::entities::activity::Activity::with_id(
-            ActivityId::parse_str(self.id.as_str()).expect("Invalid ID format"),
+            ActivityId::parse_str(self.id.clone().unwrap().as_str()).expect("Invalid ID format"),
             self.date.parse().expect("Invalid date format"),
             self.start_time.parse().expect("Invalid start time format"),
             PamCategoryId::parse_str(self.pam_category_id.as_str()).expect("Invalid PAM category ID format"),
@@ -169,7 +169,7 @@ mod tests {
 
         let activity = Activity::from_entity(&entity);
 
-        assert_eq!(activity.id, entity.id().to_string());
+        assert_eq!(activity.id.unwrap(), entity.id().to_string());
         assert_eq!(activity.date, "2023-01-10");
         assert_eq!(activity.start_time, "14:30:00");
         assert_eq!(activity.end_time, Some("15:30:00".to_string()));
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn activity_to_entity_should_convert_correctly() {
         let activity = Activity {
-            id: ActivityId::new().to_string(),
+            id: Some(ActivityId::new().to_string()),
             date: "2023-01-10".to_string(),
             start_time: "14:30:00".to_string(),
             end_time: Some("15:30:00".to_string()),
@@ -190,7 +190,7 @@ mod tests {
 
         let entity = activity.to_entity();
 
-        assert_eq!(entity.id().to_string(), activity.id);
+        assert_eq!(entity.id().to_string(), activity.id.unwrap());
         assert_eq!(entity.date().to_string(), "2023-01-10");
         assert_eq!(entity.start_time().to_string(), "14:30:00");
         assert_eq!(entity.end_time().map(|t| t.to_string()), Some("15:30:00".to_string()));
