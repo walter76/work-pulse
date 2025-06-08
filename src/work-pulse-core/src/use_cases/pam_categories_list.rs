@@ -125,7 +125,7 @@ impl PamCategoriesList {
 
 #[cfg(test)]
 mod tests {
-    use crate::infra::repositories::InMemoryPamCategoriesListRepository;
+    use crate::infra::repositories::in_memory::pam_categories_list::InMemoryPamCategoriesListRepository;
 
     use super::*;
 

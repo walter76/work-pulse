@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
-use work_pulse_core::{entities::pam::PamCategoryId, infra::repositories::RepositoryFactory, use_cases::pam_categories_list::PamCategoriesList};
+use work_pulse_core::{entities::pam::PamCategoryId, infra::repositories::in_memory::RepositoryFactory, use_cases::pam_categories_list::PamCategoriesList};
 
 use crate::prelude::PAM_CATEGORIES_SERVICE_TAG;
 
