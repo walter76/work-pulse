@@ -1,3 +1,5 @@
+pub mod in_memory;
+
 use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;

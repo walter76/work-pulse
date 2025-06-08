@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::entities::pam::{PamCategory, PamCategoryId};
+use crate::entities::{activity::Activity, pam::{PamCategory, PamCategoryId}};
 
 /// Error type for the PAM categories list repository.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
@@ -10,6 +10,7 @@ pub enum PamCategoriesListRepositoryError {
     NotFound(PamCategoryId),
 }
 
+/// Repository trait for managing PAM categories.
 pub trait PamCategoriesListRepository: Send + Sync {
     /// Retrieves a list of all PAM categories.
     ///
@@ -57,4 +58,21 @@ pub trait PamCategoriesListRepository: Send + Sync {
     /// 
     /// `Result<(), PamCategoriesListRepositoryError>` indicating success or failure of the delete operation.
     fn delete(&mut self, id: PamCategoryId) -> Result<(), PamCategoriesListRepositoryError>;
+}
+
+/// Repository trait for managing a list of activities.
+pub trait ActivitiesListRepository: Send + Sync {
+    /// Retrieves a list of all activities.
+    /// 
+    /// # Returns
+    /// 
+    /// A vector of `Activity` instances representing all activities in the repository.
+    fn get_all(&self) -> Vec<Activity>;
+
+    /// Adds a new activity to the list.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `activity`: The `Activity` instance to be added to the list.
+    fn add(&mut self, activity: Activity);
 }
