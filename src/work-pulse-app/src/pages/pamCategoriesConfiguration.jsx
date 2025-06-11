@@ -33,8 +33,7 @@ const PamCategoriesConfiguration = () => {
     console.log(`Creating category: ${categoryName}`)
 
     try {
-      const response = await axios.post('http://localhost:8080/api/v1/pam-categories', {
-        id: '',
+      await axios.post('http://localhost:8080/api/v1/pam-categories', {
         name: categoryName,
       })
 
