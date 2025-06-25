@@ -11,6 +11,12 @@ COPY src/Cargo.toml src/Cargo.lock ./
 COPY src/work-pulse-core ./work-pulse-core
 COPY src/work-pulse-service ./work-pulse-service
 
+# Copy CA certificate inside the container
+COPY certificates/* /usr/local/share/ca-certificates/
+
+# Install the SSL certificates
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
+
 # Build the application
 RUN cargo build --workspace --release
 
