@@ -1,3 +1,6 @@
+# Build time argument to include CA certificates
+ARG INCLUDE_CA=false
+
 # Use the official Rust image as the base image
 FROM rust:1.86 AS builder
 
@@ -11,11 +14,11 @@ COPY src/Cargo.toml src/Cargo.lock ./
 COPY src/work-pulse-core ./work-pulse-core
 COPY src/work-pulse-service ./work-pulse-service
 
-# Copy CA certificate inside the container
+# Copy CA certificate inside the container and install the SSL certificates (if applicable)
 COPY certificates/* /usr/local/share/ca-certificates/
-
-# Install the SSL certificates
-RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
+RUN if [ "${INCLUDE_CA}" = "true" ]; then \
+       apt-get update && apt-get install -y ca-certificates && update-ca-certificates \
+    fi
 
 # Build the application
 RUN cargo build --workspace --release
