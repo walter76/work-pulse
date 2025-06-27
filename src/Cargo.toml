@@ -1,6 +1,7 @@
 [workspace]
 resolver = "1"
-members = [
+members = [ 
+    "work-pulse-cli",
     "work-pulse-core",
     "work-pulse-service"
 ]
