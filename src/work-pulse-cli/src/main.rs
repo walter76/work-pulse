@@ -1,3 +1,4 @@
+mod category_service;
 mod csv_import;
 
 use anyhow::Result;
