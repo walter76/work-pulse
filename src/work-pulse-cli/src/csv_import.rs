@@ -9,7 +9,7 @@ pub fn import(file_path: &str) -> Result<()> {
 
     let records = read_csv(file_path)?;
 
-    for record in records {
+    for record in records.iter() {
         println!(
             "CW: {}, Date: {}, Check In: {}, Check Out: {}, PAM Category: {}, Task: {}, Comment: {}",
             record.cw,
@@ -20,6 +20,14 @@ pub fn import(file_path: &str) -> Result<()> {
             record.task,
             record.comment
         );
+    }
+
+    println!();
+    println!("Unique PAM Categories:");
+
+    let pam_categories = get_pam_categories(&records);
+    for pam_category in pam_categories {
+        println!("  {}", pam_category);
     }
 
     Ok(())
@@ -50,6 +58,8 @@ struct ActivityTableRecord {
 }
 
 fn read_csv(file_path: &str) -> Result<Vec<ActivityTableRecord>> {
+    // FIXME It might be required to detect the encoding of the CSV file, if we run that on Linux OS.
+
     let file = File::open(file_path)
         .with_context(|| format!("Failed to open CSV file: {}", file_path))?;
     let mut reader = BufReader::new(file);
@@ -73,4 +83,16 @@ fn read_csv(file_path: &str) -> Result<Vec<ActivityTableRecord>> {
             .map(|result| result.with_context(|| "Failed to deserialize CSV record"))
             .collect::<Result<Vec<ActivityTableRecord>>>()?,
     )
+}
+
+fn get_pam_categories(records: &[ActivityTableRecord]) -> Vec<String> {
+    let mut categories = records
+        .iter()
+        .map(|record| record.pam_category.clone())
+        .collect::<Vec<String>>();
+
+    categories.sort();
+    categories.dedup();
+
+    categories
 }
