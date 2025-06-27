@@ -1,6 +1,7 @@
 use std::{fs::File, io::{BufReader, Read}};
 
 use anyhow::{Context, Result};
+use encoding_rs::Encoding;
 use serde::Deserialize;
 
 pub fn import(file_path: &str) -> Result<()> {
@@ -59,9 +60,10 @@ fn read_csv(file_path: &str) -> Result<Vec<ActivityTableRecord>> {
         .read_to_end(&mut raw_bytes)
         .with_context(|| format!("Failed to read CSV file: {}", file_path))?;
     
-    // decode the bytes using WINDOWS-1252 encoding
-    let (decoded_content, _ , _) = encoding_rs::WINDOWS_1252.decode(&raw_bytes);
-
+    // decode the bytes using latin-1 encoding
+    let enc = Encoding::for_label(b"latin1")
+        .with_context(|| "Failed to find encoding for latin1")?;
+    let (decoded_content, _ , _) = enc.decode(&raw_bytes);
 
     let mut csv_reader = csv::Reader::from_reader(decoded_content.as_bytes());
 
