@@ -15,11 +15,15 @@ COPY src/Cargo.lock ./
 COPY src/work-pulse-core ./work-pulse-core
 COPY src/work-pulse-service ./work-pulse-service
 
+RUN mkdir -p ./certificates
+COPY certificates ./certificates
+
 # Copy CA certificate inside the container and install the SSL certificates (if applicable)
-# COPY certificates/* /usr/local/share/ca-certificates/
-# RUN if [ "${INCLUDE_CA}" = "true" ]; then \
-#        apt-get update && apt-get install -y ca-certificates && update-ca-certificates \
-#     fi
+RUN if [ "$INCLUDE_CA" = "true" ] && [ -d "./certificates" ]; then \
+      cp -r ./certificates /usr/local/share/ca-certificates && \
+      apt-get update && apt-get install -y ca-certificates && \
+      update-ca-certificates; \
+    fi
 
 # Build the application
 RUN cargo build --package work-pulse-service --release
