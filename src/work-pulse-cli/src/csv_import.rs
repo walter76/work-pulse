@@ -30,6 +30,14 @@ pub fn import(file_path: &str) -> Result<()> {
         println!("  {}", pam_category);
     }
 
+    println!();
+    println!("PAM Categories from Service:");
+
+    let pam_categories_from_service = get_pam_categories_from_service()?;
+    for pam_category in pam_categories_from_service {
+        println!("  {}: {}", pam_category.id, pam_category.name);
+    }
+    
     Ok(())
 }
 
@@ -95,4 +103,29 @@ fn get_pam_categories(records: &[ActivityTableRecord]) -> Vec<String> {
     categories.dedup();
 
     categories
+}
+
+#[derive(Debug, Clone, Default, Eq, PartialEq, Deserialize)]
+struct PamCategory {
+    id: String,
+    name: String,
+}
+
+fn get_pam_categories_from_service() -> Result<Vec<PamCategory>> {
+    let url = "http://localhost:8080/api/v1/pam-categories";
+    
+    let response = reqwest::blocking::get(url)
+        .with_context(|| format!("Failed to fetch PAM categories from {}", url))?;
+
+    if response.status().is_success() {
+        let pam_categories: Vec<PamCategory> = response
+            .json()
+            .with_context(|| "Failed to parse PAM categories from response")?;
+        Ok(pam_categories)
+    } else {
+        Err(anyhow::anyhow!(
+            "Failed to fetch PAM categories: HTTP {}",
+            response.status()
+        ))
+    }
 }
