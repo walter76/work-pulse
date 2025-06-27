@@ -8,20 +8,21 @@ FROM rust:1.86 AS builder
 WORKDIR /usr/src/work-pulse
 
 # Copy the Cargo.toml and Cargo.lock files
-COPY src/Cargo.toml src/Cargo.lock ./
+COPY src/Cargo.docker.toml ./Cargo.toml
+COPY src/Cargo.lock ./
 
 # Copy the source code
 COPY src/work-pulse-core ./work-pulse-core
 COPY src/work-pulse-service ./work-pulse-service
 
 # Copy CA certificate inside the container and install the SSL certificates (if applicable)
-COPY certificates/* /usr/local/share/ca-certificates/
-RUN if [ "${INCLUDE_CA}" = "true" ]; then \
-       apt-get update && apt-get install -y ca-certificates && update-ca-certificates \
-    fi
+# COPY certificates/* /usr/local/share/ca-certificates/
+# RUN if [ "${INCLUDE_CA}" = "true" ]; then \
+#        apt-get update && apt-get install -y ca-certificates && update-ca-certificates \
+#     fi
 
 # Build the application
-RUN cargo build --workspace --release
+RUN cargo build --package work-pulse-service --release
 
 # Use a smaller base image for the final image
 FROM debian:trixie-slim
