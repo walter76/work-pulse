@@ -17,6 +17,8 @@ impl Category {
     }
 }
 
+const CATEGORY_SERVICE_URL: &str = "http://localhost:8080/api/v1/pam-categories";
+
 pub struct CategoryService {
 }
 
@@ -26,10 +28,8 @@ impl CategoryService {
     }
 
     pub fn get_categories(&self) -> Result<Vec<Category>> {
-        let url = "http://localhost:8080/api/v1/pam-categories";
-    
-        let response = reqwest::blocking::get(url)
-            .with_context(|| format!("Failed to fetch PAM categories from {}", url))?;
+        let response = reqwest::blocking::get(CATEGORY_SERVICE_URL)
+            .with_context(|| format!("Failed to fetch PAM categories from {}", CATEGORY_SERVICE_URL))?;
     
         if response.status().is_success() {
             let pam_categories: Vec<Category> = response
