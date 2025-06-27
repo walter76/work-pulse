@@ -1,5 +1,6 @@
 mod csv_import;
 
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -19,14 +20,14 @@ enum Commands {
     },
 }
 
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
         Commands::CsvImport { file } => {
-            println!("Importing CSV file: {}", file);
-
-            // csv_import::import(&file);
+            csv_import::import(&file)?;
         }
     }
+
+    Ok(())
 }
