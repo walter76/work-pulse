@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use encoding_rs::Encoding;
 use serde::Deserialize;
 
-use crate::category_service::CategoryService;
+use crate::{category_mapper, category_service::CategoryService};
 
 pub fn import(file_path: &str) -> Result<()> {
     println!("Importing CSV file: {}", file_path);
@@ -25,11 +25,14 @@ pub fn import(file_path: &str) -> Result<()> {
     }
 
     println!();
-    println!("Unique PAM Categories:");
+    println!("Unique PAM Categories and Mapping:");
 
     let pam_categories = get_pam_categories(&records);
     for pam_category in pam_categories {
-        println!("  {}", pam_category);
+        match category_mapper::map_category(&pam_category) {
+            Some(mapped_category) => println!("  {} -> {}", pam_category, mapped_category),
+            None => println!("  {} -> {}", pam_category, pam_category),
+        }
     }
 
     println!();

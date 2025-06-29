@@ -2381,6 +2381,7 @@ dependencies = [
  "clap",
  "csv",
  "encoding_rs",
+ "once_cell",
  "reqwest",
  "serde",
 ]
