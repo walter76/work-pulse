@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use encoding_rs::Encoding;
 use serde::Deserialize;
 
-use crate::{category_mapper, category_service::{Category, CategoryService}};
+use crate::{category_mapper, category_service::CategoryService};
 
 pub fn import(file_path: &str) -> Result<()> {
     println!("Importing CSV file: {}", file_path);

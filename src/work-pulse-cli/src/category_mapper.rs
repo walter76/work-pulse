@@ -27,11 +27,13 @@ pub fn map_category(category: &str) -> Option<&str> {
 }
 
 /// Gets all available category mappings as a vector of (input, output) pairs.
+#[allow(dead_code)]
 pub fn get_all_mappings() -> Vec<(&'static str, &'static str)> {
     CATEGORY_MAP.iter().map(|(&k, &v)| (k, v)).collect()
 }
 
 /// Gets all unique standardized categories.
+#[allow(dead_code)]
 pub fn get_standard_categories() -> Vec<&'static str> {
     let mut categories: Vec<_> = CATEGORY_MAP.values().cloned().collect();
     categories.sort();
@@ -40,6 +42,7 @@ pub fn get_standard_categories() -> Vec<&'static str> {
 }
 
 /// Checks if a category name has a mapping.
+#[allow(dead_code)]
 pub fn has_mapping(category: &str) -> bool {
     CATEGORY_MAP.contains_key(category)
 }
