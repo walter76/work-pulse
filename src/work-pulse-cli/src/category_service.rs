@@ -35,17 +35,37 @@ impl Category {
 const CATEGORY_SERVICE_URL: &str = "http://localhost:8080/api/v1/pam-categories";
 
 pub struct CategoryService {
+    client: reqwest::blocking::Client,
+    base_url: String,
+}
+
+impl Default for CategoryService {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CategoryService {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            client: reqwest::blocking::Client::new(),
+            base_url: CATEGORY_SERVICE_URL.to_string(),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn with_base_url(base_url: &str) -> Self {
+        Self {
+            client: reqwest::blocking::Client::new(),
+            base_url: base_url.to_string(),
+        }
     }
 
     pub fn get_categories(&self) -> Result<Vec<Category>> {
-        let response = reqwest::blocking::get(CATEGORY_SERVICE_URL)
-            .with_context(|| format!("Failed to fetch PAM categories from {}", CATEGORY_SERVICE_URL))?;
-    
+        let response = self.client.get(&self.base_url)
+            .send()
+            .with_context(|| format!("Failed to fetch PAM categories from {}", self.base_url))?;
+
         if response.status().is_success() {
             let pam_categories: Vec<Category> = response
                 .json()
@@ -60,8 +80,7 @@ impl CategoryService {
     }
 
     pub fn create_category(&self, category_name: &str) -> Result<Category> {
-        let client = reqwest::blocking::Client::new();
-        let response = client.post(CATEGORY_SERVICE_URL)
+        let response = self.client.post(&self.base_url)
             .json(&Category::new(category_name.to_string()))
             .send()
             .with_context(|| format!("Failed to create category: {}", category_name))?;
