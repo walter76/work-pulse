@@ -24,38 +24,7 @@ pub fn import(file_path: &str) -> Result<()> {
         );
     }
 
-    println!();
-    println!("Unique PAM Categories and Mapping:");
-
-    let pam_categories = get_pam_categories(&records);
-    for pam_category in pam_categories.iter() {
-        match category_mapper::map_category(&pam_category) {
-            Some(mapped_category) => println!("  {} -> {}", pam_category, mapped_category),
-            None => println!("  {} -> {}", pam_category, pam_category),
-        }
-    }
-
-    println!();
-    println!("Checking PAM Categories against Service Categories:");
-
-    let categories_from_service = CategoryService::new().get_categories()?;
-    for pam_category in pam_categories.iter() {
-        let category_name = category_mapper::map_category(&pam_category)
-            .unwrap_or(&pam_category);
-
-        if !categories_from_service.iter().any(|c| c.name() == category_name) {
-            println!(
-                "  {} -> {} (not found in service categories)",
-                pam_category, category_name
-            );
-
-            CategoryService::new()
-                .create_category(category_name)
-                .with_context(|| format!("Failed to create category: {}", category_name))?;
-        } else {
-            println!("  {} -> {}", pam_category, category_name);
-        }
-    }
+    check_and_create_pam_categories(&records)?;
 
     println!();
     println!("Categories from Service:");
@@ -118,6 +87,33 @@ fn read_csv(file_path: &str) -> Result<Vec<ActivityTableRecord>> {
             .map(|result| result.with_context(|| "Failed to deserialize CSV record"))
             .collect::<Result<Vec<ActivityTableRecord>>>()?,
     )
+}
+
+fn check_and_create_pam_categories(records: &[ActivityTableRecord]) -> Result<()> {
+    println!();
+    println!("Checking PAM Categories against Service Categories:");
+
+    let pam_categories = get_pam_categories(&records);
+    let pam_categories_from_service = CategoryService::new().get_categories()?;
+    for pam_category in pam_categories.iter() {
+        let category_name = category_mapper::map_category(&pam_category)
+            .unwrap_or(&pam_category);
+
+        if !pam_categories_from_service.iter().any(|c| c.name() == category_name) {
+            println!(
+                "  {} -> {} (not found in service categories)",
+                pam_category, category_name
+            );
+
+            CategoryService::new()
+                .create_category(category_name)
+                .with_context(|| format!("Failed to create category: {}", category_name))?;
+        } else {
+            println!("  {} -> {}", pam_category, category_name);
+        }
+    }
+
+    Ok(())
 }
 
 fn get_pam_categories(records: &[ActivityTableRecord]) -> Vec<String> {
