@@ -8,6 +8,21 @@ pub struct Category {
 }
 
 impl Category {
+    pub fn new(name: String) -> Self {
+        Self {
+            id: None,
+            name,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn with_id(id: String, name: String) -> Self {
+        Self {
+            id: Some(id),
+            name,
+        }
+    }
+
     pub fn id(&self) -> Option<&str> {
         self.id.as_deref()
     }
@@ -47,10 +62,7 @@ impl CategoryService {
     pub fn create_category(&self, category_name: &str) -> Result<Category> {
         let client = reqwest::blocking::Client::new();
         let response = client.post(CATEGORY_SERVICE_URL)
-            .json(&Category {
-                id: None,
-                name: category_name.to_string(),
-            })
+            .json(&Category::new(category_name.to_string()))
             .send()
             .with_context(|| format!("Failed to create category: {}", category_name))?;
 
