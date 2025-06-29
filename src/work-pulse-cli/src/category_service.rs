@@ -1,15 +1,15 @@
 use anyhow::{Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Category {
-    id: String,
+    id: Option<String>,
     name: String,
 }
 
 impl Category {
-    pub fn id(&self) -> &str {
-        &self.id
+    pub fn id(&self) -> Option<&str> {
+        self.id.as_deref()
     }
 
     pub fn name(&self) -> &str {
@@ -39,6 +39,29 @@ impl CategoryService {
         } else {
             Err(anyhow::anyhow!(
                 "Failed to fetch PAM categories: HTTP {}",
+                response.status()
+            ))
+        }
+    }
+
+    pub fn create_category(&self, category_name: &str) -> Result<Category> {
+        let client = reqwest::blocking::Client::new();
+        let response = client.post(CATEGORY_SERVICE_URL)
+            .json(&Category {
+                id: None,
+                name: category_name.to_string(),
+            })
+            .send()
+            .with_context(|| format!("Failed to create category: {}", category_name))?;
+
+        if response.status().is_success() {
+            let created_category: Category = response
+                .json()
+                .with_context(|| "Failed to parse created category from response")?;
+            Ok(created_category)
+        } else {
+            Err(anyhow::anyhow!(
+                "Failed to create category: HTTP {}",
                 response.status()
             ))
         }

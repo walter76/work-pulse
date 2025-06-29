@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use encoding_rs::Encoding;
 use serde::Deserialize;
 
-use crate::{category_mapper, category_service::CategoryService};
+use crate::{category_mapper, category_service::{Category, CategoryService}};
 
 pub fn import(file_path: &str) -> Result<()> {
     println!("Importing CSV file: {}", file_path);
@@ -28,10 +28,32 @@ pub fn import(file_path: &str) -> Result<()> {
     println!("Unique PAM Categories and Mapping:");
 
     let pam_categories = get_pam_categories(&records);
-    for pam_category in pam_categories {
+    for pam_category in pam_categories.iter() {
         match category_mapper::map_category(&pam_category) {
             Some(mapped_category) => println!("  {} -> {}", pam_category, mapped_category),
             None => println!("  {} -> {}", pam_category, pam_category),
+        }
+    }
+
+    println!();
+    println!("Checking PAM Categories against Service Categories:");
+
+    let categories_from_service = CategoryService::new().get_categories()?;
+    for pam_category in pam_categories.iter() {
+        let category_name = category_mapper::map_category(&pam_category)
+            .unwrap_or(&pam_category);
+
+        if !categories_from_service.iter().any(|c| c.name() == category_name) {
+            println!(
+                "  {} -> {} (not found in service categories)",
+                pam_category, category_name
+            );
+
+            CategoryService::new()
+                .create_category(category_name)
+                .with_context(|| format!("Failed to create category: {}", category_name))?;
+        } else {
+            println!("  {} -> {}", pam_category, category_name);
         }
     }
 
@@ -40,7 +62,7 @@ pub fn import(file_path: &str) -> Result<()> {
 
     let categories_from_service = CategoryService::new().get_categories()?;
     for category in categories_from_service {
-        println!("  {}: {}", category.id(), category.name());
+        println!("  {}: {}", category.id().unwrap(), category.name());
     }
 
     Ok(())
