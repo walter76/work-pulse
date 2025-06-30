@@ -1,10 +1,13 @@
 use std::{fs::File, io::{BufReader, Read}};
 
 use anyhow::{Context, Result};
+use chrono::NaiveDate;
 use encoding_rs::Encoding;
 use serde::Deserialize;
 
-use crate::{category_mapper, category_service::CategoryService};
+use crate::{activity_service::ActivityService, category_mapper, category_service::CategoryService};
+
+const ACTIVITIES_YEAR: &str = "2023";
 
 pub fn import(file_path: &str) -> Result<()> {
     println!("Importing CSV file: {}", file_path);
@@ -30,11 +33,58 @@ pub fn import(file_path: &str) -> Result<()> {
     println!("Categories from Service:");
 
     let categories_from_service = CategoryService::new().get_categories()?;
-    for category in categories_from_service {
+    for category in categories_from_service.iter() {
         println!("  {}: {}", category.id().unwrap(), category.name());
     }
 
+    println!();
+    println!("Creating Activities from CSV records...");
+    println!("This might take a while, depending on the number of records in the CSV file.");
+
+    let activity_service = ActivityService::new();
+
+    for record in records.iter() {
+        let date = convert_date_format(&record.date)
+            .with_context(|| format!("Failed to convert date format for record: {}", record.date))?;
+
+        let pam_category_id = categories_from_service
+            .iter()
+            .find(|c| c.name() == category_mapper::map_category(&record.pam_category).unwrap_or(&record.pam_category))
+            .map(|c| c.id().unwrap())
+            .unwrap()
+            .to_string();
+
+        let activity = activity_service.create_activity(
+            date,
+            record.check_in.clone(),
+            Some(record.check_out.clone()),
+            pam_category_id.clone(),
+            record.task.clone(),
+        )?;
+
+        println!(
+            "Created Activity: ID: {}, Date: {}, Start Time: {}, End Time: {}, PAM Category ID: {}, Task: {}",
+            activity.id().unwrap_or("N/A"),
+            activity.date(),
+            activity.start_time(),
+            activity.end_time().unwrap_or("N/A"),
+            activity.pam_category_id(),
+            activity.task()
+        );
+    }
+
     Ok(())
+}
+
+fn convert_date_format(date: &str) -> Result<String> {
+    // add the year of the activity
+    let date = format!("{}{}", date, ACTIVITIES_YEAR);
+
+    // Parse the date in "dd.mm.yyyy" format
+    let parsed_date = NaiveDate::parse_from_str(&date, "%d.%m.%Y")?;
+
+    // Format the date into "yyyy-mm-dd"
+    Ok(parsed_date.format("%Y-%m-%d").to_string())
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Deserialize)]

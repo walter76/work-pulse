@@ -1,3 +1,4 @@
+mod activity_service;
 mod category_mapper;
 mod category_service;
 mod csv_import;
