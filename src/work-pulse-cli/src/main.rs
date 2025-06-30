@@ -1,6 +1,7 @@
 mod activity_service;
 mod category_mapper;
 mod category_service;
+mod csv_export;
 mod csv_import;
 
 use anyhow::Result;
@@ -21,6 +22,13 @@ enum Commands {
         #[arg(short, long)]
         file: String,
     },
+
+    /// Export activities to a CSV file.
+    CsvExport {
+        /// The path to the CSV file to export.
+        #[arg(short, long)]
+        file: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -29,6 +37,10 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::CsvImport { file } => {
             csv_import::import(&file)?;
+        }
+
+        Commands::CsvExport { file } => {
+            csv_export::export(&file)?;
         }
     }
 
