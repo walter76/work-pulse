@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Button, Input, Option, Select, Sheet, Typography } from '@mui/joy'
-import { Add } from '@mui/icons-material'
+import { Button, Input, Option, Select, Sheet, Table, Typography } from '@mui/joy'
+import { Add, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
 const ActivitiesList = () => {
+  const [activities, setActivities] = useState([])
   const [categories, setCategories] = useState([])
   const [categoryId, setCategoryId] = useState('')
   const [activityDate, setActivityDate] = useState('')
@@ -15,6 +16,20 @@ const ActivitiesList = () => {
     // Fetch categories when the component mounts
     refreshCategories()
   }, [])
+
+  const refreshActivities = async () => {
+    console.log('Refreshing activities...')
+
+    try {
+      const response = await axios.get('http://localhost:8080/api/v1/activities')
+
+      setActivities(response.data)
+
+      console.log('Activities refreshed successfully!')
+    } catch (error) {
+      console.error('Error fetching activities:', error)
+    }
+  }
 
   const refreshCategories = async () => {
     console.log('Refreshing categories...')
@@ -108,6 +123,45 @@ const ActivitiesList = () => {
           Add Activity
         </Button>
       </Sheet>
+
+      <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
+        <Typography level="h3">
+          Activities List
+        </Typography>
+
+        <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
+          <Typography>Number of Records: {activities.length}</Typography>
+          <Button startDecorator={<Refresh />} onClick={refreshActivities}>
+            Refresh Activities
+          </Button>
+        </Sheet>
+
+        <Table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Check-In</th>
+              <th>Check-Out</th>
+              <th>PAM Category</th>
+              <th>Task</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activities.map((activity) => (
+              <tr key={activity.id}>
+                <td>{activity.date}</td>
+                <td>{activity.start_time}</td>
+                <td>{activity.end_time}</td>
+                <td>{activity.pam_category_id}</td>
+                <td>{activity.task}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+
+      </Sheet>
+
     </Sheet>
   )
 }
