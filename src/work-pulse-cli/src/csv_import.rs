@@ -7,8 +7,6 @@ use serde::Deserialize;
 
 use crate::{activity_service::ActivityService, category_mapper, category_service::CategoryService};
 
-const ACTIVITIES_YEAR: &str = "2023";
-
 pub fn import(file_path: &str) -> Result<()> {
     println!("Importing CSV file: {}", file_path);
 
@@ -75,6 +73,8 @@ pub fn import(file_path: &str) -> Result<()> {
 
     Ok(())
 }
+
+const ACTIVITIES_YEAR: &str = "2025";
 
 fn convert_date_format(date: &str) -> Result<String> {
     // add the year of the activity
