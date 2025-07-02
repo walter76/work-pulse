@@ -4,6 +4,10 @@ ARG INCLUDE_CA=false
 # Use the official Rust image as the base image
 FROM rust:1.86 AS builder
 
+# Pass the ARG value to an environment variable
+ARG INCLUDE_CA
+ENV INCLUDE_CA=${INCLUDE_CA}
+
 # Set the working directory
 WORKDIR /usr/src/work-pulse
 
@@ -19,6 +23,12 @@ RUN mkdir -p ./certificates
 COPY certificates ./certificates
 
 # Copy CA certificate inside the container and install the SSL certificates (if applicable)
+# RUN if [ "$INCLUDE_CA" = "true" ] && [ -d "./certificates" ]; then \
+#      cp -r ./certificates /usr/local/share/ca-certificates && \
+#      apt-get update && apt-get install -y ca-certificates && \
+#      update-ca-certificates; \
+#     fi
+
 RUN if [ "$INCLUDE_CA" = "true" ] && [ -d "./certificates" ]; then \
       cp -r ./certificates /usr/local/share/ca-certificates && \
       apt-get update && apt-get install -y ca-certificates && \
