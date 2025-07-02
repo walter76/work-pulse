@@ -4,10 +4,13 @@ import { Add, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
 const ActivitiesList = () => {
+  const today = new Date()
+  const formattedDate = today.toISOString().split('T')[0] // Format date as YYYY-MM-DD
+
   const [activities, setActivities] = useState([])
   const [categories, setCategories] = useState([])
   const [categoryId, setCategoryId] = useState('')
-  const [activityDate, setActivityDate] = useState('')
+  const [activityDate, setActivityDate] = useState(formattedDate)
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [task, setTask] = useState('')
@@ -21,7 +24,7 @@ const ActivitiesList = () => {
     console.log('Refreshing activities...')
 
     try {
-      const response = await axios.get('http://localhost:8080/api/v1/activities')
+      const response = await axios.get(`http://localhost:8080/api/v1/activities?date=${formattedDate}`)
 
       setActivities(response.data)
 
@@ -59,10 +62,13 @@ const ActivitiesList = () => {
 
       // Reset the input field after creating the category
       setCategoryId('')
-      setActivityDate('')
+      setActivityDate(formattedDate)
       setStartTime('')
       setEndTime('')
       setTask('')
+
+      // Refresh the activities list after creating the activity
+      refreshActivities()
 
       console.log(`Activity created successfully!`)
     } catch (error) {
@@ -126,7 +132,7 @@ const ActivitiesList = () => {
 
       <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
         <Typography level="h3">
-          Activities List
+          Activities List on {formattedDate}
         </Typography>
 
         <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
