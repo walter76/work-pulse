@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{extract::{Query, State}, response::IntoResponse, Json};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{entities::{activity::ActivityId, pam::PamCategoryId}, infra::repositories::in_memory::RepositoryFactory, use_cases::activities_list::ActivitiesList};
 
@@ -92,23 +92,38 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
         .with_state(store)
 }
 
+/// Query parameters for listing activities.
+#[derive(Deserialize, IntoParams)]
+struct ListActivitiesQuery {
+    /// The date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
+    date: Option<String>,
+}
+
 /// Lists all activities.
 #[utoipa::path(
     get,
     path = "",
     tag = ACTIVITIES_LIST_SERVICE_TAG,
+    params(
+        ListActivitiesQuery,
+    ),
     responses(
         (status = 200, description = "List all activities successfully", body = Vec<Activity>),
     )
 )]
-async fn list_activities(State(store): State<Arc<Store>>) -> Json<Vec<Activity>> {
+async fn list_activities(State(store): State<Arc<Store>>, query: Query<ListActivitiesQuery>,) -> Json<Vec<Activity>> {
     let activities_list = store.lock().await;
 
     let activities = activities_list
         .activities()
         .iter()
         .map(Activity::from_entity)
-        .collect();
+        .collect::<Vec<_>>();
+
+    // Filter activities by date if provided
+    if let Some(date) = query.date.as_ref() {
+        return Json(activities.into_iter().filter(|activity| activity.date == *date).collect());
+    }
 
     Json(activities)
 }
