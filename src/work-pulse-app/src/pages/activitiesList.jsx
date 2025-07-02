@@ -154,15 +154,20 @@ const ActivitiesList = () => {
             </tr>
           </thead>
           <tbody>
-            {activities.map((activity) => (
-              <tr key={activity.id}>
-                <td>{activity.date}</td>
-                <td>{activity.start_time}</td>
-                <td>{activity.end_time}</td>
-                <td>{activity.pam_category_id}</td>
-                <td>{activity.task}</td>
-              </tr>
-            ))}
+            {activities.map((activity) => {
+              const category = categories.find((cat) => cat.id === activity.pam_category_id)
+              const categoryName = category ? category.name : 'Unknown'
+
+              return (
+                <tr key={activity.id}>
+                  <td>{activity.date}</td>
+                  <td>{activity.start_time}</td>
+                  <td>{activity.end_time}</td>
+                  <td>{categoryName}</td>
+                  <td>{activity.task}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </Table>
 
