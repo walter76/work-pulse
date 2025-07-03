@@ -1,33 +1,12 @@
-import { BrowserRouter as Router, Link, Routes, Route, useLocation } from 'react-router-dom'
-import { Box, Button, Sheet, Typography } from '@mui/joy'
+import { Routes, Route } from 'react-router-dom'
+import { Sheet, Typography } from '@mui/joy'
 
 import ActivitiesList from "../pages/activitiesList"
 import PamCategoriesConfiguration from "../pages/pamCategoriesConfiguration"
 
-const Navigation = () => {
-  const location = useLocation()
+import Navigation from './Navigation'
 
-  return (
-    <Box sx={{ display: 'flex', gap: 2, marginBottom: 3 }}>
-      <Button
-        component={Link}
-        to="/activities"
-        variant={location.pathname === '/activities' ? 'solid' : 'soft'}
-      >
-        Activities Tracker
-      </Button>
-      <Button
-        component={Link}
-        to="/categories"
-        variant={location.pathname === '/categories' ? 'solid' : 'soft'}
-      >
-        Categories Configuration
-      </Button>
-    </Box>
-  )
-}
-
-const AppContent = () => (
+const App = () => (
   <Sheet sx={{ minHeight: '100vh', padding: 2 }}>
     <Sheet
       variant="outlined"
@@ -49,13 +28,5 @@ const AppContent = () => (
     </Routes>
   </Sheet>
 )
-
-const App = () => {
-  return (
-    <Router>
-      <AppContent />
-    </Router>
-  )
-}
 
 export default App
