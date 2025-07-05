@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
-import { Sheet, Typography } from '@mui/joy'
+import { Box, Sheet, Typography } from '@mui/joy'
 
 import ActivitiesList from "../pages/activitiesList"
 import PamCategoriesConfiguration from "../pages/pamCategoriesConfiguration"
@@ -20,12 +20,28 @@ const App = () => (
         Work Pulse
       </Typography>
     </Sheet>
-    <Navigation />
-    <Routes>
-      <Route path="/activities" element={<ActivitiesList />} />
-      <Route path="/categories" element={<PamCategoriesConfiguration />} />
-      <Route path="/" element={<ActivitiesList />} />
-    </Routes>
+
+    <Box sx={{ display: 'flex', minHeight: 'calc(100vh - 200px)' }}>
+      <Sheet
+        variant="outlined"
+        sx={{
+          width: 300,
+          padding: 2,
+          borderRight: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Navigation />
+      </Sheet>
+
+      <Box sx={{ flex: 1, padding: 2 }}>
+        <Routes>
+          <Route path="/activities" element={<ActivitiesList />} />
+          <Route path="/categories" element={<PamCategoriesConfiguration />} />
+          <Route path="/" element={<ActivitiesList />} />
+        </Routes>
+      </Box>
+    </Box>
   </Sheet>
 )
 

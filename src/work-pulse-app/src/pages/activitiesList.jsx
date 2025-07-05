@@ -79,7 +79,7 @@ const ActivitiesList = () => {
   return (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5, margin: 5 }}>
       <Typography level="h2">
-        Activities
+        Today's Activities
       </Typography>
 
       <Sheet variant="outlined" sx={{ display: 'flex', gap: 2, padding: 2 }}>

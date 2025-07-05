@@ -1,26 +1,65 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Box, Button } from '@mui/joy'
+import { Button, Divider, Stack } from '@mui/joy'
+import { List, Settings, ViewList } from '@mui/icons-material'
 
 const Navigation = () => {
   const location = useLocation()
 
   return (
-    <Box sx={{ display: 'flex', gap: 2, marginBottom: 3 }}>
+    <Stack spacing={2}>
       <Button
         component={Link}
         to="/activities"
         variant={location.pathname === '/activities' ? 'solid' : 'soft'}
+        startDecorator={<List />}
+        fullWidth
+        sx={{ justifyContent: 'flex-start' }}
       >
-        Activities Tracker
+        Today's Activities
       </Button>
+
+      <Divider />
+
+      <Button
+        variant="soft"
+        startDecorator={<ViewList />}
+        fullWidth
+        sx={{ justifyContent: 'flex-start' }}
+      >
+        Daily Activity Log
+      </Button>
+
+      <Button
+        variant="soft"
+        startDecorator={<ViewList />}
+        fullWidth
+        sx={{ justifyContent: 'flex-start' }}
+      >
+        Weekly Activity Log
+      </Button>
+
+      <Button
+        variant="soft"
+        startDecorator={<ViewList />}
+        fullWidth
+        sx={{ justifyContent: 'flex-start' }}
+      >
+        Yearly Activity Log
+      </Button>
+
+      <Divider />
+
       <Button
         component={Link}
         to="/categories"
         variant={location.pathname === '/categories' ? 'solid' : 'soft'}
+        startDecorator={<Settings />}
+        fullWidth
+        sx={{ justifyContent: 'flex-start' }}
       >
         Categories Configuration
       </Button>
-    </Box>
+    </Stack>
   )
 }
 
