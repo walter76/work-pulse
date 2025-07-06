@@ -77,7 +77,7 @@ const ActivitiesList = () => {
   }
 
   return (
-    <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5, margin: 5 }}>
+    <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <Typography level="h2">
         Today's Activities
       </Typography>

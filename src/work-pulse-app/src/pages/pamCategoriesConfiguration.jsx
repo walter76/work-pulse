@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, IconButton, Input, Sheet, Table, Typography } from '@mui/joy'
 import { Add, Check, Close, Delete, Edit, Refresh } from '@mui/icons-material'
 import axios from 'axios'
@@ -8,9 +8,15 @@ const PamCategoriesConfiguration = () => {
   const [categoryName, setCategoryName] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editingName, setEditingName] = useState('')
+  const [error, setError] = useState('')
 
+  useEffect(() => {
+    refreshCategories()
+  }, [])
+  
   const refreshCategories = async () => {
     console.log('Refreshing categories...')
+    setError('')
 
     try {
       const response = await axios.get('http://localhost:8080/api/v1/pam-categories')
@@ -20,17 +26,19 @@ const PamCategoriesConfiguration = () => {
       console.log('Categories refreshed successfully!')
     } catch (error) {
       console.error('Error fetching categories:', error)
+      setError('Failed to fetch categories. Please try again.')
     }
   }
 
   const createCategory = async () => {
     if (!categoryName) {
-      alert('Please enter a category name.')
+      setError('Please enter a category name.')
       return
     }
 
     // Here you would typically make an API call to create the category
     console.log(`Creating category: ${categoryName}`)
+    setError('')
 
     try {
       await axios.post('http://localhost:8080/api/v1/pam-categories', {
@@ -46,11 +54,13 @@ const PamCategoriesConfiguration = () => {
       console.log(`Category "${categoryName}" created successfully!`)
     } catch (error) {
       console.error('Error creating category:', error)
+      setError('Failed to create category. Is the category name already existing? Please try again.')
     }
   }
 
   const deleteCategory = async (categoryId) => {
     console.log(`Deleting category with ID: ${categoryId}`)
+    setError('')
 
     try {
       await axios.delete(`http://localhost:8080/api/v1/pam-categories/${categoryId}`)
@@ -61,6 +71,7 @@ const PamCategoriesConfiguration = () => {
       console.log(`Category with ID ${categoryId} deleted successfully!`)
     } catch (error) {
       console.error(`Error deleting category with ID ${categoryId}:`, error)
+      setError('Failed to delete category. Please try again.')
     }
   }
 
@@ -76,6 +87,7 @@ const PamCategoriesConfiguration = () => {
 
   const saveCategory = async () => {
     console.log(`Renaming category with ID: ${editingId} to "${editingName}"`)
+    setError('')
 
     try {
       await axios.put(`http://localhost:8080/api/v1/pam-categories`, {
@@ -88,24 +100,32 @@ const PamCategoriesConfiguration = () => {
       refreshCategories()
     } catch (error) {
         console.error(`Error renaming category:`, error)
+        setError('Failed to rename category. Is the category name already existing? Please try again.')
     }
   }
 
   return (
-    <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5, margin: 5 }}>
+    <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <Typography level="h2">
-        PAM Categories Configuration
+        Categories Configuration
       </Typography>
 
+      {error && (
+        <Typography level="body-md" color="danger" sx={{ padding: 1 }}>
+          {error}
+        </Typography>
+      )}
+      
       <Sheet variant="outlined" sx={{ display: 'flex', gap: 2, padding: 2 }}>
         <Input
           required
           id="category-name"
+          size="sm"
           placeholder="Category Name"
           value={categoryName}
           onChange={(e) => setCategoryName(e.target.value)}
         />
-        <Button startDecorator={<Add/>} onClick={createCategory}>
+        <Button startDecorator={<Add/>} size="sm" onClick={createCategory}>
           Add Category
         </Button>
       </Sheet>
@@ -117,7 +137,7 @@ const PamCategoriesConfiguration = () => {
 
         <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
           <Typography>Number of Records: {categories.length}</Typography>
-          <Button startDecorator={<Refresh />} onClick={refreshCategories}>
+          <Button startDecorator={<Refresh />} size="sm" onClick={refreshCategories}>
             Refresh Categories
           </Button>
         </Sheet>
