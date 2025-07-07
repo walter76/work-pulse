@@ -16,8 +16,8 @@ const TodaysActivities = () => {
   const [task, setTask] = useState('')
 
   useEffect(() => {
-    // Fetch categories when the component mounts
     refreshCategories()
+    refreshActivities()
   }, [])
 
   const refreshActivities = async () => {
