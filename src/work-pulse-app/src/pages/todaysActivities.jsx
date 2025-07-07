@@ -3,7 +3,7 @@ import { Button, Input, Option, Select, Sheet, Table, Typography } from '@mui/jo
 import { Add, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
-const ActivitiesList = () => {
+const TodaysActivities = () => {
   const today = new Date()
   const formattedDate = today.toISOString().split('T')[0] // Format date as YYYY-MM-DD
 
@@ -107,8 +107,8 @@ const ActivitiesList = () => {
           onChange={(e) => setEndTime(e.target.value)}
         />
         <Select
-          id="pam-category"
-          placeholder="PAM Category"
+          id="category"
+          placeholder="Category"
           value={categoryId}
           onChange={(_e, newValue) => setCategoryId(newValue)}
         >
@@ -148,7 +148,7 @@ const ActivitiesList = () => {
               <th>Date</th>
               <th>Check-In</th>
               <th>Check-Out</th>
-              <th>PAM Category</th>
+              <th>Category</th>
               <th>Task</th>
               <th>Actions</th>
             </tr>
@@ -177,4 +177,4 @@ const ActivitiesList = () => {
   )
 }
 
-export default ActivitiesList
+export default TodaysActivities

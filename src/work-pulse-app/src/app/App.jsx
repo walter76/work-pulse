@@ -1,8 +1,8 @@
 import { Routes, Route } from 'react-router-dom'
 import { Box, Sheet, Typography } from '@mui/joy'
 
-import ActivitiesList from "../pages/activitiesList"
-import PamCategoriesConfiguration from "../pages/pamCategoriesConfiguration"
+import TodaysActivities from "../pages/todaysActivities"
+import CategoriesConfiguration from "../pages/categoriesConfiguration"
 
 import Navigation from './Navigation'
 
@@ -36,9 +36,9 @@ const App = () => (
 
       <Box sx={{ flex: 1, padding: 2 }}>
         <Routes>
-          <Route path="/activities" element={<ActivitiesList />} />
-          <Route path="/categories" element={<PamCategoriesConfiguration />} />
-          <Route path="/" element={<ActivitiesList />} />
+          <Route path="/activities" element={<TodaysActivities />} />
+          <Route path="/categories" element={<CategoriesConfiguration />} />
+          <Route path="/" element={<TodaysActivities />} />
         </Routes>
       </Box>
     </Box>

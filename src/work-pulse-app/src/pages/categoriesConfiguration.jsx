@@ -3,7 +3,7 @@ import { Button, IconButton, Input, Sheet, Table, Typography } from '@mui/joy'
 import { Add, Check, Close, Delete, Edit, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
-const PamCategoriesConfiguration = () => {
+const CategoriesConfiguration = () => {
   const [categories, setCategories] = useState([])
   const [categoryName, setCategoryName] = useState('')
   const [editingId, setEditingId] = useState(null)
@@ -195,7 +195,7 @@ const PamCategoriesConfiguration = () => {
                   ) : (
                     <>
                       <IconButton 
-                        aria-label="Rename PAM Category"
+                        aria-label="Rename Category"
                         color="primary"
                         variant="soft"
                         onClick={() => startEditing(category)}
@@ -205,7 +205,7 @@ const PamCategoriesConfiguration = () => {
                         <Edit />
                       </IconButton>
                       <IconButton 
-                        aria-label="Delete PAM Category"
+                        aria-label="Delete Category"
                         color="danger"
                         variant="soft"
                         onClick={() => deleteCategory(category.id)}
@@ -225,4 +225,4 @@ const PamCategoriesConfiguration = () => {
   )
 }
 
-export default PamCategoriesConfiguration
+export default CategoriesConfiguration
