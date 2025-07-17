@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Input, Option, Select, Sheet, Table, Typography } from '@mui/joy'
 import { Add, Refresh } from '@mui/icons-material'
 import axios from 'axios'
@@ -15,6 +15,8 @@ const TodaysActivities = () => {
   const [endTime, setEndTime] = useState('')
   const [task, setTask] = useState('')
   const [error, setError] = useState('')
+
+  const startTimeRef = useRef(null)
   
   useEffect(() => {
     refreshCategories()
@@ -29,6 +31,9 @@ const TodaysActivities = () => {
       const response = await axios.get(`http://localhost:8080/api/v1/activities?date=${formattedDate}`)
 
       setActivities(response.data)
+
+      // focus back to start time input
+      startTimeRef.current?.focus()
 
       console.log('Activities refreshed successfully!')
     } catch (error) {
@@ -101,6 +106,9 @@ const TodaysActivities = () => {
       // Refresh the activities list after creating the activity
       refreshActivities()
 
+      // focus back to start time input
+      startTimeRef.current?.focus()
+
       console.log(`Activity created successfully!`)
     } catch (error) {
       console.error('Error creating activity:', error)
@@ -131,6 +139,7 @@ const TodaysActivities = () => {
           size="sm"
         />
         <Input
+          ref={startTimeRef}
           required
           id="start-time"
           type="time"
@@ -139,6 +148,11 @@ const TodaysActivities = () => {
           onChange={(e) => setStartTime(e.target.value)}
           size="sm"
           autoFocus
+          slotProps={{
+            input: {
+              ref: startTimeRef,
+            }
+          }}
         />
         <Input
           id="end-time"
