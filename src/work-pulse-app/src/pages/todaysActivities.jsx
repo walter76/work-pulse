@@ -154,19 +154,28 @@ const TodaysActivities = () => {
             </tr>
           </thead>
           <tbody>
-            {activities.map((activity) => {
-              const category = categories.find((cat) => cat.id === activity.pam_category_id)
-              const categoryName = category ? category.name : 'Unknown'
+            {activities
+              .sort((a, b) => {
+                // first sort by date (descending)
+                const dateComparison = new Date(a.date) - new Date(b.date)
+                if (dateComparison !== 0) return dateComparison
 
-              return (
-                <tr key={activity.id}>
-                  <td>{activity.date}</td>
-                  <td>{activity.start_time}</td>
-                  <td>{activity.end_time}</td>
-                  <td>{categoryName}</td>
-                  <td>{activity.task}</td>
-                </tr>
-              )
+                // if dates are equal, sort by start time (descending)
+                return a.start_time.localeCompare(b.start_time)
+              })
+              .map((activity) => {
+                const category = categories.find((cat) => cat.id === activity.pam_category_id)
+                const categoryName = category ? category.name : 'Unknown'
+
+                return (
+                  <tr key={activity.id}>
+                    <td>{activity.date}</td>
+                    <td>{activity.start_time}</td>
+                    <td>{activity.end_time}</td>
+                    <td>{categoryName}</td>
+                    <td>{activity.task}</td>
+                  </tr>
+                )
             })}
           </tbody>
         </Table>
