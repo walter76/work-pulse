@@ -128,6 +128,7 @@ const TodaysActivities = () => {
           placeholder="Date"
           value={activityDate}
           onChange={(e) => setActivityDate(e.target.value)}
+          size="sm"
         />
         <Input
           required
@@ -136,6 +137,8 @@ const TodaysActivities = () => {
           placeholder="Start Time"
           value={startTime}
           onChange={(e) => setStartTime(e.target.value)}
+          size="sm"
+          autoFocus
         />
         <Input
           id="end-time"
@@ -143,12 +146,14 @@ const TodaysActivities = () => {
           placeholder="End Time"
           value={endTime}
           onChange={(e) => setEndTime(e.target.value)}
+          size="sm"
         />
         <Select
           id="category"
           placeholder="Category"
           value={categoryId}
           onChange={(_e, newValue) => setCategoryId(newValue)}
+          size="sm"
         >
           {categories.map((category) => (
             <Option key={category.id} value={category.id}>
@@ -162,8 +167,13 @@ const TodaysActivities = () => {
           placeholder="Task"
           value={task}
           onChange={(e) => setTask(e.target.value)}
+          onKeyDown={ e => {
+            if (e.key === 'Enter') createActivity()
+          }}
+          size="sm"
+          sx={{ minWidth: 400 }}
         />
-        <Button startDecorator={<Add/>} onClick={createActivity}>
+        <Button startDecorator={<Add/>} onClick={createActivity} size="sm">
           Add Activity
         </Button>
       </Sheet>
@@ -175,7 +185,7 @@ const TodaysActivities = () => {
 
         <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
           <Typography>Number of Records: {activities.length}</Typography>
-          <Button startDecorator={<Refresh />} onClick={refreshActivities}>
+          <Button startDecorator={<Refresh />} onClick={refreshActivities} size="sm">
             Refresh Activities
           </Button>
         </Sheet>
