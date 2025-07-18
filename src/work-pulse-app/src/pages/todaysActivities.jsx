@@ -28,7 +28,7 @@ const TodaysActivities = () => {
     setError('')
 
     try {
-      const response = await axios.get(`http://localhost:8080/api/v1/activities?date=${formattedDate}`)
+      const response = await axios.get(`http://localhost:8080/api/v1/activities?start_date=${formattedDate}&end_date=${formattedDate}`)
 
       setActivities(response.data)
 

@@ -95,8 +95,10 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 /// Query parameters for listing activities.
 #[derive(Deserialize, IntoParams)]
 struct ListActivitiesQuery {
-    /// The date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
-    date: Option<String>,
+    /// The start date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
+    start_date: Option<String>,
+    /// The end date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
+    end_date: Option<String>,
 }
 
 /// Lists all activities.
@@ -109,9 +111,10 @@ struct ListActivitiesQuery {
     ),
     responses(
         (status = 200, description = "List all activities successfully", body = Vec<Activity>),
+        (status = 400, description = "Invalid request - both start_date and end_date are required", body = String)
     )
 )]
-async fn list_activities(State(store): State<Arc<Store>>, query: Query<ListActivitiesQuery>,) -> Json<Vec<Activity>> {
+async fn list_activities(State(store): State<Arc<Store>>, query: Query<ListActivitiesQuery>,) -> impl IntoResponse {
     let activities_list = store.lock().await;
 
     let activities = activities_list
@@ -120,12 +123,27 @@ async fn list_activities(State(store): State<Arc<Store>>, query: Query<ListActiv
         .map(Activity::from_entity)
         .collect::<Vec<_>>();
 
-    // Filter activities by date if provided
-    if let Some(date) = query.date.as_ref() {
-        return Json(activities.into_iter().filter(|activity| activity.date == *date).collect());
-    }
+    // Filter activities by date rangeif provided
+    match (&query.start_date, &query.end_date) {
+        (Some(start_date), Some(end_date)) => {
+            let filtered_activities = activities
+                .into_iter()
+                .filter(|activity| {
+                    activity.date >= *start_date && activity.date <= *end_date
+                })
+                .collect::<Vec<_>>();
+            Json(filtered_activities).into_response()
+        }
 
-    Json(activities)
+        (Some(_), None) | (None, Some(_)) => {
+            (
+                StatusCode::BAD_REQUEST,
+                Json("Both start_date and end_date are required when filtering by date.".to_string())
+            ).into_response()
+        }
+
+        (None, None) => Json(activities).into_response(),
+    }
 }
 
 /// Creates a new Activity.
