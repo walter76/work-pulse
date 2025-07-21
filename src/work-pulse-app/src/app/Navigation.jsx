@@ -26,7 +26,18 @@ const Navigation = () => {
         fullWidth
         sx={{ justifyContent: 'flex-start' }}
       >
-        Daily Activity Log
+        Activity Log
+      </Button>
+
+      <Divider />
+
+      <Button
+        variant="soft"
+        startDecorator={<ViewList />}
+        fullWidth
+        sx={{ justifyContent: 'flex-start' }}
+      >
+        Daily Report
       </Button>
 
       <Button
@@ -35,7 +46,7 @@ const Navigation = () => {
         fullWidth
         sx={{ justifyContent: 'flex-start' }}
       >
-        Weekly Activity Log
+        Weekly Report
       </Button>
 
       <Button
@@ -44,7 +55,7 @@ const Navigation = () => {
         fullWidth
         sx={{ justifyContent: 'flex-start' }}
       >
-        Yearly Activity Log
+        Yearly Report
       </Button>
 
       <Divider />
