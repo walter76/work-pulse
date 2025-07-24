@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::{Query, State}, response::IntoResponse, Json};
+use axum::{extract::{Path, Query, State}, response::IntoResponse, Json};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
@@ -89,6 +89,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 
     OpenApiRouter::new()
         .routes(routes!(list_activities, create_activity))
+        .routes(routes!(delete_activity))
         .with_state(store)
 }
 
@@ -180,6 +181,41 @@ async fn create_activity(
         StatusCode::CREATED,
         Json(Activity::from_entity(&activity)),
     )
+}
+
+/// Deletes an activity by ID.
+#[utoipa::path(
+    delete,
+    path = "/{id}",
+    tag = ACTIVITIES_LIST_SERVICE_TAG,
+    params(
+        ("id" = String, Path, description = "The unique identifier of the activity to delete")
+    ),
+    responses(
+        (status = 204, description = "Activity successfully deleted"),
+        (status = 400, description = "Invalid request", body = String),
+        (status = 500, description = "Internal server error", body = String)
+    ),
+)]
+async fn delete_activity(
+    Path(id): Path<String>,
+    State(store): State<Arc<Store>>,
+) -> impl IntoResponse {
+    let mut activities_list = store.lock().await;
+
+    match ActivityId::parse_str(&id) {
+        Ok(activity_id) => match activities_list.delete(activity_id) {
+            Ok(_) => StatusCode::NO_CONTENT.into_response(),
+            Err(err) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(err.to_string())
+                ).into_response(),
+        },
+        Err(_) => (
+                StatusCode::BAD_REQUEST,
+                Json("Invalid activity ID format".to_string())
+            ).into_response(),
+    }
 }
 
 #[cfg(test)]
