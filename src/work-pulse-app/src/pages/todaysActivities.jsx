@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Input, Option, Select, Sheet, Table, Typography } from '@mui/joy'
-import { Add, Refresh } from '@mui/icons-material'
+import { Button, IconButton, Input, Option, Select, Sheet, Table, Typography } from '@mui/joy'
+import { Add, Delete, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
 const TodaysActivities = () => {
@@ -114,6 +114,23 @@ const TodaysActivities = () => {
       console.error('Error creating activity:', error)
       setError('Failed to create activity. Please try again.')
     }    
+  }
+
+  const deleteActivity = async (activityId) => {
+    console.log(`Deleting activity with ID: ${activityId}`)
+    setError('')
+
+    try {
+      await axios.delete(`http://localhost:8080/api/v1/activities/${activityId}`)
+
+      // Refresh the activities list after deletion
+      refreshActivities()
+
+      console.log(`Activity with ID ${activityId} deleted successfully!`)
+    } catch (error) {
+      console.error(`Error deleting activity with ID ${activityId}:`, error)
+      setError('Failed to delete activity. Please try again.')
+    }
   }
 
   return (
@@ -236,6 +253,17 @@ const TodaysActivities = () => {
                     <td>{activity.end_time}</td>
                     <td>{categoryName}</td>
                     <td>{activity.task}</td>
+                    <td>
+                      <IconButton 
+                        aria-label="Delete Activity"
+                        color="danger"
+                        variant="soft"
+                        onClick={() => deleteActivity(activity.id)}
+                        size="sm"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </td>
                   </tr>
                 )
             })}
