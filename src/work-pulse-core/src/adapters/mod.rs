@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::entities::{activity::Activity, pam::{PamCategory, PamCategoryId}};
+use crate::entities::{activity::{Activity, ActivityId}, pam::{PamCategory, PamCategoryId}};
 
 /// Error type for the PAM categories list repository.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
@@ -60,6 +60,14 @@ pub trait PamCategoriesListRepository: Send + Sync {
     fn delete(&mut self, id: PamCategoryId) -> Result<(), PamCategoriesListRepositoryError>;
 }
 
+/// Error type for the activities list repository.
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
+pub enum ActivitiesListRepositoryError {
+    /// An error indicating that the activity with the specified ID was not found.
+    #[error("Activity with ID {0} not found")]
+    NotFound(ActivityId),
+}
+
 /// Repository trait for managing a list of activities.
 pub trait ActivitiesListRepository: Send + Sync {
     /// Retrieves a list of all activities.
@@ -75,4 +83,15 @@ pub trait ActivitiesListRepository: Send + Sync {
     /// 
     /// - `activity`: The `Activity` instance to be added to the list.
     fn add(&mut self, activity: Activity);
+
+    /// Deletes an activity from the repository.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `id`: The unique identifier of the activity to be deleted.
+    /// 
+    /// # Returns
+    /// 
+    /// `Result<(), ActivitiesListRepositoryError>` indicating success or failure of the delete operation.
+    fn delete(&mut self, id: ActivityId) -> Result<(), ActivitiesListRepositoryError>;    
 }

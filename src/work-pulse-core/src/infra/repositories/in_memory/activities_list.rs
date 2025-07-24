@@ -1,7 +1,7 @@
 use chrono::{NaiveDate, NaiveTime};
 use uuid::Uuid;
 
-use crate::{adapters::ActivitiesListRepository, entities::{activity::{Activity, ActivityId}, pam::PamCategoryId}};
+use crate::{adapters::{ActivitiesListRepository, ActivitiesListRepositoryError}, entities::{activity::{Activity, ActivityId}, pam::PamCategoryId}};
 
 /// Represents a record for an `Activity`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -82,5 +82,14 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
     fn add(&mut self, activity: Activity) {
         let record = ActivityRecord::from_entity(activity);
         self.activities.push(record);
+    }
+
+    fn delete(&mut self, id: ActivityId) -> Result<(), ActivitiesListRepositoryError> {
+        if let Some(index) = self.activities.iter().position(|record| record.id == id.0) {
+            self.activities.remove(index);
+            Ok(())
+        } else {
+            Err(ActivitiesListRepositoryError::NotFound(id))
+        }
     }
 }
