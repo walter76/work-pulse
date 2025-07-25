@@ -106,9 +106,6 @@ const TodaysActivities = () => {
       // Refresh the activities list after creating the activity
       refreshActivities()
 
-      // focus back to start time input
-      startTimeRef.current?.focus()
-
       console.log(`Activity created successfully!`)
     } catch (error) {
       console.error('Error creating activity:', error)
