@@ -71,15 +71,14 @@ impl ActivitiesList {
     /// 
     /// # Returns
     /// 
-    /// - `Ok(Activity)`: If the activity was found.
-    /// - `Err(ActivitiesListError)`: If the activity with the specified ID does not exist.
-    pub fn get_by_id(&self, activity_id: &ActivityId) -> Result<Activity, ActivitiesListError> {
+    /// - `Some(Activity)`: If the activity was found.
+    /// - `None`: If the activity with the specified ID does not exist.
+    pub fn get_by_id(&self, activity_id: &ActivityId) -> Option<Activity> {
         let repo = self.repository.lock().expect("Failed to lock repository");
 
         repo.get_all().iter()
             .find(|activity| activity.id() == activity_id)
             .cloned()
-            .ok_or(ActivitiesListError::NotFound(activity_id.clone()))
     }
 
     /// Deletes an activity from the list.
@@ -193,15 +192,14 @@ mod tests {
     }
 
     #[test]
-    fn activities_list_get_by_id_should_fail_when_activity_not_found() {
+    fn activities_list_get_by_id_should_return_none_when_activity_not_found() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let activities_list = ActivitiesList::new(repository);
 
         let non_existent_id = ActivityId::new();
         let result = activities_list.get_by_id(&non_existent_id);
-        
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ActivitiesListError::NotFound(non_existent_id));
+
+        assert!(result.is_none());
     }
     
     #[test]
