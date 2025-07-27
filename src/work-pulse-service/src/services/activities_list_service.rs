@@ -89,6 +89,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 
     OpenApiRouter::new()
         .routes(routes!(list_activities, create_activity))
+        .routes(routes!(get_activity_by_id))
         .routes(routes!(delete_activity))
         .with_state(store)
 }
@@ -144,6 +145,44 @@ async fn list_activities(State(store): State<Arc<Store>>, query: Query<ListActiv
         }
 
         (None, None) => Json(activities).into_response(),
+    }
+}
+
+/// Get an activity by ID.
+#[utoipa::path(
+    get,
+    path = "/{id}",
+    tag = ACTIVITIES_LIST_SERVICE_TAG,
+    params(
+        ("id" = String, Path, description = "The unique identifier of the activity to retrieve")
+    ),
+    responses(
+        (status = 200, description = "Activity successfully retrieved", body = Activity),
+        (status = 404, description = "Activity not found", body = String),
+        (status = 500, description = "Internal server error", body = String)
+    ),
+)]
+async fn get_activity_by_id(
+    Path(id): Path<String>,
+    State(store): State<Arc<Store>>,
+) -> impl IntoResponse {
+    let activities_list = store.lock().await;
+
+    match ActivityId::parse_str(&id) {
+        Ok(activity_id) => match activities_list.get_by_id(&activity_id) {
+            Some(activity) => (
+                StatusCode::OK,
+                Json(Activity::from_entity(&activity)),
+            ).into_response(),
+            None => (
+                StatusCode::NOT_FOUND,
+                Json("Activity not found".to_string()),
+            ).into_response(),
+        },
+        Err(_) => (
+            StatusCode::BAD_REQUEST,
+            Json("Invalid activity ID format".to_string()),
+        ).into_response(),
     }
 }
 
