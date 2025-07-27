@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button, IconButton, Input, Option, Select, Sheet, Table, Typography } from '@mui/joy'
-import { Add, Delete, Refresh } from '@mui/icons-material'
+import { Add, Delete, Edit, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
 const TodaysActivities = () => {
@@ -130,6 +131,15 @@ const TodaysActivities = () => {
     }
   }
 
+  const navigate = useNavigate()
+
+  const editActivity = (activity) => {
+    console.log(`Editing activity with ID: ${activity.id}`)
+    setError('')
+
+    navigate(`/activities/edit/${activity.id}`)
+  }
+
   return (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <Typography level="h2">
@@ -251,6 +261,15 @@ const TodaysActivities = () => {
                     <td>{categoryName}</td>
                     <td>{activity.task}</td>
                     <td>
+                      <IconButton 
+                        aria-label="Edit Activity"
+                        color="primary"
+                        variant="soft"
+                        onClick={() => editActivity(activity)}
+                        size="sm"
+                      >
+                        <Edit />
+                      </IconButton>
                       <IconButton 
                         aria-label="Delete Activity"
                         color="danger"
