@@ -38,7 +38,7 @@ const App = () => (
       <Box sx={{ flex: 1, padding: 2 }}>
         <Routes>
           <Route path="/activities" element={<TodaysActivities />} />
-          <Route path="/activities/edit/:activityId" element={<EditActivity />} />
+          <Route path="/activities/edit/:id" element={<EditActivity />} />
           <Route path="/categories" element={<CategoriesConfiguration />} />
           <Route path="/" element={<TodaysActivities />} />
         </Routes>

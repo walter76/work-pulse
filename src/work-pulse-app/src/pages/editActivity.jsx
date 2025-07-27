@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { Button, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Save } from '@mui/icons-material'
+import axios from 'axios'
 
-const EditActivity = ({ activityId }) => {
+const EditActivity = () => {
+  const { id: activityId } = useParams()
+
   const [categories, setCategories] = useState([])
 
   const [activityDate, setActivityDate] = useState('')
@@ -14,9 +18,11 @@ const EditActivity = ({ activityId }) => {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    refreshCategories()
-    fetchActivity()
-  }, [])
+    if (activityId) {
+      refreshCategories()
+      fetchActivity()
+    }
+  }, [activityId])
 
   const fetchActivity = async () => {
     console.log(`Fetching activity with ID: ${activityId}`)
