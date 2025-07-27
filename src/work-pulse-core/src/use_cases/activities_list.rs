@@ -63,6 +63,35 @@ impl ActivitiesList {
         repo.get_all()
     }
 
+    /// Retrieves an activity by its ID.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `activity_id`: The ID of the activity to retrieve.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(Activity)`: If the activity was found.
+    /// - `Err(ActivitiesListError)`: If the activity with the specified ID does not exist.
+    pub fn get_by_id(&self, activity_id: &ActivityId) -> Result<Activity, ActivitiesListError> {
+        let repo = self.repository.lock().expect("Failed to lock repository");
+
+        repo.get_all().iter()
+            .find(|activity| activity.id() == activity_id)
+            .cloned()
+            .ok_or(ActivitiesListError::NotFound(activity_id.clone()))
+    }
+
+    /// Deletes an activity from the list.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `activity_id`: The ID of the activity to delete.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(())`: If the activity was successfully deleted.
+    /// - `Err(ActivitiesListError)`: If the activity with the specified ID does
     pub fn delete(&mut self, activity_id: ActivityId) -> Result<(), ActivitiesListError> {
         let mut repo = self.repository.lock().unwrap();
 
@@ -146,6 +175,35 @@ mod tests {
         assert_eq!(activities.len(), 2);
     }
 
+    #[test]
+    fn activities_list_get_by_id_should_return_activity() {
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let mut activities_list = ActivitiesList::new(repository);
+
+        let activity = activities_list.record(
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
+            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid time")),
+            PamCategoryId::new(),
+            "Test Task".to_string(),
+        );
+
+        let retrieved_activity = activities_list.get_by_id(activity.id()).unwrap();
+        assert_eq!(retrieved_activity, activity);
+    }
+
+    #[test]
+    fn activities_list_get_by_id_should_fail_when_activity_not_found() {
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let activities_list = ActivitiesList::new(repository);
+
+        let non_existent_id = ActivityId::new();
+        let result = activities_list.get_by_id(&non_existent_id);
+        
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ActivitiesListError::NotFound(non_existent_id));
+    }
+    
     #[test]
     fn activities_list_delete_should_remove_activity() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
