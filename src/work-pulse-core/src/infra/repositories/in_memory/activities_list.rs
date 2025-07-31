@@ -84,6 +84,16 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
         self.activities.push(record);
     }
 
+    fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListRepositoryError> {
+        if let Some(record) = self.activities.iter_mut().find(|r| r.id == activity.id().0) {
+            *record = ActivityRecord::from_entity(activity);
+
+            Ok(())
+        } else {
+            Err(ActivitiesListRepositoryError::NotFound(activity.id().clone()))
+        }
+    }
+
     fn delete(&mut self, id: ActivityId) -> Result<(), ActivitiesListRepositoryError> {
         if let Some(index) = self.activities.iter().position(|record| record.id == id.0) {
             self.activities.remove(index);

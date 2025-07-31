@@ -81,6 +81,23 @@ impl ActivitiesList {
             .cloned()
     }
 
+    /// Updates an existing activity in the list.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `activity`: The `Activity` instance with updated information to be saved.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(())`: If the activity was successfully updated.
+    /// - `Err(ActivitiesListError)`: If the activity with the specified ID does not exist.
+    pub fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListError> {
+        let mut repo = self.repository.lock().unwrap();
+
+        let activity_id = activity.id().clone();
+        repo.update(activity).map_err(|_| ActivitiesListError::NotFound(activity_id))
+    }
+
     /// Deletes an activity from the list.
     /// 
     /// # Arguments
@@ -94,9 +111,7 @@ impl ActivitiesList {
     pub fn delete(&mut self, activity_id: ActivityId) -> Result<(), ActivitiesListError> {
         let mut repo = self.repository.lock().unwrap();
 
-        repo.delete(activity_id.clone()).map_err(|_| ActivitiesListError::NotFound(activity_id))?;
-
-        Ok(())
+        repo.delete(activity_id.clone()).map_err(|_| ActivitiesListError::NotFound(activity_id))
     }
 
 }
@@ -104,7 +119,7 @@ impl ActivitiesList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{entities::{pam::PamCategoryId}, infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository};
+    use crate::{entities::pam::PamCategoryId, infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository};
     use chrono::{NaiveDate, NaiveTime};
 
     #[test]
@@ -202,6 +217,45 @@ mod tests {
         assert!(result.is_none());
     }
     
+    #[test]
+    fn activities_list_update_should_modify_existing_activity() {
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let mut activities_list = ActivitiesList::new(repository);
+
+        let mut activity = activities_list.record(
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
+            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid time")),
+            PamCategoryId::new(),
+            "Test Task".to_string(),
+        );
+
+        activity.set_task("Updated Task".to_string());
+        activities_list.update(activity.clone()).unwrap();
+
+        let updated_activity = activities_list.get_by_id(activity.id()).unwrap();
+        assert_eq!(updated_activity.task(), "Updated Task");
+    }
+
+    #[test]
+    fn activities_list_update_should_fail_when_activity_not_found() {
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let mut activities_list = ActivitiesList::new(repository);
+
+        let activity = Activity::with_id(
+            ActivityId::new(), 
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"), 
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"), 
+            PamCategoryId::new(), 
+            "Non-existent Task".to_string()
+        );
+        
+        let result = activities_list.update(activity.clone());
+        
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ActivitiesListError::NotFound(activity.id().clone()));
+    }
+
     #[test]
     fn activities_list_delete_should_remove_activity() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));

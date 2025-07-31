@@ -84,6 +84,17 @@ pub trait ActivitiesListRepository: Send + Sync {
     /// - `activity`: The `Activity` instance to be added to the list.
     fn add(&mut self, activity: Activity);
 
+    /// Updates an existing activity in the repository.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `activity`: The `Activity` instance with updated information to be saved in the repository.
+    /// 
+    /// # Returns
+    /// 
+    /// `Result<(), ActivitiesListRepositoryError>` indicating success or failure of the update operation.
+    fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListRepositoryError>;
+
     /// Deletes an activity from the repository.
     /// 
     /// # Arguments

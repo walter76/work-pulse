@@ -99,9 +99,7 @@ impl PamCategoriesList {
         let mut repo = self.repository.lock().unwrap();
 
         let category_id = category.id().clone();
-        repo.update(category).map_err(|_| PamCategoriesListError::NotFound(category_id))?;
-
-        Ok(())
+        repo.update(category).map_err(|_| PamCategoriesListError::NotFound(category_id))
     }
 
     /// Deletes a PAM category from the list.
@@ -117,9 +115,7 @@ impl PamCategoriesList {
     pub fn delete(&mut self, id: PamCategoryId) -> Result<(), PamCategoriesListError> {
         let mut repo = self.repository.lock().unwrap();
 
-        repo.delete(id.clone()).map_err(|_| PamCategoriesListError::NotFound(id))?;
-
-        Ok(())
+        repo.delete(id.clone()).map_err(|_| PamCategoriesListError::NotFound(id))
     }
 }
 
