@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Save } from '@mui/icons-material'
 import axios from 'axios'
@@ -61,6 +61,8 @@ const EditActivity = () => {
     }
   }
 
+  const navigate = useNavigate()
+
   const updateActivity = async () => {
     if (!activityDate) {
       setError('Please enter a valid date for the activity.')
@@ -91,7 +93,8 @@ const EditActivity = () => {
     setError('')
 
     try {
-      await axios.put(`http://localhost:8080/api/v1/activities/${activity.id}`, {
+      await axios.put(`http://localhost:8080/api/v1/activities`, {
+        id: activityId,
         date: activityDate,
         start_time: startTime,
         end_time: endTime,
@@ -101,12 +104,14 @@ const EditActivity = () => {
 
       // Reset the input field after updating the activity
       setCategoryId('')
-      setActivityDate(formattedDate)
+      setActivityDate('')
       setStartTime('')
       setEndTime('')
       setTask('')
 
       console.log(`Activity updated successfully!`)
+
+      navigate('/activities')
     } catch (error) {
       console.error('Error updating activity:', error)
       setError('Failed to update activity. Please try again.')
