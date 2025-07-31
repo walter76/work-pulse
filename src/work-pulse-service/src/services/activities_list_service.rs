@@ -90,6 +90,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     OpenApiRouter::new()
         .routes(routes!(list_activities, create_activity))
         .routes(routes!(get_activity_by_id))
+        .routes(routes!(update_pam_category))
         .routes(routes!(delete_activity))
         .with_state(store)
 }
@@ -220,6 +221,46 @@ async fn create_activity(
         StatusCode::CREATED,
         Json(Activity::from_entity(&activity)),
     )
+}
+
+/// Updates an existing activity.
+#[utoipa::path(
+    put,
+    path = "",
+    tag = ACTIVITIES_LIST_SERVICE_TAG,
+    request_body = Activity,
+    responses(
+        (status = 200, description = "Activity successfully updated", body = Activity),
+        (status = 400, description = "Invalid request", body = String),
+        (status = 404, description = "Activity not found", body = String),
+        (status = 500, description = "Internal server error", body = String)
+    ),
+)]
+async fn update_pam_category(
+    State(store): State<Arc<Store>>,
+    Json(updated_activity): Json<Activity>,
+) -> impl IntoResponse {
+    let mut activities_list = store.lock().await;
+
+    if updated_activity.id.is_none() {
+        return (
+                StatusCode::BAD_REQUEST,
+                Json("An ID for Activity is required".to_string())
+            ).into_response();
+    }
+
+    let updated_activity = updated_activity.to_entity();
+
+    match activities_list.update(updated_activity.clone()) {
+        Ok(_) => (
+                StatusCode::OK,
+                Json(Activity::from_entity(&updated_activity))
+            ).into_response(),
+        Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(err.to_string())
+            ).into_response(),
+    }
 }
 
 /// Deletes an activity by ID.
