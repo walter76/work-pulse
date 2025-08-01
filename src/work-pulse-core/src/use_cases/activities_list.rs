@@ -114,6 +114,27 @@ impl ActivitiesList {
         repo.delete(activity_id.clone()).map_err(|_| ActivitiesListError::NotFound(activity_id))
     }
 
+    /// Imports activities from an external source using the provided importer.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `importer`: The `ActivitiesImporter` implementation to use for importing activities.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(())`: If the import was successful.
+    /// - `Err(ActivitiesImporterError)`: If an error occurred during the import process.
+    pub fn import(&mut self, importer: &dyn crate::adapters::ActivitiesImporter) -> Result<(), crate::adapters::ActivitiesImporterError> {
+        let mut repo = self.repository.lock().unwrap();
+
+        let activities = importer.import()?;
+
+        for activity in activities {
+            repo.add(activity);
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

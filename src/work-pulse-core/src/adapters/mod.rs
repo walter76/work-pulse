@@ -106,3 +106,17 @@ pub trait ActivitiesListRepository: Send + Sync {
     /// `Result<(), ActivitiesListRepositoryError>` indicating success or failure of the delete operation.
     fn delete(&mut self, id: ActivityId) -> Result<(), ActivitiesListRepositoryError>;    
 }
+
+/// Error type for the activities importer.
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
+pub enum ActivitiesImporterError {
+}
+
+pub trait ActivitiesImporter {
+    /// Imports activities from a source.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or failure of the import operation.
+    fn import(&self) -> Result<Vec<Activity>, ActivitiesImporterError>;
+}
