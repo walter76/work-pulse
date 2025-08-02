@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use chrono::{NaiveDate, NaiveTime};
 use thiserror::Error;
 
-use crate::{adapters::ActivitiesListRepository, entities::{activity::{Activity, ActivityId}, pam::PamCategoryId}};
+use crate::{adapters::{ActivitiesImporter, ActivitiesImporterError, ActivitiesListRepository}, entities::{activity::{Activity, ActivityId}, pam::PamCategoryId}};
 
 /// Represents an error that can occur while managing the list of activities.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
@@ -124,7 +124,7 @@ impl ActivitiesList {
     /// 
     /// - `Ok(())`: If the import was successful.
     /// - `Err(ActivitiesImporterError)`: If an error occurred during the import process.
-    pub fn import(&mut self, importer: &dyn crate::adapters::ActivitiesImporter) -> Result<(), crate::adapters::ActivitiesImporterError> {
+    pub fn import<I: ActivitiesImporter>(&mut self, importer: &mut I) -> Result<(), ActivitiesImporterError> {
         let mut repo = self.repository.lock().unwrap();
 
         let activities = importer.import()?;

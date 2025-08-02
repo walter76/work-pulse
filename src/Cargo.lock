@@ -2392,6 +2392,8 @@ name = "work-pulse-core"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "csv",
+ "serde",
  "thiserror",
  "uuid",
 ]

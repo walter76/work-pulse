@@ -110,6 +110,8 @@ pub trait ActivitiesListRepository: Send + Sync {
 /// Error type for the activities importer.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
 pub enum ActivitiesImporterError {
+    #[error("Could not parse the activities from the source")]
+    ParseError,
 }
 
 pub trait ActivitiesImporter {
@@ -118,5 +120,5 @@ pub trait ActivitiesImporter {
     /// # Returns
     ///
     /// A `Result` indicating success or failure of the import operation.
-    fn import(&self) -> Result<Vec<Activity>, ActivitiesImporterError>;
+    fn import(&mut self) -> Result<Vec<Activity>, ActivitiesImporterError>;
 }
