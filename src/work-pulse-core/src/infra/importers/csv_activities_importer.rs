@@ -4,20 +4,21 @@ use chrono::{NaiveDate, NaiveTime};
 use csv::Reader;
 use serde::Deserialize;
 
-use crate::{adapters::{ActivitiesImporter, ActivitiesImporterError}, entities::{activity::Activity, pam::PamCategoryId}};
+use crate::{adapters::{ActivitiesImporter, ActivitiesImporterError, PamCategoriesListRepository}, entities::activity::Activity};
 
-pub struct CsvActivitiesImporter<R: Read> {
+pub struct CsvActivitiesImporter<R: Read, P: PamCategoriesListRepository> {
     reader: R,
     activities_year: String,
+    pam_categories_list_repository: P,
 }
 
-impl<R: Read> CsvActivitiesImporter<R> {
-    pub fn new(reader: R, activities_year: String) -> Self {
-        CsvActivitiesImporter { reader, activities_year }
+impl<R: Read, P: PamCategoriesListRepository> CsvActivitiesImporter<R, P> {
+    pub fn new(reader: R, pam_categories_list_repository: P, activities_year: String) -> Self {
+        CsvActivitiesImporter { reader, pam_categories_list_repository, activities_year }
     }
 }
 
-impl<R: Read> ActivitiesImporter for CsvActivitiesImporter<R> {
+impl<R: Read, P: PamCategoriesListRepository> ActivitiesImporter for CsvActivitiesImporter<R, P> {
     fn import(&mut self) -> Result<Vec<Activity>, ActivitiesImporterError> {
         let mut csv_reader = Reader::from_reader(&mut self.reader);
         let mut records = Vec::new();
@@ -32,13 +33,15 @@ impl<R: Read> ActivitiesImporter for CsvActivitiesImporter<R> {
         for activity_record in records {
             let date = ActivityTableRecord::convert_date_format(&activity_record.date, &self.activities_year)?;
 
+            let pam_category = self.pam_categories_list_repository.get_or_create_by_name(&activity_record.pam_category)
+                .map_err(|_| ActivitiesImporterError::ParseError)?;
+
             let mut activity = Activity::new(
                 date.parse()
                     .map_err(|_| ActivitiesImporterError::ParseError)?,
                 activity_record.check_in.parse::<NaiveTime>()
                     .map_err(|_| ActivitiesImporterError::ParseError)?,
-                PamCategoryId::parse_str(&activity_record.pam_category)
-                    .map_err(|_| ActivitiesImporterError::ParseError)?,
+                pam_category.id().clone(),
                 activity_record.task,
             );
 

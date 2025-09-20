@@ -82,4 +82,14 @@ impl PamCategoriesListRepository for InMemoryPamCategoriesListRepository {
             Err(PamCategoriesListRepositoryError::NotFound(id))
         }
     }
+
+    fn get_or_create_by_name(&mut self, name: &str) -> Result<PamCategory, PamCategoriesListRepositoryError> {
+        if let Some(record) = self.categories.iter().find(|r| r.name.eq(name)) {
+            Ok(record.to_entity())
+        } else {
+            let new_category = PamCategory::new(name.to_string());
+            self.add(new_category.clone());
+            Ok(new_category)
+        }
+    }
 }

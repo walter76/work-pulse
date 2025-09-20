@@ -58,6 +58,17 @@ pub trait PamCategoriesListRepository: Send + Sync {
     /// 
     /// `Result<(), PamCategoriesListRepositoryError>` indicating success or failure of the delete operation.
     fn delete(&mut self, id: PamCategoryId) -> Result<(), PamCategoriesListRepositoryError>;
+
+    /// Retrieves a PAM category by its name, or creates it if it does not exist.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `name`: The name of the PAM category to retrieve or create.
+    /// 
+    /// # Returns
+    /// 
+    /// `Result<PamCategory, PamCategoriesListRepositoryError>` containing the retrieved or newly created PAM category.
+    fn get_or_create_by_name(&mut self, name: &str) -> Result<PamCategory, PamCategoriesListRepositoryError>;
 }
 
 /// Error type for the activities list repository.
