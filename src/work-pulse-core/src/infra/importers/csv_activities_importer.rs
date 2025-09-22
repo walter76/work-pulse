@@ -14,7 +14,7 @@ pub struct CsvActivitiesImporter<R: Read, P: PamCategoriesListRepository> {
 
 impl<R: Read, P: PamCategoriesListRepository> CsvActivitiesImporter<R, P> {
     pub fn new(reader: R, pam_categories_list_repository: P, activities_year: String) -> Self {
-        CsvActivitiesImporter { reader, pam_categories_list_repository, activities_year }
+        Self { reader, pam_categories_list_repository, activities_year }
     }
 }
 
@@ -90,5 +90,73 @@ impl ActivityTableRecord {
 
         // Format the date into "yyyy-mm-dd"
         Ok(parsed_date.format("%Y-%m-%d").to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::infra::repositories::in_memory::pam_categories_list::InMemoryPamCategoriesListRepository;
+
+    use super::*;
+
+    #[test]
+    fn convert_date_format_should_convert_valid_date() {
+        let date = "15.03.";
+        let year = "2023";
+        let expected = "2023-03-15";
+
+        let result = ActivityTableRecord::convert_date_format(date, year).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn convert_date_format_should_fail_with_invalid_date() {
+        let date = "31.02."; // Invalid date
+        let year = "2023";
+
+        let result = ActivityTableRecord::convert_date_format(date, year);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ActivitiesImporterError::ParseError);
+    }
+
+    #[test]
+    fn import_should_import_activities_from_csv() {
+        let csv_data = "\
+CW,Date,Check In,Check Out,PAM Category,Topic,Comment
+11,15.03.,09:00,17:00,Development,Coding,Worked on project X
+11,16.03.,10:00,18:00,Meeting,Team Meeting,Discussed project Y
+";
+
+        let reader = csv_data.as_bytes();
+        let pam_repo = InMemoryPamCategoriesListRepository::new();
+        let mut importer = CsvActivitiesImporter::new(reader, pam_repo, "2023".to_string());
+
+        let activities = importer.import().unwrap();
+        assert_eq!(activities.len(), 2);
+
+        assert_eq!(activities[0].date().to_string(), "2023-03-15");
+        assert_eq!(activities[0].start_time().to_string(), "09:00:00");
+        assert_eq!(activities[0].end_time().unwrap().to_string(), "17:00:00");
+        assert_eq!(activities[0].task(), "Coding");
+
+        assert_eq!(activities[1].date().to_string(), "2023-03-16");
+        assert_eq!(activities[1].start_time().to_string(), "10:00:00");
+        assert_eq!(activities[1].end_time().unwrap().to_string(), "18:00:00");
+        assert_eq!(activities[1].task(), "Team Meeting");
+    }
+
+    #[test]
+    fn import_should_fail_with_invalid_csv() {
+        let csv_data = "\
+CW,Date,Check In,Check Out,PAM Category,Topic,Comment
+11,invalid-date,09:00,17:00,Development,Coding,Worked on project X
+";
+        let reader = csv_data.as_bytes();
+        let pam_repo = InMemoryPamCategoriesListRepository::new();
+        let mut importer = CsvActivitiesImporter::new(reader, pam_repo, "2023".to_string());
+
+        let result = importer.import();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ActivitiesImporterError::ParseError);
     }
 }
