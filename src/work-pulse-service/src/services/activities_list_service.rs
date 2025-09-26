@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::{Path, Query, State}, response::IntoResponse, Json};
+use axum::{extract::{Multipart, Path, Query, State}, response::IntoResponse, Json};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
@@ -104,7 +104,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
         .routes(routes!(get_activity_by_id))
         .routes(routes!(update_pam_category))
         .routes(routes!(delete_activity))
-        .routes(routes!(upload_activities_csv))
+        .routes(routes!(upload_activities_csv_raw, upload_activities_csv_multipart))
         .with_state(store)
 }
 
@@ -312,32 +312,69 @@ async fn delete_activity(
 }
 
 #[utoipa::path(
-    post,
+    put,
     path = "/upload-csv",
     tag = ACTIVITIES_LIST_SERVICE_TAG,
-    request_body(content = String, description = "CSV file containing activities data"),
+    request_body(content = String, content_type = "text/csv", description = "CSV file containing activities data"),
     responses(
         (status = 200, description = "CSV file processed successfully"),
-        (status = 400, description = "Invalid CSV format", body = String),
-        (status = 500, description = "Internal server error", body = String)
+        (status = 400, description = "Invalid CSV format", body = String)
     )
 )]
-async fn upload_activities_csv(
+async fn upload_activities_csv_raw(
     State(store): State<ServiceState>,
     body: String,
 ) -> impl IntoResponse {
-    if !body.is_empty() {
+    if body.is_empty() {
+        (StatusCode::BAD_REQUEST, Json("No CSV data provided".to_string())).into_response()
+    } else {
         let mut activities_list = store.activities_store.lock().await;
 
         let mut csv_importer = store.csv_activities_importer.lock().await;
         let reader = body.as_bytes();
 
         match activities_list.import(&mut *csv_importer, reader) {
-            Ok(_) => return (StatusCode::OK, Json("CSV file processed successfully".to_string())).into_response(),
-            Err(err) => return (StatusCode::BAD_REQUEST, Json(err.to_string())).into_response(),
+            Ok(_) => (StatusCode::OK, Json("CSV file processed successfully".to_string())).into_response(),
+            Err(err) => (StatusCode::BAD_REQUEST, Json(err.to_string())).into_response(),
+        }
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/upload-csv",
+    tag = ACTIVITIES_LIST_SERVICE_TAG,
+    request_body(content_type = "multipart/form-data", description = "CSV file upload"),
+    responses(
+        (status = 200, description = "CSV file processed successfully"),
+        (status = 400, description = "Invalid CSV format", body = String)
+    )
+)]
+async fn upload_activities_csv_multipart(
+    State(store): State<ServiceState>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut csv_content: Option<String> = None;
+
+    while let Some(field) = multipart.next_field().await.unwrap_or(None) {
+        if field.name() == Some("file") {
+            csv_content = Some(String::from_utf8_lossy(&field.bytes().await.unwrap_or_default()).to_string());
+            break;
+        }
+    }
+
+    if let Some(csv_content) = csv_content {
+        let mut activities_list = store.activities_store.lock().await;
+
+        let mut csv_importer = store.csv_activities_importer.lock().await;
+        let reader = csv_content.as_bytes();
+
+        match activities_list.import(&mut *csv_importer, reader) {
+            Ok(_) => (StatusCode::OK, Json("CSV file processed successfully".to_string())).into_response(),
+            Err(err) => (StatusCode::BAD_REQUEST, Json(err.to_string())).into_response(),
         }
     } else {
-        return (StatusCode::BAD_REQUEST, Json("No CSV data provided".to_string())).into_response();
+        (StatusCode::BAD_REQUEST, Json("No file field in multipart data".to_string())).into_response()
     }
 }
 
