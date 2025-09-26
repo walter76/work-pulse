@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use thiserror::Error;
 
 use crate::entities::{activity::{Activity, ActivityId}, pam::{PamCategory, PamCategoryId}};
@@ -128,8 +130,12 @@ pub enum ActivitiesImporterError {
 pub trait ActivitiesImporter {
     /// Imports activities from a source.
     ///
+    /// # Arguments
+    /// 
+    /// - `reader`: A reader instance that provides the source data for importing activities.
+    /// 
     /// # Returns
     ///
     /// A `Result` indicating success or failure of the import operation.
-    fn import(&mut self) -> Result<Vec<Activity>, ActivitiesImporterError>;
+    fn import<R: Read>(&mut self, reader: R) -> Result<Vec<Activity>, ActivitiesImporterError>;
 }

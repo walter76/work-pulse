@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::{io::Read, sync::{Arc, Mutex}};
 
 use chrono::{NaiveDate, NaiveTime};
 use csv::Reader;
@@ -6,21 +6,22 @@ use serde::Deserialize;
 
 use crate::{adapters::{ActivitiesImporter, ActivitiesImporterError, PamCategoriesListRepository}, entities::activity::Activity};
 
-pub struct CsvActivitiesImporter<R: Read, P: PamCategoriesListRepository> {
-    reader: R,
+pub struct CsvActivitiesImporter {
     activities_year: String,
-    pam_categories_list_repository: P,
+
+    /// The list of PAM categories.
+    pam_categories_list_repository: Arc<Mutex<dyn PamCategoriesListRepository>>,    
 }
 
-impl<R: Read, P: PamCategoriesListRepository> CsvActivitiesImporter<R, P> {
-    pub fn new(reader: R, pam_categories_list_repository: P, activities_year: String) -> Self {
-        Self { reader, pam_categories_list_repository, activities_year }
+impl CsvActivitiesImporter {
+    pub fn new(pam_categories_list_repository: Arc<Mutex<dyn PamCategoriesListRepository>>, activities_year: String) -> Self {
+        Self { pam_categories_list_repository, activities_year }
     }
 }
 
-impl<R: Read, P: PamCategoriesListRepository> ActivitiesImporter for CsvActivitiesImporter<R, P> {
-    fn import(&mut self) -> Result<Vec<Activity>, ActivitiesImporterError> {
-        let mut csv_reader = Reader::from_reader(&mut self.reader);
+impl ActivitiesImporter for CsvActivitiesImporter {
+    fn import<R: Read>(&mut self, reader: R) -> Result<Vec<Activity>, ActivitiesImporterError> {
+        let mut csv_reader = Reader::from_reader(reader);
         let mut records = Vec::new();
 
         for result in csv_reader.deserialize() {
@@ -29,11 +30,12 @@ impl<R: Read, P: PamCategoriesListRepository> ActivitiesImporter for CsvActiviti
         }
 
         let mut activities = Vec::new();
+        let mut pam_categories_list_repository = self.pam_categories_list_repository.lock().unwrap();
 
         for activity_record in records {
             let date = ActivityTableRecord::convert_date_format(&activity_record.date, &self.activities_year)?;
 
-            let pam_category = self.pam_categories_list_repository.get_or_create_by_name(&activity_record.pam_category)
+            let pam_category = pam_categories_list_repository.get_or_create_by_name(&activity_record.pam_category)
                 .map_err(|_| ActivitiesImporterError::ParseError)?;
 
             let mut activity = Activity::new(
@@ -128,10 +130,10 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 ";
 
         let reader = csv_data.as_bytes();
-        let pam_repo = InMemoryPamCategoriesListRepository::new();
-        let mut importer = CsvActivitiesImporter::new(reader, pam_repo, "2023".to_string());
+        let pam_repo = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let mut importer = CsvActivitiesImporter::new(pam_repo, "2023".to_string());
 
-        let activities = importer.import().unwrap();
+        let activities = importer.import(reader).unwrap();
         assert_eq!(activities.len(), 2);
 
         assert_eq!(activities[0].date().to_string(), "2023-03-15");
@@ -152,10 +154,10 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 11,invalid-date,09:00,17:00,Development,Coding,Worked on project X
 ";
         let reader = csv_data.as_bytes();
-        let pam_repo = InMemoryPamCategoriesListRepository::new();
-        let mut importer = CsvActivitiesImporter::new(reader, pam_repo, "2023".to_string());
+        let pam_repo = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let mut importer = CsvActivitiesImporter::new(pam_repo, "2023".to_string());
 
-        let result = importer.import();
+        let result = importer.import(reader);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ActivitiesImporterError::ParseError);
     }

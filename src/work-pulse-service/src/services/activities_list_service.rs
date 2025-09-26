@@ -7,11 +7,17 @@ use tokio::sync::Mutex;
 
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
-use work_pulse_core::{entities::{activity::ActivityId, pam::PamCategoryId}, infra::repositories::in_memory::RepositoryFactory, use_cases::activities_list::ActivitiesList};
+use work_pulse_core::{entities::{activity::ActivityId, pam::PamCategoryId}, infra::{importers::csv_activities_importer::CsvActivitiesImporter, repositories::in_memory::RepositoryFactory}, use_cases::activities_list::ActivitiesList};
 
 use crate::prelude::ACTIVITIES_LIST_SERVICE_TAG;
 
-type Store = Mutex<ActivitiesList>;
+type ActivitiesStore = Mutex<ActivitiesList>;
+
+#[derive(Clone)]
+struct ServiceState {
+    activities_store: Arc<ActivitiesStore>,
+    csv_activities_importer: Arc<Mutex<CsvActivitiesImporter>>,
+}
 
 /// The Activity.
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
@@ -85,13 +91,20 @@ impl Activity {
 }
 
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    let store = Arc::new(Mutex::new(ActivitiesList::new(repository_factory.activities_list_repository.clone())));
+    let activities_store = Arc::new(Mutex::new(ActivitiesList::new(repository_factory.activities_list_repository.clone())));
+    let csv_activities_importer = Arc::new(Mutex::new(CsvActivitiesImporter::new(repository_factory.pam_categories_list_repository.clone(), "2025".to_string())));
+
+    let store = ServiceState {
+        activities_store,
+        csv_activities_importer,
+    };
 
     OpenApiRouter::new()
         .routes(routes!(list_activities, create_activity))
         .routes(routes!(get_activity_by_id))
         .routes(routes!(update_pam_category))
         .routes(routes!(delete_activity))
+        .routes(routes!(upload_activities_csv))
         .with_state(store)
 }
 
@@ -117,8 +130,8 @@ struct ListActivitiesQuery {
         (status = 400, description = "Invalid request - both start_date and end_date are required", body = String)
     )
 )]
-async fn list_activities(State(store): State<Arc<Store>>, query: Query<ListActivitiesQuery>,) -> impl IntoResponse {
-    let activities_list = store.lock().await;
+async fn list_activities(State(store): State<ServiceState>, query: Query<ListActivitiesQuery>,) -> impl IntoResponse {
+    let activities_list = store.activities_store.lock().await;
 
     let activities = activities_list
         .activities()
@@ -165,9 +178,9 @@ async fn list_activities(State(store): State<Arc<Store>>, query: Query<ListActiv
 )]
 async fn get_activity_by_id(
     Path(id): Path<String>,
-    State(store): State<Arc<Store>>,
+    State(store): State<ServiceState>,
 ) -> impl IntoResponse {
-    let activities_list = store.lock().await;
+    let activities_list = store.activities_store.lock().await;
 
     match ActivityId::parse_str(&id) {
         Ok(activity_id) => match activities_list.get_by_id(&activity_id) {
@@ -199,10 +212,10 @@ async fn get_activity_by_id(
     ),
 )]
 async fn create_activity(
-    State(store): State<Arc<Store>>,
+    State(store): State<ServiceState>,
     Json(new_activity): Json<Activity>,
 ) -> impl IntoResponse {
-    let mut activities_list = store.lock().await;
+    let mut activities_list = store.activities_store.lock().await;
 
     let date = new_activity.date.parse().expect("Invalid date format");
     let start_time = new_activity.start_time.parse().expect("Invalid start time format");
@@ -237,10 +250,10 @@ async fn create_activity(
     ),
 )]
 async fn update_pam_category(
-    State(store): State<Arc<Store>>,
+    State(store): State<ServiceState>,
     Json(updated_activity): Json<Activity>,
 ) -> impl IntoResponse {
-    let mut activities_list = store.lock().await;
+    let mut activities_list = store.activities_store.lock().await;
 
     if updated_activity.id.is_none() {
         return (
@@ -279,9 +292,9 @@ async fn update_pam_category(
 )]
 async fn delete_activity(
     Path(id): Path<String>,
-    State(store): State<Arc<Store>>,
+    State(store): State<ServiceState>,
 ) -> impl IntoResponse {
-    let mut activities_list = store.lock().await;
+    let mut activities_list = store.activities_store.lock().await;
 
     match ActivityId::parse_str(&id) {
         Ok(activity_id) => match activities_list.delete(activity_id) {
@@ -295,6 +308,36 @@ async fn delete_activity(
                 StatusCode::BAD_REQUEST,
                 Json("Invalid activity ID format".to_string())
             ).into_response(),
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/upload-csv",
+    tag = ACTIVITIES_LIST_SERVICE_TAG,
+    request_body(content = String, description = "CSV file containing activities data"),
+    responses(
+        (status = 200, description = "CSV file processed successfully"),
+        (status = 400, description = "Invalid CSV format", body = String),
+        (status = 500, description = "Internal server error", body = String)
+    )
+)]
+async fn upload_activities_csv(
+    State(store): State<ServiceState>,
+    body: String,
+) -> impl IntoResponse {
+    if !body.is_empty() {
+        let mut activities_list = store.activities_store.lock().await;
+
+        let mut csv_importer = store.csv_activities_importer.lock().await;
+        let reader = body.as_bytes();
+
+        match activities_list.import(&mut *csv_importer, reader) {
+            Ok(_) => return (StatusCode::OK, Json("CSV file processed successfully".to_string())).into_response(),
+            Err(err) => return (StatusCode::BAD_REQUEST, Json(err.to_string())).into_response(),
+        }
+    } else {
+        return (StatusCode::BAD_REQUEST, Json("No CSV data provided".to_string())).into_response();
     }
 }
 

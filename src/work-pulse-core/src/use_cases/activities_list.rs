@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::{io::Read, sync::{Arc, Mutex}};
 
 use chrono::{NaiveDate, NaiveTime};
 use thiserror::Error;
@@ -119,15 +119,16 @@ impl ActivitiesList {
     /// # Arguments
     /// 
     /// - `importer`: The `ActivitiesImporter` implementation to use for importing activities.
+    /// - `reader`: The reader from which to import activities.
     /// 
     /// # Returns
     /// 
     /// - `Ok(())`: If the import was successful.
     /// - `Err(ActivitiesImporterError)`: If an error occurred during the import process.
-    pub fn import<I: ActivitiesImporter>(&mut self, importer: &mut I) -> Result<(), ActivitiesImporterError> {
+    pub fn import<I: ActivitiesImporter, R: Read>(&mut self, importer: &mut I, reader: R) -> Result<(), ActivitiesImporterError> {
         let mut repo = self.repository.lock().unwrap();
 
-        let activities = importer.import()?;
+        let activities = importer.import(reader)?;
 
         for activity in activities {
             repo.add(activity);
