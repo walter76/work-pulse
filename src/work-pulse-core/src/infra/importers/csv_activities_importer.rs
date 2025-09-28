@@ -7,20 +7,18 @@ use serde::Deserialize;
 use crate::{adapters::{ActivitiesImporter, ActivitiesImporterError, PamCategoriesListRepository}, entities::activity::Activity};
 
 pub struct CsvActivitiesImporter {
-    activities_year: String,
-
-    /// The list of PAM categories.
+    /// The list of categories.
     pam_categories_list_repository: Arc<Mutex<dyn PamCategoriesListRepository>>,    
 }
 
 impl CsvActivitiesImporter {
-    pub fn new(pam_categories_list_repository: Arc<Mutex<dyn PamCategoriesListRepository>>, activities_year: String) -> Self {
-        Self { pam_categories_list_repository, activities_year }
+    pub fn new(pam_categories_list_repository: Arc<Mutex<dyn PamCategoriesListRepository>>) -> Self {
+        Self { pam_categories_list_repository }
     }
 }
 
 impl ActivitiesImporter for CsvActivitiesImporter {
-    fn import<R: Read>(&mut self, reader: R) -> Result<Vec<Activity>, ActivitiesImporterError> {
+    fn import<R: Read>(&mut self, reader: R, year: u16) -> Result<Vec<Activity>, ActivitiesImporterError> {
         let mut csv_reader = Reader::from_reader(reader);
         let mut records = Vec::new();
 
@@ -33,7 +31,7 @@ impl ActivitiesImporter for CsvActivitiesImporter {
         let mut pam_categories_list_repository = self.pam_categories_list_repository.lock().unwrap();
 
         for activity_record in records {
-            let date = ActivityTableRecord::convert_date_format(&activity_record.date, &self.activities_year)?;
+            let date = ActivityTableRecord::convert_date_format(&activity_record.date, &year.to_string())?;
 
             let pam_category = pam_categories_list_repository.get_or_create_by_name(&activity_record.pam_category)
                 .map_err(|_| ActivitiesImporterError::ParseError)?;
@@ -131,9 +129,9 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 
         let reader = csv_data.as_bytes();
         let pam_repo = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
-        let mut importer = CsvActivitiesImporter::new(pam_repo, "2023".to_string());
+        let mut importer = CsvActivitiesImporter::new(pam_repo);
 
-        let activities = importer.import(reader).unwrap();
+        let activities = importer.import(reader, 2023).unwrap();
         assert_eq!(activities.len(), 2);
 
         assert_eq!(activities[0].date().to_string(), "2023-03-15");
@@ -155,9 +153,9 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 ";
         let reader = csv_data.as_bytes();
         let pam_repo = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
-        let mut importer = CsvActivitiesImporter::new(pam_repo, "2023".to_string());
+        let mut importer = CsvActivitiesImporter::new(pam_repo);
 
-        let result = importer.import(reader);
+        let result = importer.import(reader, 2023);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ActivitiesImporterError::ParseError);
     }

@@ -120,15 +120,16 @@ impl ActivitiesList {
     /// 
     /// - `importer`: The `ActivitiesImporter` implementation to use for importing activities.
     /// - `reader`: The reader from which to import activities.
+    /// - `year`: The year to associate with the imported activities.
     /// 
     /// # Returns
     /// 
     /// - `Ok(())`: If the import was successful.
     /// - `Err(ActivitiesImporterError)`: If an error occurred during the import process.
-    pub fn import<I: ActivitiesImporter, R: Read>(&mut self, importer: &mut I, reader: R) -> Result<(), ActivitiesImporterError> {
+    pub fn import<I: ActivitiesImporter, R: Read>(&mut self, importer: &mut I, reader: R, year: u16) -> Result<(), ActivitiesImporterError> {
         let mut repo = self.repository.lock().unwrap();
 
-        let activities = importer.import(reader)?;
+        let activities = importer.import(reader, year)?;
 
         for activity in activities {
             repo.add(activity);

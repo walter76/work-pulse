@@ -137,5 +137,5 @@ pub trait ActivitiesImporter {
     /// # Returns
     ///
     /// A `Result` indicating success or failure of the import operation.
-    fn import<R: Read>(&mut self, reader: R) -> Result<Vec<Activity>, ActivitiesImporterError>;
+    fn import<R: Read>(&mut self, reader: R, year: u16) -> Result<Vec<Activity>, ActivitiesImporterError>;
 }
