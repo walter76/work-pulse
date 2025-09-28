@@ -92,7 +92,7 @@ impl Activity {
 
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     let activities_store = Arc::new(Mutex::new(ActivitiesList::new(repository_factory.activities_list_repository.clone())));
-    let csv_activities_importer = Arc::new(Mutex::new(CsvActivitiesImporter::new(repository_factory.pam_categories_list_repository.clone(), "2025".to_string())));
+    let csv_activities_importer = Arc::new(Mutex::new(CsvActivitiesImporter::new(repository_factory.pam_categories_list_repository.clone())));
 
     let store = ServiceState {
         activities_store,
@@ -311,10 +311,20 @@ async fn delete_activity(
     }
 }
 
+/// Query parameters for uploading activities.
+#[derive(Deserialize, IntoParams)]
+struct UploadActivitiesQuery {
+    /// The year of the activities being uploaded.
+    activities_year: u16,
+}
+
 #[utoipa::path(
     put,
     path = "/upload-csv",
     tag = ACTIVITIES_LIST_SERVICE_TAG,
+    params(
+        UploadActivitiesQuery,
+    ),
     request_body(content = String, content_type = "text/csv", description = "CSV file containing activities data"),
     responses(
         (status = 200, description = "CSV file processed successfully"),
@@ -323,6 +333,7 @@ async fn delete_activity(
 )]
 async fn upload_activities_csv_raw(
     State(store): State<ServiceState>,
+    query: Query<UploadActivitiesQuery>,
     body: String,
 ) -> impl IntoResponse {
     if body.is_empty() {
@@ -333,7 +344,7 @@ async fn upload_activities_csv_raw(
         let mut csv_importer = store.csv_activities_importer.lock().await;
         let reader = body.as_bytes();
 
-        match activities_list.import(&mut *csv_importer, reader) {
+        match activities_list.import(&mut *csv_importer, reader, query.activities_year) {
             Ok(_) => (StatusCode::OK, Json("CSV file processed successfully".to_string())).into_response(),
             Err(err) => (StatusCode::BAD_REQUEST, Json(err.to_string())).into_response(),
         }
@@ -344,6 +355,9 @@ async fn upload_activities_csv_raw(
     post,
     path = "/upload-csv",
     tag = ACTIVITIES_LIST_SERVICE_TAG,
+    params(
+        UploadActivitiesQuery,
+    ),
     request_body(content_type = "multipart/form-data", description = "CSV file upload"),
     responses(
         (status = 200, description = "CSV file processed successfully"),
@@ -352,6 +366,7 @@ async fn upload_activities_csv_raw(
 )]
 async fn upload_activities_csv_multipart(
     State(store): State<ServiceState>,
+    query: Query<UploadActivitiesQuery>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
     let mut csv_content: Option<String> = None;
@@ -369,7 +384,7 @@ async fn upload_activities_csv_multipart(
         let mut csv_importer = store.csv_activities_importer.lock().await;
         let reader = csv_content.as_bytes();
 
-        match activities_list.import(&mut *csv_importer, reader) {
+        match activities_list.import(&mut *csv_importer, reader, query.activities_year) {
             Ok(_) => (StatusCode::OK, Json("CSV file processed successfully".to_string())).into_response(),
             Err(err) => (StatusCode::BAD_REQUEST, Json(err.to_string())).into_response(),
         }
