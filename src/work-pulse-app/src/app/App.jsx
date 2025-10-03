@@ -4,6 +4,7 @@ import { Box, Sheet, Typography } from '@mui/joy'
 import TodaysActivities from "../pages/todaysActivities"
 import CategoriesConfiguration from "../pages/categoriesConfiguration"
 import EditActivity from "../pages/editActivity"
+import ImportActivities from "../pages/importActivities"
 
 import Navigation from './Navigation'
 
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/activities" element={<TodaysActivities />} />
           <Route path="/activities/edit/:id" element={<EditActivity />} />
           <Route path="/categories" element={<CategoriesConfiguration />} />
+          <Route path="/import" element={<ImportActivities />} />
           <Route path="/" element={<TodaysActivities />} />
         </Routes>
       </Box>

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Button, Divider, Stack } from '@mui/joy'
-import { List, Settings, ViewList } from '@mui/icons-material'
+import { CloudUpload, List, Settings, ViewList } from '@mui/icons-material'
 
 const Navigation = () => {
   const location = useLocation()
@@ -69,6 +69,17 @@ const Navigation = () => {
         sx={{ justifyContent: 'flex-start' }}
       >
         Categories Configuration
+      </Button>
+
+      <Button
+        component={Link}
+        to="/import"
+        variant={location.pathname === '/import' ? 'solid' : 'soft'}
+        startDecorator={<CloudUpload />}
+        fullWidth
+        sx={{ justifyContent: 'flex-start' }}
+      >
+        Import Activities
       </Button>
     </Stack>
   )
