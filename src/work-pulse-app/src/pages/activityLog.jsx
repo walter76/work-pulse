@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, IconButton, Sheet, Table, Typography } from '@mui/joy'
+import { Button, IconButton, Input, Sheet, Table, Typography } from '@mui/joy'
 import { Delete, Edit, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
 const ActivityLog = () => {
-  const fromDate = '2025-01-01'
-  const toDate = '2025-10-31'
+  const [fromDate, setFromDate] = useState('2025-01-01')
+  const [toDate, setToDate] = useState('2025-10-31')
 
   const [activities, setActivities] = useState([])
   const [categories, setCategories] = useState([])
@@ -15,6 +15,7 @@ const ActivityLog = () => {
 
   useEffect(() => {
     refreshCategories()
+    refreshActivities()
   }, [])
 
   const refreshCategories = async () => {
@@ -87,6 +88,26 @@ const ActivityLog = () => {
         </Typography>
       )}
 
+      <Sheet variant='outlined' sx={{ display: 'flex', gap: 2, padding: 2 }}>
+        <Input
+          type='date'
+          placeholder="From Date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          size="sm"
+        />
+        <Input
+            type='date'
+            placeholder="To Date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            size="sm"
+        />
+        <Button startDecorator={<Refresh />} onClick={refreshActivities} size="sm">
+          Refresh Activities
+        </Button>
+      </Sheet>
+
       <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
         <Typography level="h3">
           Activities from {fromDate} to {toDate}
@@ -94,9 +115,6 @@ const ActivityLog = () => {
 
         <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
           <Typography>Number of Records: {activities.length}</Typography>
-          <Button startDecorator={<Refresh />} onClick={refreshActivities} size="sm">
-            Refresh Activities
-          </Button>
         </Sheet>
 
         <Table>
