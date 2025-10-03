@@ -21,7 +21,9 @@ const Navigation = () => {
       <Divider />
 
       <Button
-        variant="soft"
+        component={Link}
+        to="/activities/log"
+        variant={location.pathname === '/activities/log' ? 'solid' : 'soft'}
         startDecorator={<ViewList />}
         fullWidth
         sx={{ justifyContent: 'flex-start' }}

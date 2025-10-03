@@ -5,6 +5,7 @@ import TodaysActivities from "../pages/todaysActivities"
 import CategoriesConfiguration from "../pages/categoriesConfiguration"
 import EditActivity from "../pages/editActivity"
 import ImportActivities from "../pages/importActivities"
+import ActivityLog from '../pages/activityLog'
 
 import Navigation from './Navigation'
 
@@ -40,6 +41,7 @@ const App = () => (
         <Routes>
           <Route path="/activities" element={<TodaysActivities />} />
           <Route path="/activities/edit/:id" element={<EditActivity />} />
+          <Route path="/activities/log" element={<ActivityLog />} />
           <Route path="/categories" element={<CategoriesConfiguration />} />
           <Route path="/import" element={<ImportActivities />} />
           <Route path="/" element={<TodaysActivities />} />
