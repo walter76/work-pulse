@@ -53,9 +53,23 @@ const groupActivitiesByWeek = (activities) => {
   return grouped
 }
 
+// Function to get the first and last day of the current month
+const getCurrentMonthRange = () => {
+  const now = new Date()
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+  return {
+    start: firstDay.toISOString().split('T')[0],
+    end: lastDay.toISOString().split('T')[0],
+  }
+}
+
 const ActivityLog = () => {
-  const [fromDate, setFromDate] = useState('2025-01-01')
-  const [toDate, setToDate] = useState('2025-10-31')
+  const currentMonthRange = getCurrentMonthRange()
+
+  const [fromDate, setFromDate] = useState(currentMonthRange.start)
+  const [toDate, setToDate] = useState(currentMonthRange.end)
 
   const [activities, setActivities] = useState([])
   const [categories, setCategories] = useState([])
