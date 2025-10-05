@@ -39,7 +39,9 @@ const ActivityLog = () => {
     setError('')
 
     try {
-      const response = await axios.get(`http://localhost:8080/api/v1/activities?start_date=${fromDate}&end_date=${toDate}`)
+      const response = await axios.get(
+        `http://localhost:8080/api/v1/activities?start_date=${fromDate}&end_date=${toDate}`,
+      )
 
       setActivities(response.data)
 
@@ -78,9 +80,7 @@ const ActivityLog = () => {
 
   return (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <Typography level="h2">
-        Activities Log
-      </Typography>
+      <Typography level="h2">Activities Log</Typography>
 
       {error && (
         <Typography level="body-md" color="danger" sx={{ padding: 1 }}>
@@ -88,20 +88,20 @@ const ActivityLog = () => {
         </Typography>
       )}
 
-      <Sheet variant='outlined' sx={{ display: 'flex', gap: 2, padding: 2 }}>
+      <Sheet variant="outlined" sx={{ display: 'flex', gap: 2, padding: 2 }}>
         <Input
-          type='date'
+          type="date"
           placeholder="From Date"
           value={fromDate}
           onChange={(e) => setFromDate(e.target.value)}
           size="sm"
         />
         <Input
-            type='date'
-            placeholder="To Date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            size="sm"
+          type="date"
+          placeholder="To Date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          size="sm"
         />
         <Button startDecorator={<Refresh />} onClick={refreshActivities} size="sm">
           Refresh Activities
@@ -109,11 +109,9 @@ const ActivityLog = () => {
       </Sheet>
 
       <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
-        <Typography level="h3">
-          Activities from {fromDate} to {toDate}
-        </Typography>
-
-        <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
+        <Sheet
+          sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}
+        >
           <Typography>Number of Records: {activities.length}</Typography>
         </Sheet>
 
@@ -150,7 +148,7 @@ const ActivityLog = () => {
                     <td>{categoryName}</td>
                     <td>{activity.task}</td>
                     <td>
-                      <IconButton 
+                      <IconButton
                         aria-label="Edit Activity"
                         color="primary"
                         variant="soft"
@@ -159,7 +157,7 @@ const ActivityLog = () => {
                       >
                         <Edit />
                       </IconButton>
-                      <IconButton 
+                      <IconButton
                         aria-label="Delete Activity"
                         color="danger"
                         variant="soft"
@@ -171,12 +169,10 @@ const ActivityLog = () => {
                     </td>
                   </tr>
                 )
-            })}
+              })}
           </tbody>
         </Table>
-
       </Sheet>
-
     </Sheet>
   )
 }
