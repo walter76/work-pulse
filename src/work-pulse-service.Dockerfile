@@ -12,15 +12,15 @@ ENV INCLUDE_CA=${INCLUDE_CA}
 WORKDIR /usr/src/work-pulse
 
 # Copy the Cargo.toml and Cargo.lock files
-COPY src/Cargo.docker.toml ./Cargo.toml
-COPY src/Cargo.lock ./
+COPY ./Cargo.docker.toml ./Cargo.toml
+COPY ./Cargo.lock ./Cargo.lock
 
 # Copy the source code
-COPY src/work-pulse-core ./work-pulse-core
-COPY src/work-pulse-service ./work-pulse-service
+COPY ./work-pulse-core ./work-pulse-core
+COPY ./work-pulse-service ./work-pulse-service
 
 RUN mkdir -p ./certificates
-COPY certificates ./certificates
+COPY ./certificates ./certificates
 
 # Copy CA certificate inside the container and install the SSL certificates (if applicable)
 # RUN if [ "$INCLUDE_CA" = "true" ] && [ -d "./certificates" ]; then \
