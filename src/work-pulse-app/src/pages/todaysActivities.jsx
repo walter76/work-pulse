@@ -4,6 +4,8 @@ import { Button, IconButton, Input, Option, Select, Sheet, Table, Typography } f
 import { Add, Delete, Edit, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
+import { API_BASE_URL } from '../config/api'
+
 const TodaysActivities = () => {
   const today = new Date()
   const formattedDate = today.toISOString().split('T')[0] // Format date as YYYY-MM-DD
@@ -29,7 +31,7 @@ const TodaysActivities = () => {
     setError('')
 
     try {
-      const response = await axios.get(`http://localhost:8080/api/v1/activities?start_date=${formattedDate}&end_date=${formattedDate}`)
+      const response = await axios.get(`${API_BASE_URL}/api/v1/activities?start_date=${formattedDate}&end_date=${formattedDate}`)
 
       setActivities(response.data)
 
@@ -48,7 +50,7 @@ const TodaysActivities = () => {
     setError('')
 
     try {
-      const response = await axios.get('http://localhost:8080/api/v1/pam-categories')
+      const response = await axios.get(`${API_BASE_URL}/api/v1/pam-categories`)
 
       setCategories(response.data)
 
@@ -89,7 +91,7 @@ const TodaysActivities = () => {
     setError('')
 
     try {
-      await axios.post('http://localhost:8080/api/v1/activities', {
+      await axios.post(`${API_BASE_URL}/api/v1/activities`, {
         date: activityDate,
         start_time: startTime,
         end_time: endTime,
@@ -119,7 +121,7 @@ const TodaysActivities = () => {
     setError('')
 
     try {
-      await axios.delete(`http://localhost:8080/api/v1/activities/${activityId}`)
+      await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
 
       // Refresh the activities list after deletion
       refreshActivities()

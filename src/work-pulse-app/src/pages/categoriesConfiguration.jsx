@@ -3,6 +3,8 @@ import { Button, IconButton, Input, Sheet, Table, Typography } from '@mui/joy'
 import { Add, Check, Close, Delete, Edit, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
+import { API_BASE_URL } from '../config/api'
+
 const CategoriesConfiguration = () => {
   const [categories, setCategories] = useState([])
   const [categoryName, setCategoryName] = useState('')
@@ -19,7 +21,7 @@ const CategoriesConfiguration = () => {
     setError('')
 
     try {
-      const response = await axios.get('http://localhost:8080/api/v1/pam-categories')
+      const response = await axios.get(`${API_BASE_URL}/api/v1/pam-categories`)
 
       setCategories(response.data)
 
@@ -41,7 +43,7 @@ const CategoriesConfiguration = () => {
     setError('')
 
     try {
-      await axios.post('http://localhost:8080/api/v1/pam-categories', {
+      await axios.post(`${API_BASE_URL}/api/v1/pam-categories`, {
         name: categoryName,
       })
 
@@ -63,7 +65,7 @@ const CategoriesConfiguration = () => {
     setError('')
 
     try {
-      await axios.delete(`http://localhost:8080/api/v1/pam-categories/${categoryId}`)
+      await axios.delete(`${API_BASE_URL}/api/v1/pam-categories/${categoryId}`)
     
       // Refresh the categories list after deletion
       refreshCategories()
@@ -90,7 +92,7 @@ const CategoriesConfiguration = () => {
     setError('')
 
     try {
-      await axios.put(`http://localhost:8080/api/v1/pam-categories`, {
+      await axios.put(`${API_BASE_URL}/api/v1/pam-categories`, {
         id: editingId,
         name: editingName,
       })

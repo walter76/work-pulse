@@ -3,6 +3,8 @@ import { Box, Button, Input, Sheet, Typography } from '@mui/joy'
 import { CloudUpload } from '@mui/icons-material'
 import axios from 'axios'
 
+import { API_BASE_URL } from '../config/api'
+
 const ImportActivities = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
   const [selectedFile, setSelectedFile] = useState(null)
@@ -37,7 +39,7 @@ const ImportActivities = () => {
         // Add your import logic here, e.g., sending the file to the backend
         console.log(`Importing activities for year ${selectedYear} from file:`, selectedFile.name)
 
-        const response = await axios.post(`http://localhost:8080/api/v1/activities/upload-csv?activities_year=${selectedYear}`, formData, {
+        const response = await axios.post(`${API_BASE_URL}/api/v1/activities/upload-csv?activities_year=${selectedYear}`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },

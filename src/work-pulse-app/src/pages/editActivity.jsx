@@ -4,6 +4,8 @@ import { Button, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Save } from '@mui/icons-material'
 import axios from 'axios'
 
+import { API_BASE_URL } from '../config/api'
+
 const EditActivity = () => {
   const { id: activityId } = useParams()
 
@@ -29,7 +31,7 @@ const EditActivity = () => {
     setError('')
 
     try {
-      const response = await axios.get(`http://localhost:8080/api/v1/activities/${activityId}`)
+      const response = await axios.get(`${API_BASE_URL}/api/v1/activities/${activityId}`)
       const activityData = response.data
 
       setActivityDate(activityData.date)
@@ -50,7 +52,7 @@ const EditActivity = () => {
     setError('')
 
     try {
-      const response = await axios.get('http://localhost:8080/api/v1/pam-categories')
+      const response = await axios.get(`${API_BASE_URL}/api/v1/pam-categories`)
 
       setCategories(response.data)
 
@@ -93,7 +95,7 @@ const EditActivity = () => {
     setError('')
 
     try {
-      await axios.put(`http://localhost:8080/api/v1/activities`, {
+      await axios.put(`${API_BASE_URL}/api/v1/activities`, {
         id: activityId,
         date: activityDate,
         start_time: startTime,

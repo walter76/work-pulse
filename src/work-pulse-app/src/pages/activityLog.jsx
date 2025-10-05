@@ -4,6 +4,8 @@ import { Button, Divider, IconButton, Input, Sheet, Table, Typography } from '@m
 import { Delete, Edit, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
+import { API_BASE_URL } from '../config/api'
+
 // Helper function to get week number from a date
 const getWeekNumber = (date) => {
   const d = new Date(date)
@@ -86,7 +88,7 @@ const ActivityLog = () => {
     setError('')
 
     try {
-      const response = await axios.get('http://localhost:8080/api/v1/pam-categories')
+      const response = await axios.get(`${API_BASE_URL}/api/v1/pam-categories`)
 
       setCategories(response.data)
 
@@ -103,7 +105,7 @@ const ActivityLog = () => {
 
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/v1/activities?start_date=${fromDate}&end_date=${toDate}`,
+        `${API_BASE_URL}/api/v1/activities?start_date=${fromDate}&end_date=${toDate}`,
       )
 
       setActivities(response.data)
@@ -120,7 +122,7 @@ const ActivityLog = () => {
     setError('')
 
     try {
-      await axios.delete(`http://localhost:8080/api/v1/activities/${activityId}`)
+      await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
 
       // Refresh the activities list after deletion
       refreshActivities()
