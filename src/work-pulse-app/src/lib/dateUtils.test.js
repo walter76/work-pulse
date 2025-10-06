@@ -1,4 +1,4 @@
-import { getWeekNumber } from './dateUtils'
+import { getWeekNumber, getWeekRange } from './dateUtils'
 
 describe('getWeekNumber', () => {
     describe('accepts different input formats', () => {
@@ -96,6 +96,214 @@ describe('getWeekNumber', () => {
                 const weekNumber = getWeekNumber(date)
                 expect(weekNumber).toBeGreaterThanOrEqual(1)
                 expect(weekNumber).toBeLessThanOrEqual(53)
+            })
+        })
+    })
+})
+
+describe('getWeekRange', () => {
+    describe('accepts different input formats', () => {
+        it('should accept string date in YYYY-MM-DD format', () => {
+            const result = getWeekRange('2025-01-08')
+            expect(result).toEqual({
+                start: '2025-01-06',
+                end: '2025-01-12'
+            })
+        })
+
+        it('should accept Date object', () => {
+            const result = getWeekRange(new Date('2025-01-08'))
+            expect(result).toEqual({
+                start: '2025-01-06',
+                end: '2025-01-12'
+            })
+        })
+    })
+
+    describe('calculates correct week ranges for different days of the week', () => {
+        // Test week: January 6-12, 2025
+        it('should return correct range when input is Monday', () => {
+            const result = getWeekRange('2025-01-06') // Monday
+            expect(result).toEqual({
+                start: '2025-01-06',
+                end: '2025-01-12'
+            })
+        })
+
+        it('should return correct range when input is Wednesday', () => {
+            const result = getWeekRange('2025-01-08') // Wednesday
+            expect(result).toEqual({
+                start: '2025-01-06',
+                end: '2025-01-12'
+            })
+        })
+
+        it('should return correct range when input is Friday', () => {
+            const result = getWeekRange('2025-01-10') // Friday
+            expect(result).toEqual({
+                start: '2025-01-06',
+                end: '2025-01-12'
+            })
+        })
+
+        it('should return correct range when input is Sunday', () => {
+            const result = getWeekRange('2025-01-12') // Sunday
+            expect(result).toEqual({
+                start: '2025-01-06',
+                end: '2025-01-12'
+            })
+        })
+    })
+
+    describe('handles all days of the same week consistently', () => {
+        it('should return the same week range for all days in January 6-12, 2025', () => {
+            const expectedRange = {
+                start: '2025-01-06',
+                end: '2025-01-12'
+            }
+
+            expect(getWeekRange('2025-01-06')).toEqual(expectedRange) // Monday
+            expect(getWeekRange('2025-01-07')).toEqual(expectedRange) // Tuesday
+            expect(getWeekRange('2025-01-08')).toEqual(expectedRange) // Wednesday
+            expect(getWeekRange('2025-01-09')).toEqual(expectedRange) // Thursday
+            expect(getWeekRange('2025-01-10')).toEqual(expectedRange) // Friday
+            expect(getWeekRange('2025-01-11')).toEqual(expectedRange) // Saturday
+            expect(getWeekRange('2025-01-12')).toEqual(expectedRange) // Sunday
+        })
+    })
+
+    describe('handles month boundaries correctly', () => {
+        it('should handle week spanning across months', () => {
+            const result = getWeekRange('2025-02-01') // Saturday
+            expect(result).toEqual({
+                start: '2025-01-27',    // Monday of previous month
+                end: '2025-02-02'       // Sunday of current month
+            })
+        })
+
+        it('should handle end of month dates', () => {
+            const result = getWeekRange('2025-01-31') // Friday
+            expect(result).toEqual({
+                start: '2025-01-27',
+                end: '2025-02-02'
+            })
+        })
+    })
+
+    describe('handles year boundaries correctly', () => {
+        it('should handle week spanning across years', () => {
+            const result = getWeekRange('2024-12-30') // Monday
+            expect(result).toEqual({
+                start: '2024-12-30',    // Monday of current year
+                end: '2025-01-05'       // Sunday of next year
+            })
+        })
+
+        it('should handle New Year Day', () => {
+            const result = getWeekRange('2025-01-01') // Wednesday
+            expect(result).toEqual({
+                start: '2024-12-30',    // Monday of previous year
+                end: '2025-01-05'       // Sunday of current year
+            })
+        })
+
+        it('should handle last day of year', () => {
+            const result = getWeekRange('2024-12-31') // Tuesday
+            expect(result).toEqual({
+                start: '2024-12-30',    // Monday of current year
+                end: '2025-01-05'       // Sunday of next year
+            })
+        })
+    })
+
+    describe('handles leap year correctly', () => {
+        it('should handle February 29th in a leap year', () => {
+            const result = getWeekRange('2024-02-29') // Thursday
+            expect(result).toEqual({
+                start: '2024-02-26',
+                end: '2024-03-03'
+            })
+        })
+    })
+
+    describe('handles various dates throughout the year', () => {
+        it('should handle mid-year dates correctly', () => {
+            const result1 = getWeekRange('2025-06-15') // Sunday
+            expect(result1).toEqual({
+                start: '2025-06-09',
+                end: '2025-06-15'
+            })
+
+            const result2 = getWeekRange('2025-09-10') // Wednesday
+            expect(result2).toEqual({
+                start: '2025-09-08',
+                end: '2025-09-14'
+            })
+        })
+    })
+
+    describe('return format validation', () => {
+        it('should return object with start and end properties', () => {
+            const result = getWeekRange('2025-01-08')
+
+            expect(result).toHaveProperty('start')
+            expect(result).toHaveProperty('end')
+            expect(typeof result.start).toBe('string')
+            expect(typeof result.end).toBe('string')
+        })
+
+        it('should return dates in YYYY-MM-DD format', () => {
+            const result = getWeekRange('2025-01-08')
+
+            // Check format with regex: YYYY-MM-DD
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+            expect(result.start).toMatch(dateRegex)
+            expect(result.end).toMatch(dateRegex)
+        })
+
+        it('should ensure start date is always before end date', () => {
+            const testDates = [
+                '2025-01-01', '2025-03-15', '2025-06-30',
+                '2025-09-15', '2025-12-31'
+            ]
+
+            testDates.forEach(date => {
+                const result = getWeekRange(date)
+                expect(new Date(result.start) <= new Date(result.end)).toBe(true)
+            })
+        })
+
+        it('should ensure week is exactly 7 days long', () => {
+            const testDates = [
+                '2025-01-01', '2025-03-15', '2025-06-30',
+                '2025-09-15', '2025-12-31'
+            ]
+
+            testDates.forEach(date => {
+                const result = getWeekRange(date)
+                const start = new Date(result.start)
+                const end = new Date(result.end)
+                const diffTime = Math.abs(end - start)
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 to include both start and end dates
+                expect(diffDays).toBe(7)
+            })
+        })
+    })
+
+    describe('edge cases', () => {
+        it('should handle dates at the beginning of time', () => {
+            const result = getWeekRange('1970-01-01') // Thursday
+            expect(result).toEqual({
+                start: '1969-12-29',
+                end: '1970-01-04'
+            })
+        })
+
+        it('should handle future dates', () => {
+            const result = getWeekRange('2100-12-31') // Friday
+            expect(result).toEqual({
+                start: '2100-12-27',
+                end: '2101-01-02'
             })
         })
     })

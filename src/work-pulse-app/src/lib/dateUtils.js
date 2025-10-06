@@ -56,13 +56,27 @@ export const getWeekNumber = (date) => {
  * getWeekRange('2025-01-08') // Returns { start: '2025-01-06', end: '2025-01-12' }
  */
 export const getWeekRange = (date) => {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(d.setDate(diffToMonday))
+  // Create a new Date object to avoid mutating the original
+  const targetDate = new Date(date)
+
+  // Get the day of the week (0=Sunday, 1=Monday, ..., 6=Saturday)
+  const dayOfWeek = targetDate.getDay()
+
+  // Calculate how many days to subtract to get to Monday
+  // If it's Sunday (0), we need to go back 6 days
+  // If it's Monday (1), we need to go back 0 days
+  // If it's Tuesday (2), we need to go back 1 day, etc.
+  const daysToSubtractForMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+
+  // Find the Monday of this week
+  const monday = new Date(targetDate)
+  monday.setDate(targetDate.getDate() - daysToSubtractForMonday)
+
+  // Find the Sunday of this week (6 days after Monday)
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
 
+  // Return dates in YYYY-MM-DD format
   return {
     start: monday.toISOString().split('T')[0],
     end: sunday.toISOString().split('T')[0],
