@@ -16,7 +16,8 @@ const ActivityLog = () => {
   const [fromDate, setFromDate] = useState(currentMonthRange.start)
   const [toDate, setToDate] = useState(currentMonthRange.end)
 
-  const { activities, loading, error, setError, refreshActivities } = useActivities()
+  const { activities, loading, error, setError, refreshActivities, deleteActivity } =
+    useActivities()
   const [categories, setCategories] = useState([])
 
   useEffect(() => {
@@ -40,20 +41,12 @@ const ActivityLog = () => {
     }
   }
 
-  const deleteActivity = async (activityId) => {
-    console.log(`Deleting activity with ID: ${activityId}`)
-    setError('')
+  const handleDeleteActivity = async (activityId) => {
+    const success = await deleteActivity(activityId)
 
-    try {
-      await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
-
+    if (success) {
       // Refresh the activities list after deletion
       refreshActivities(fromDate, toDate)
-
-      console.log(`Activity with ID ${activityId} deleted successfully!`)
-    } catch (error) {
-      console.error(`Error deleting activity with ID ${activityId}:`, error)
-      setError('Failed to delete activity. Please try again.')
     }
   }
 
@@ -94,7 +87,11 @@ const ActivityLog = () => {
           onChange={(e) => setToDate(e.target.value)}
           size="sm"
         />
-        <Button startDecorator={<Refresh />} onClick={() => refreshActivities(fromDate, toDate)} size="sm">
+        <Button
+          startDecorator={<Refresh />}
+          onClick={() => refreshActivities(fromDate, toDate)}
+          size="sm"
+        >
           Refresh Activities
         </Button>
       </Sheet>
@@ -130,7 +127,7 @@ const ActivityLog = () => {
                 activities={sortedActivities}
                 categories={categories}
                 onEditActivity={editActivity}
-                onDeleteActivity={deleteActivity}
+                onDeleteActivity={handleDeleteActivity}
               />
 
               {weekIndex < sortedWeeks.length - 1 && <Divider sx={{ marginTop: 2 }} />}

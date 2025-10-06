@@ -12,8 +12,9 @@ import { API_BASE_URL } from '../config/api'
 const TodaysActivities = () => {
   const today = new Date()
   const formattedDate = today.toISOString().split('T')[0] // Format date as YYYY-MM-DD
-  
-  const { activities, loading, error, setError, refreshActivities } = useActivities()
+
+  const { activities, loading, error, setError, refreshActivities, deleteActivity } =
+    useActivities()
 
   const [categories, setCategories] = useState([])
   const [categoryId, setCategoryId] = useState('')
@@ -102,20 +103,12 @@ const TodaysActivities = () => {
     }
   }
 
-  const deleteActivity = async (activityId) => {
-    console.log(`Deleting activity with ID: ${activityId}`)
-    setError('')
+  const handleDeleteActivity = async (activityId) => {
+    const success = await deleteActivity(activityId)
 
-    try {
-      await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
-
+    if (success) {
       // Refresh the activities list after deletion
       refreshActivities(formattedDate, formattedDate)
-
-      console.log(`Activity with ID ${activityId} deleted successfully!`)
-    } catch (error) {
-      console.error(`Error deleting activity with ID ${activityId}:`, error)
-      setError('Failed to delete activity. Please try again.')
     }
   }
 
@@ -209,7 +202,11 @@ const TodaysActivities = () => {
           sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}
         >
           <Typography>Number of Records: {activities.length}</Typography>
-          <Button startDecorator={<Refresh />} onClick={() => refreshActivities(formattedDate, formattedDate)} size="sm">
+          <Button
+            startDecorator={<Refresh />}
+            onClick={() => refreshActivities(formattedDate, formattedDate)}
+            size="sm"
+          >
             Refresh Activities
           </Button>
         </Sheet>
@@ -218,7 +215,7 @@ const TodaysActivities = () => {
           activities={activities.sort((a, b) => b.start_time.localeCompare(a.start_time))}
           categories={categories}
           onEditActivity={editActivity}
-          onDeleteActivity={deleteActivity}
+          onDeleteActivity={handleDeleteActivity}
         />
 
         {activities.length === 0 && (

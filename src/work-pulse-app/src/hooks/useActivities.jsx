@@ -29,11 +29,30 @@ export const useActivities = () => {
     }
   }, [])
 
+  const deleteActivity = useCallback(async (activityId) => {
+    console.log(`Deleting activity with ID: ${activityId}`)
+    setError('')
+
+    try {
+      await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
+
+      console.log(`Activity with ID ${activityId} deleted successfully!`)
+
+      return true
+    } catch (error) {
+      console.error(`Error deleting activity with ID ${activityId}:`, error)
+      setError('Failed to delete activity. Please try again.')
+
+      return false
+    }
+  }, [])
+
   return {
     activities,
     loading,
     error,
     setError,
     refreshActivities,
+    deleteActivity,
   }
 }
