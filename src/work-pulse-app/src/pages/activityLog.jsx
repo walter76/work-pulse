@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Divider, IconButton, Input, Sheet, Table, Typography } from '@mui/joy'
-import { Delete, Edit, Refresh } from '@mui/icons-material'
+import { Button, Divider, Input, Sheet, Typography } from '@mui/joy'
+import { Refresh } from '@mui/icons-material'
 import axios from 'axios'
+
+import ActivitiesTable from '../components/activitiesTable'
 
 import { API_BASE_URL } from '../config/api'
 import { getCurrentMonthRange, groupActivitiesByWeek } from '../lib/dateUtils'
@@ -143,54 +145,12 @@ const ActivityLog = () => {
                 </Typography>
               </Typography>
 
-              <Table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Check-In</th>
-                    <th>Check-Out</th>
-                    <th>Category</th>
-                    <th>Task</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedActivities.map((activity) => {
-                    const category = categories.find((cat) => cat.id === activity.pam_category_id)
-                    const categoryName = category ? category.name : 'Unknown'
-
-                    return (
-                      <tr key={activity.id}>
-                        <td>{activity.date}</td>
-                        <td>{activity.start_time}</td>
-                        <td>{activity.end_time}</td>
-                        <td>{categoryName}</td>
-                        <td>{activity.task}</td>
-                        <td>
-                          <IconButton
-                            aria-label="Edit Activity"
-                            color="primary"
-                            variant="soft"
-                            onClick={() => editActivity(activity)}
-                            size="sm"
-                          >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            aria-label="Delete Activity"
-                            color="danger"
-                            variant="soft"
-                            onClick={() => deleteActivity(activity.id)}
-                            size="sm"
-                          >
-                            <Delete />
-                          </IconButton>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
+              <ActivitiesTable
+                activities={sortedActivities}
+                categories={categories}
+                onEditActivity={editActivity}
+                onDeleteActivity={deleteActivity}
+              />
 
               {weekIndex < sortedWeeks.length - 1 && <Divider sx={{ marginTop: 2 }} />}
             </Sheet>

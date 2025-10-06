@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, IconButton, Input, Option, Select, Sheet, Table, Typography } from '@mui/joy'
-import { Add, Delete, Edit, Refresh } from '@mui/icons-material'
+import { Button, Input, Option, Select, Sheet, Typography } from '@mui/joy'
+import { Add, Refresh } from '@mui/icons-material'
 import axios from 'axios'
+
+import ActivitiesTable from '../components/activitiesTable'
 
 import { API_BASE_URL } from '../config/api'
 
@@ -20,7 +22,7 @@ const TodaysActivities = () => {
   const [error, setError] = useState('')
 
   const startTimeRef = useRef(null)
-  
+
   useEffect(() => {
     refreshCategories()
     refreshActivities()
@@ -31,7 +33,9 @@ const TodaysActivities = () => {
     setError('')
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/activities?start_date=${formattedDate}&end_date=${formattedDate}`)
+      const response = await axios.get(
+        `${API_BASE_URL}/api/v1/activities?start_date=${formattedDate}&end_date=${formattedDate}`,
+      )
 
       setActivities(response.data)
 
@@ -87,7 +91,9 @@ const TodaysActivities = () => {
       return
     }
 
-    console.log(`Creating activity for date: ${activityDate}, start time: ${startTime}, end time: ${endTime}, category ID: ${categoryId}, task: ${task}`)
+    console.log(
+      `Creating activity for date: ${activityDate}, start time: ${startTime}, end time: ${endTime}, category ID: ${categoryId}, task: ${task}`,
+    )
     setError('')
 
     try {
@@ -96,7 +102,7 @@ const TodaysActivities = () => {
         start_time: startTime,
         end_time: endTime,
         pam_category_id: categoryId,
-        task: task
+        task: task,
       })
 
       // Reset the input field after creating the category
@@ -113,7 +119,7 @@ const TodaysActivities = () => {
     } catch (error) {
       console.error('Error creating activity:', error)
       setError('Failed to create activity. Please try again.')
-    }    
+    }
   }
 
   const deleteActivity = async (activityId) => {
@@ -144,9 +150,7 @@ const TodaysActivities = () => {
 
   return (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <Typography level="h2">
-        Today's Activities
-      </Typography>
+      <Typography level="h2">Today's Activities</Typography>
 
       {error && (
         <Typography level="body-md" color="danger" sx={{ padding: 1 }}>
@@ -177,7 +181,7 @@ const TodaysActivities = () => {
           slotProps={{
             input: {
               ref: startTimeRef,
-            }
+            },
           }}
         />
         <Input
@@ -207,89 +211,42 @@ const TodaysActivities = () => {
           placeholder="Task"
           value={task}
           onChange={(e) => setTask(e.target.value)}
-          onKeyDown={ e => {
+          onKeyDown={(e) => {
             if (e.key === 'Enter') createActivity()
           }}
           size="sm"
           sx={{ minWidth: 400 }}
         />
-        <Button startDecorator={<Add/>} onClick={createActivity} size="sm">
+        <Button startDecorator={<Add />} onClick={createActivity} size="sm">
           Add Activity
         </Button>
       </Sheet>
 
       <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
-        <Typography level="h3">
-          Activities List on {formattedDate}
-        </Typography>
+        <Typography level="h3">Activities List on {formattedDate}</Typography>
 
-        <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
+        <Sheet
+          sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}
+        >
           <Typography>Number of Records: {activities.length}</Typography>
           <Button startDecorator={<Refresh />} onClick={refreshActivities} size="sm">
             Refresh Activities
           </Button>
         </Sheet>
 
-        <Table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Check-In</th>
-              <th>Check-Out</th>
-              <th>Category</th>
-              <th>Task</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activities
-              .sort((a, b) => {
-                // first sort by date (descending)
-                const dateComparison = new Date(a.date) - new Date(b.date)
-                if (dateComparison !== 0) return dateComparison
+        <ActivitiesTable
+          activities={activities.sort((a, b) => b.start_time.localeCompare(a.start_time))}
+          categories={categories}
+          onEditActivity={editActivity}
+          onDeleteActivity={deleteActivity}
+        />
 
-                // if dates are equal, sort by start time (descending)
-                return a.start_time.localeCompare(b.start_time)
-              })
-              .map((activity) => {
-                const category = categories.find((cat) => cat.id === activity.pam_category_id)
-                const categoryName = category ? category.name : 'Unknown'
-
-                return (
-                  <tr key={activity.id}>
-                    <td>{activity.date}</td>
-                    <td>{activity.start_time}</td>
-                    <td>{activity.end_time}</td>
-                    <td>{categoryName}</td>
-                    <td>{activity.task}</td>
-                    <td>
-                      <IconButton 
-                        aria-label="Edit Activity"
-                        color="primary"
-                        variant="soft"
-                        onClick={() => editActivity(activity)}
-                        size="sm"
-                      >
-                        <Edit />
-                      </IconButton>
-                      <IconButton 
-                        aria-label="Delete Activity"
-                        color="danger"
-                        variant="soft"
-                        onClick={() => deleteActivity(activity.id)}
-                        size="sm"
-                      >
-                        <Delete />
-                      </IconButton>
-                    </td>
-                  </tr>
-                )
-            })}
-          </tbody>
-        </Table>
-
+        {activities.length === 0 && (
+          <Typography level="body-md" color="neutral" sx={{ padding: 1 }}>
+            No activities found for today.
+          </Typography>
+        )}
       </Sheet>
-
     </Sheet>
   )
 }
