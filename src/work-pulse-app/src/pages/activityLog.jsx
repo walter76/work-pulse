@@ -4,6 +4,7 @@ import { Button, Divider, Input, Sheet, Typography } from '@mui/joy'
 import { Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
+import { useActivities } from '../hooks/useActivities'
 import ActivitiesTable from '../components/activitiesTable'
 
 import { API_BASE_URL } from '../config/api'
@@ -15,15 +16,13 @@ const ActivityLog = () => {
   const [fromDate, setFromDate] = useState(currentMonthRange.start)
   const [toDate, setToDate] = useState(currentMonthRange.end)
 
-  const [activities, setActivities] = useState([])
+  const { activities, loading, error, setError, refreshActivities } = useActivities()
   const [categories, setCategories] = useState([])
-
-  const [error, setError] = useState('')
 
   useEffect(() => {
     refreshCategories()
-    refreshActivities()
-  }, [])
+    refreshActivities(fromDate, toDate)
+  }, [refreshActivities])
 
   const refreshCategories = async () => {
     console.log('Refreshing categories...')
@@ -41,24 +40,6 @@ const ActivityLog = () => {
     }
   }
 
-  const refreshActivities = async () => {
-    console.log('Refreshing activities...')
-    setError('')
-
-    try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/v1/activities?start_date=${fromDate}&end_date=${toDate}`,
-      )
-
-      setActivities(response.data)
-
-      console.log('Activities refreshed successfully!')
-    } catch (error) {
-      console.error('Error fetching activities:', error)
-      setError('Failed to fetch activities. Please try again.')
-    }
-  }
-
   const deleteActivity = async (activityId) => {
     console.log(`Deleting activity with ID: ${activityId}`)
     setError('')
@@ -67,7 +48,7 @@ const ActivityLog = () => {
       await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
 
       // Refresh the activities list after deletion
-      refreshActivities()
+      refreshActivities(fromDate, toDate)
 
       console.log(`Activity with ID ${activityId} deleted successfully!`)
     } catch (error) {
@@ -113,7 +94,7 @@ const ActivityLog = () => {
           onChange={(e) => setToDate(e.target.value)}
           size="sm"
         />
-        <Button startDecorator={<Refresh />} onClick={refreshActivities} size="sm">
+        <Button startDecorator={<Refresh />} onClick={() => refreshActivities(fromDate, toDate)} size="sm">
           Refresh Activities
         </Button>
       </Sheet>

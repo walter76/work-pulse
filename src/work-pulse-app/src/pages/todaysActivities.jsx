@@ -4,6 +4,7 @@ import { Button, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Add, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
+import { useActivities } from '../hooks/useActivities'
 import ActivitiesTable from '../components/activitiesTable'
 
 import { API_BASE_URL } from '../config/api'
@@ -11,43 +12,22 @@ import { API_BASE_URL } from '../config/api'
 const TodaysActivities = () => {
   const today = new Date()
   const formattedDate = today.toISOString().split('T')[0] // Format date as YYYY-MM-DD
+  
+  const { activities, loading, error, setError, refreshActivities } = useActivities()
 
-  const [activities, setActivities] = useState([])
   const [categories, setCategories] = useState([])
   const [categoryId, setCategoryId] = useState('')
   const [activityDate, setActivityDate] = useState(formattedDate)
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [task, setTask] = useState('')
-  const [error, setError] = useState('')
 
   const startTimeRef = useRef(null)
 
   useEffect(() => {
     refreshCategories()
-    refreshActivities()
-  }, [])
-
-  const refreshActivities = async () => {
-    console.log('Refreshing activities...')
-    setError('')
-
-    try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/v1/activities?start_date=${formattedDate}&end_date=${formattedDate}`,
-      )
-
-      setActivities(response.data)
-
-      // focus back to start time input
-      startTimeRef.current?.focus()
-
-      console.log('Activities refreshed successfully!')
-    } catch (error) {
-      console.error('Error fetching activities:', error)
-      setError('Failed to fetch activities. Please try again.')
-    }
-  }
+    refreshActivities(formattedDate, formattedDate)
+  }, [refreshActivities])
 
   const refreshCategories = async () => {
     console.log('Refreshing categories...')
@@ -113,7 +93,7 @@ const TodaysActivities = () => {
       setTask('')
 
       // Refresh the activities list after creating the activity
-      refreshActivities()
+      refreshActivities(formattedDate, formattedDate)
 
       console.log(`Activity created successfully!`)
     } catch (error) {
@@ -130,7 +110,7 @@ const TodaysActivities = () => {
       await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
 
       // Refresh the activities list after deletion
-      refreshActivities()
+      refreshActivities(formattedDate, formattedDate)
 
       console.log(`Activity with ID ${activityId} deleted successfully!`)
     } catch (error) {
@@ -229,7 +209,7 @@ const TodaysActivities = () => {
           sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}
         >
           <Typography>Number of Records: {activities.length}</Typography>
-          <Button startDecorator={<Refresh />} onClick={refreshActivities} size="sm">
+          <Button startDecorator={<Refresh />} onClick={() => refreshActivities(formattedDate, formattedDate)} size="sm">
             Refresh Activities
           </Button>
         </Sheet>
