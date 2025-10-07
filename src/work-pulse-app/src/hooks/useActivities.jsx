@@ -53,6 +53,31 @@ export const useActivities = () => {
     }
   }, [])
 
+  const updateActivity = useCallback(async (activityId, activityData) => {
+    console.log(
+      `Updating activity with ID ${activityId}: ${JSON.stringify(activityData)}`,
+    )
+
+    setError('')
+
+    try {
+      const response = await axios.put(`${API_BASE_URL}/api/v1/activities`, activityData)
+
+      setActivities(prev =>
+        prev.map(act => (act.id === activityId ? response.data : act)),
+      )
+
+      console.log(`Activity with ID ${activityId} updated successfully!`)
+
+      return { success: true, data: response.data }
+    } catch (error) {
+      console.error(`Error updating activity with ID ${activityId}:`, error)
+      setError('Failed to update activity. Please try again.')
+
+      return { success: false, error: error.message }
+    }
+  }, [])
+
   const deleteActivity = useCallback(async (activityId) => {
     console.log(`Deleting activity with ID: ${activityId}`)
 
@@ -84,6 +109,7 @@ export const useActivities = () => {
     setError,
     refreshActivities,
     createActivity,
+    updateActivity,
     deleteActivity,
   }
 }

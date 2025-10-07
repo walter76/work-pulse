@@ -4,6 +4,7 @@ import { Button, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Save } from '@mui/icons-material'
 import axios from 'axios'
 
+import { useActivities } from '../hooks/useActivities'
 import { API_BASE_URL } from '../config/api'
 
 const EditActivity = () => {
@@ -17,7 +18,8 @@ const EditActivity = () => {
   const [categoryId, setCategoryId] = useState('')
   const [task, setTask] = useState('')
 
-  const [error, setError] = useState('')
+  const { error, setError, updateActivity } =
+    useActivities()
 
   useEffect(() => {
     if (activityId) {
@@ -65,7 +67,7 @@ const EditActivity = () => {
 
   const navigate = useNavigate()
 
-  const updateActivity = async () => {
+  const handleUpdateActivity = async () => {
     if (!activityDate) {
       setError('Please enter a valid date for the activity.')
       return
@@ -91,33 +93,23 @@ const EditActivity = () => {
       return
     }
 
-    console.log(`Updating activity for date: ${activityDate}, start time: ${startTime}, end time: ${endTime}, category ID: ${categoryId}, task: ${task}`)
-    setError('')
+    await updateActivity(activityId, {
+      id: activityId,
+      date: activityDate,
+      start_time: startTime,
+      end_time: endTime,
+      pam_category_id: categoryId,
+      task: task
+    })
 
-    try {
-      await axios.put(`${API_BASE_URL}/api/v1/activities`, {
-        id: activityId,
-        date: activityDate,
-        start_time: startTime,
-        end_time: endTime,
-        pam_category_id: categoryId,
-        task: task
-      })
+    // Reset the input field after updating the activity
+    setCategoryId('')
+    setActivityDate('')
+    setStartTime('')
+    setEndTime('')
+    setTask('')
 
-      // Reset the input field after updating the activity
-      setCategoryId('')
-      setActivityDate('')
-      setStartTime('')
-      setEndTime('')
-      setTask('')
-
-      console.log(`Activity updated successfully!`)
-
-      navigate('/activities')
-    } catch (error) {
-      console.error('Error updating activity:', error)
-      setError('Failed to update activity. Please try again.')
-    }
+    navigate('/activities')
   }
 
   return (
@@ -179,20 +171,20 @@ const EditActivity = () => {
           placeholder="Task"
           value={task}
           onChange={(e) => setTask(e.target.value)}
-          onKeyDown={ e => {
-            if (e.key === 'Enter') updateActivity()
+          onKeyDown={e => {
+            if (e.key === 'Enter') handleUpdateActivity()
           }}
           size="sm"
           sx={{ minWidth: 400 }}
         />
-        <Button startDecorator={<Save/>} onClick={updateActivity} size="sm">
+        <Button startDecorator={<Save />} onClick={handleUpdateActivity} size="sm">
           Save
         </Button>
 
       </Sheet>
 
     </Sheet>
-  )    
+  )
 }
 
 export default EditActivity
