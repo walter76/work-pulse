@@ -13,7 +13,7 @@ const TodaysActivities = () => {
   const today = new Date()
   const formattedDate = today.toISOString().split('T')[0] // Format date as YYYY-MM-DD
 
-  const { activities, loading, error, setError, refreshActivities, deleteActivity } =
+  const { activities, loading, error, setError, refreshActivities, createActivity, deleteActivity } =
     useActivities()
 
   const [categories, setCategories] = useState([])
@@ -46,7 +46,7 @@ const TodaysActivities = () => {
     }
   }
 
-  const createActivity = async () => {
+  const handleCreateActivity = async () => {
     if (!activityDate) {
       setError('Please enter a valid date for the activity.')
       return
@@ -72,35 +72,13 @@ const TodaysActivities = () => {
       return
     }
 
-    console.log(
-      `Creating activity for date: ${activityDate}, start time: ${startTime}, end time: ${endTime}, category ID: ${categoryId}, task: ${task}`,
-    )
-    setError('')
-
-    try {
-      await axios.post(`${API_BASE_URL}/api/v1/activities`, {
-        date: activityDate,
-        start_time: startTime,
-        end_time: endTime,
-        pam_category_id: categoryId,
-        task: task,
-      })
-
-      // Reset the input field after creating the category
-      setCategoryId('')
-      setActivityDate(formattedDate)
-      setStartTime('')
-      setEndTime('')
-      setTask('')
-
-      // Refresh the activities list after creating the activity
-      refreshActivities(formattedDate, formattedDate)
-
-      console.log(`Activity created successfully!`)
-    } catch (error) {
-      console.error('Error creating activity:', error)
-      setError('Failed to create activity. Please try again.')
-    }
+    createActivity({
+      date: activityDate,
+      start_time: startTime,
+      end_time: endTime,
+      pam_category_id: categoryId,
+      task: task,
+    })
   }
 
   const handleDeleteActivity = async (activityId) => {
@@ -185,12 +163,12 @@ const TodaysActivities = () => {
           value={task}
           onChange={(e) => setTask(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') createActivity()
+            if (e.key === 'Enter') handleCreateActivity()
           }}
           size="sm"
           sx={{ minWidth: 400 }}
         />
-        <Button startDecorator={<Add />} onClick={createActivity} size="sm">
+        <Button startDecorator={<Add />} onClick={handleCreateActivity} size="sm">
           Add Activity
         </Button>
       </Sheet>
