@@ -52,7 +52,7 @@ const ActivityLog = () => {
 
   const navigate = useNavigate()
 
-  const editActivity = (activity) => {
+  const handleEditActivity = (activity) => {
     console.log(`Editing activity with ID: ${activity.id}`)
     setError('')
 
@@ -135,7 +135,7 @@ const ActivityLog = () => {
                 <ActivitiesTable
                   activities={sortedActivities}
                   categories={categories}
-                  onEditActivity={editActivity}
+                  onEditActivity={handleEditActivity}
                   onDeleteActivity={handleDeleteActivity}
                 />
 

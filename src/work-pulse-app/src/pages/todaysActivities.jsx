@@ -92,7 +92,7 @@ const TodaysActivities = () => {
 
   const navigate = useNavigate()
 
-  const editActivity = (activity) => {
+  const handleEditActivity = (activity) => {
     console.log(`Editing activity with ID: ${activity.id}`)
     setError('')
 
@@ -202,7 +202,7 @@ const TodaysActivities = () => {
             <ActivitiesTable
               activities={activities.sort((a, b) => b.start_time.localeCompare(a.start_time))}
               categories={categories}
-              onEditActivity={editActivity}
+              onEditActivity={handleEditActivity}
               onDeleteActivity={handleDeleteActivity}
             />
 
