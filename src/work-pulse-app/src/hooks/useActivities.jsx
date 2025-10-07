@@ -31,16 +31,14 @@ export const useActivities = () => {
   }, [])
 
   const createActivity = useCallback(async (activityData) => {
-    console.log(
-      `Creating activity: ${JSON.stringify(activityData)}`,
-    )
+    console.log(`Creating activity: ${JSON.stringify(activityData)}`)
 
     setError('')
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/v1/activities`, activityData)
 
-      setActivities(prev => [...prev, response.data])
+      setActivities((prev) => [...prev, response.data])
 
       console.log(`Activity created successfully!`)
 
@@ -54,18 +52,14 @@ export const useActivities = () => {
   }, [])
 
   const updateActivity = useCallback(async (activityId, activityData) => {
-    console.log(
-      `Updating activity with ID ${activityId}: ${JSON.stringify(activityData)}`,
-    )
+    console.log(`Updating activity with ID ${activityId}: ${JSON.stringify(activityData)}`)
 
     setError('')
 
     try {
       const response = await axios.put(`${API_BASE_URL}/api/v1/activities`, activityData)
 
-      setActivities(prev =>
-        prev.map(act => (act.id === activityId ? response.data : act)),
-      )
+      setActivities((prev) => prev.map((act) => (act.id === activityId ? response.data : act)))
 
       console.log(`Activity with ID ${activityId} updated successfully!`)
 
@@ -78,29 +72,32 @@ export const useActivities = () => {
     }
   }, [])
 
-  const deleteActivity = useCallback(async (activityId) => {
-    console.log(`Deleting activity with ID: ${activityId}`)
+  const deleteActivity = useCallback(
+    async (activityId) => {
+      console.log(`Deleting activity with ID: ${activityId}`)
 
-    setError('')
+      setError('')
 
-    const originalActivities = [...activities]
-    setActivities(prev => prev.filter(act => act.id !== activityId))
+      const originalActivities = [...activities]
+      setActivities((prev) => prev.filter((act) => act.id !== activityId))
 
-    try {
-      await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
+      try {
+        await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
 
-      console.log(`Activity with ID ${activityId} deleted successfully!`)
+        console.log(`Activity with ID ${activityId} deleted successfully!`)
 
-      return true
-    } catch (error) {
-      setActivities(originalActivities) // Revert optimistic update
+        return true
+      } catch (error) {
+        setActivities(originalActivities) // Revert optimistic update
 
-      console.error(`Error deleting activity with ID ${activityId}:`, error)
-      setError('Failed to delete activity. Please try again.')
+        console.error(`Error deleting activity with ID ${activityId}:`, error)
+        setError('Failed to delete activity. Please try again.')
 
-      return false
-    }
-  }, [activities])
+        return false
+      }
+    },
+    [activities],
+  )
 
   return {
     activities,

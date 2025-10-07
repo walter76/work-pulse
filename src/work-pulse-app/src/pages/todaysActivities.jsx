@@ -2,21 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, CircularProgress, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Add, Refresh } from '@mui/icons-material'
-import axios from 'axios'
 
 import { useActivities } from '../hooks/useActivities'
 import ActivitiesTable from '../components/activitiesTable'
-
-import { API_BASE_URL } from '../config/api'
+import { useCategories } from '../hooks/useCategories'
 
 const TodaysActivities = () => {
   const today = new Date()
   const formattedDate = today.toISOString().split('T')[0] // Format date as YYYY-MM-DD
 
-  const { activities, loading, error, setError, refreshActivities, createActivity, deleteActivity } =
-    useActivities()
+  const {
+    activities,
+    loading,
+    error,
+    setError,
+    refreshActivities,
+    createActivity,
+    deleteActivity,
+  } = useActivities()
 
-  const [categories, setCategories] = useState([])
+  const { categories, refreshCategories } = useCategories()
+
   const [categoryId, setCategoryId] = useState('')
   const [activityDate, setActivityDate] = useState(formattedDate)
   const [startTime, setStartTime] = useState('')
@@ -28,23 +34,7 @@ const TodaysActivities = () => {
   useEffect(() => {
     refreshCategories()
     refreshActivities(formattedDate, formattedDate)
-  }, [refreshActivities])
-
-  const refreshCategories = async () => {
-    console.log('Refreshing categories...')
-    setError('')
-
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/pam-categories`)
-
-      setCategories(response.data)
-
-      console.log('Categories refreshed successfully!')
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-      setError('Failed to fetch categories. Please try again.')
-    }
-  }
+  }, [refreshActivities, refreshCategories])
 
   const handleCreateActivity = async () => {
     if (!activityDate) {
@@ -191,7 +181,9 @@ const TodaysActivities = () => {
         </Sheet>
 
         {loading ? (
-          <Sheet sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 4 }}>
+          <Sheet
+            sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 4 }}
+          >
             <CircularProgress size="lg" />
             <Typography level="body-md" sx={{ marginLeft: 2 }}>
               Loading activities...

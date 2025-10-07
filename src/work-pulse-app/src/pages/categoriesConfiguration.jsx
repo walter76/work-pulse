@@ -4,9 +4,11 @@ import { Add, Check, Close, Delete, Edit, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
 import { API_BASE_URL } from '../config/api'
+import { useCategories } from '../hooks/useCategories'
 
 const CategoriesConfiguration = () => {
-  const [categories, setCategories] = useState([])
+  const { categories, refreshCategories } = useCategories()
+
   const [categoryName, setCategoryName] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editingName, setEditingName] = useState('')
@@ -14,23 +16,7 @@ const CategoriesConfiguration = () => {
 
   useEffect(() => {
     refreshCategories()
-  }, [])
-  
-  const refreshCategories = async () => {
-    console.log('Refreshing categories...')
-    setError('')
-
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/pam-categories`)
-
-      setCategories(response.data)
-
-      console.log('Categories refreshed successfully!')
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-      setError('Failed to fetch categories. Please try again.')
-    }
-  }
+  }, [refreshCategories])
 
   const createCategory = async () => {
     if (!categoryName) {
@@ -56,7 +42,9 @@ const CategoriesConfiguration = () => {
       console.log(`Category "${categoryName}" created successfully!`)
     } catch (error) {
       console.error('Error creating category:', error)
-      setError('Failed to create category. Is the category name already existing? Please try again.')
+      setError(
+        'Failed to create category. Is the category name already existing? Please try again.',
+      )
     }
   }
 
@@ -66,10 +54,10 @@ const CategoriesConfiguration = () => {
 
     try {
       await axios.delete(`${API_BASE_URL}/api/v1/pam-categories/${categoryId}`)
-    
+
       // Refresh the categories list after deletion
       refreshCategories()
-    
+
       console.log(`Category with ID ${categoryId} deleted successfully!`)
     } catch (error) {
       console.error(`Error deleting category with ID ${categoryId}:`, error)
@@ -99,25 +87,26 @@ const CategoriesConfiguration = () => {
 
       setEditingId(null)
       setEditingName('')
+
       refreshCategories()
     } catch (error) {
-        console.error(`Error renaming category:`, error)
-        setError('Failed to rename category. Is the category name already existing? Please try again.')
+      console.error(`Error renaming category:`, error)
+      setError(
+        'Failed to rename category. Is the category name already existing? Please try again.',
+      )
     }
   }
 
   return (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <Typography level="h2">
-        Categories Configuration
-      </Typography>
+      <Typography level="h2">Categories Configuration</Typography>
 
       {error && (
         <Typography level="body-md" color="danger" sx={{ padding: 1 }}>
           {error}
         </Typography>
       )}
-      
+
       <Sheet variant="outlined" sx={{ display: 'flex', gap: 2, padding: 2 }}>
         <Input
           required
@@ -127,17 +116,17 @@ const CategoriesConfiguration = () => {
           value={categoryName}
           onChange={(e) => setCategoryName(e.target.value)}
         />
-        <Button startDecorator={<Add/>} size="sm" onClick={createCategory}>
+        <Button startDecorator={<Add />} size="sm" onClick={createCategory}>
           Add Category
         </Button>
       </Sheet>
 
       <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
-        <Typography level="h3">
-          Categories List
-        </Typography>
+        <Typography level="h3">Categories List</Typography>
 
-        <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}>
+        <Sheet
+          sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}
+        >
           <Typography>Number of Records: {categories.length}</Typography>
           <Button startDecorator={<Refresh />} size="sm" onClick={refreshCategories}>
             Refresh Categories
@@ -158,14 +147,14 @@ const CategoriesConfiguration = () => {
                   {editingId === category.id ? (
                     <Input
                       value={editingName}
-                      onChange={ e => setEditingName(e.target.value) }
+                      onChange={(e) => setEditingName(e.target.value)}
                       size="sm"
                       autoFocus
-                      onKeyDown={ e => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter') saveCategory()
                         if (e.key === 'Escape') cancelEditing()
                       }}
-                      sx={{ minWidth: 150}}
+                      sx={{ minWidth: 150 }}
                     />
                   ) : (
                     category.name
@@ -174,7 +163,7 @@ const CategoriesConfiguration = () => {
                 <td>
                   {editingId === category.id ? (
                     <>
-                      <IconButton 
+                      <IconButton
                         aria-label="Save"
                         color="success"
                         variant="soft"
@@ -184,7 +173,7 @@ const CategoriesConfiguration = () => {
                       >
                         <Check />
                       </IconButton>
-                      <IconButton 
+                      <IconButton
                         aria-label="Cancel"
                         color="neutral"
                         variant="soft"
@@ -196,7 +185,7 @@ const CategoriesConfiguration = () => {
                     </>
                   ) : (
                     <>
-                      <IconButton 
+                      <IconButton
                         aria-label="Rename Category"
                         color="primary"
                         variant="soft"
@@ -206,7 +195,7 @@ const CategoriesConfiguration = () => {
                       >
                         <Edit />
                       </IconButton>
-                      <IconButton 
+                      <IconButton
                         aria-label="Delete Category"
                         color="danger"
                         variant="soft"

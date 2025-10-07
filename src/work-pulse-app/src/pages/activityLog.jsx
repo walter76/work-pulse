@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, CircularProgress, Divider, Input, Sheet, Typography } from '@mui/joy'
 import { Refresh } from '@mui/icons-material'
-import axios from 'axios'
 
 import { useActivities } from '../hooks/useActivities'
+import { useCategories } from '../hooks/useCategories'
 import ActivitiesTable from '../components/activitiesTable'
 
-import { API_BASE_URL } from '../config/api'
 import { getCurrentMonthRange, groupActivitiesByWeek } from '../lib/dateUtils'
 
 const ActivityLog = () => {
@@ -18,28 +17,12 @@ const ActivityLog = () => {
 
   const { activities, loading, error, setError, refreshActivities, deleteActivity } =
     useActivities()
-  const [categories, setCategories] = useState([])
+  const { categories, refreshCategories } = useCategories()
 
   useEffect(() => {
     refreshCategories()
     refreshActivities(fromDate, toDate)
-  }, [refreshActivities])
-
-  const refreshCategories = async () => {
-    console.log('Refreshing categories...')
-    setError('')
-
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/pam-categories`)
-
-      setCategories(response.data)
-
-      console.log('Categories refreshed successfully!')
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-      setError('Failed to fetch categories. Please try again.')
-    }
-  }
+  }, [refreshActivities, refreshCategories])
 
   const handleDeleteActivity = async (activityId) => {
     const success = await deleteActivity(activityId)

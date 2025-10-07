@@ -5,12 +5,13 @@ import { Save } from '@mui/icons-material'
 import axios from 'axios'
 
 import { useActivities } from '../hooks/useActivities'
+import { useCategories } from '../hooks/useCategories'
 import { API_BASE_URL } from '../config/api'
 
 const EditActivity = () => {
   const { id: activityId } = useParams()
 
-  const [categories, setCategories] = useState([])
+  const { categories, refreshCategories } = useCategories()
 
   const [activityDate, setActivityDate] = useState('')
   const [startTime, setStartTime] = useState('')
@@ -18,8 +19,7 @@ const EditActivity = () => {
   const [categoryId, setCategoryId] = useState('')
   const [task, setTask] = useState('')
 
-  const { error, setError, updateActivity } =
-    useActivities()
+  const { error, setError, updateActivity } = useActivities()
 
   useEffect(() => {
     if (activityId) {
@@ -46,22 +46,6 @@ const EditActivity = () => {
     } catch (error) {
       console.error('Error fetching activity:', error)
       setError('Failed to fetch activity. Please try again.')
-    }
-  }
-
-  const refreshCategories = async () => {
-    console.log('Refreshing categories...')
-    setError('')
-
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/pam-categories`)
-
-      setCategories(response.data)
-
-      console.log('Categories refreshed successfully!')
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-      setError('Failed to fetch categories. Please try again.')
     }
   }
 
@@ -99,7 +83,7 @@ const EditActivity = () => {
       start_time: startTime,
       end_time: endTime,
       pam_category_id: categoryId,
-      task: task
+      task: task,
     })
 
     // Reset the input field after updating the activity
@@ -114,9 +98,7 @@ const EditActivity = () => {
 
   return (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <Typography level="h2">
-        Edit Activity
-      </Typography>
+      <Typography level="h2">Edit Activity</Typography>
 
       {error && (
         <Typography level="body-md" color="danger" sx={{ padding: 1 }}>
@@ -171,7 +153,7 @@ const EditActivity = () => {
           placeholder="Task"
           value={task}
           onChange={(e) => setTask(e.target.value)}
-          onKeyDown={e => {
+          onKeyDown={(e) => {
             if (e.key === 'Enter') handleUpdateActivity()
           }}
           size="sm"
@@ -180,9 +162,7 @@ const EditActivity = () => {
         <Button startDecorator={<Save />} onClick={handleUpdateActivity} size="sm">
           Save
         </Button>
-
       </Sheet>
-
     </Sheet>
   )
 }
