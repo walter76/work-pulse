@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Input, Option, Select, Sheet, Typography } from '@mui/joy'
+import { Button, CircularProgress, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Add, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
@@ -203,25 +203,37 @@ const TodaysActivities = () => {
         >
           <Typography>Number of Records: {activities.length}</Typography>
           <Button
-            startDecorator={<Refresh />}
+            startDecorator={loading ? <CircularProgress size="sm" /> : <Refresh />}
             onClick={() => refreshActivities(formattedDate, formattedDate)}
             size="sm"
+            loading={loading}
           >
             Refresh Activities
           </Button>
         </Sheet>
 
-        <ActivitiesTable
-          activities={activities.sort((a, b) => b.start_time.localeCompare(a.start_time))}
-          categories={categories}
-          onEditActivity={editActivity}
-          onDeleteActivity={handleDeleteActivity}
-        />
+        {loading ? (
+          <Sheet sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 4 }}>
+            <CircularProgress size="lg" />
+            <Typography level="body-md" sx={{ marginLeft: 2 }}>
+              Loading activities...
+            </Typography>
+          </Sheet>
+        ) : (
+          <>
+            <ActivitiesTable
+              activities={activities.sort((a, b) => b.start_time.localeCompare(a.start_time))}
+              categories={categories}
+              onEditActivity={editActivity}
+              onDeleteActivity={handleDeleteActivity}
+            />
 
-        {activities.length === 0 && (
-          <Typography level="body-md" color="neutral" sx={{ padding: 1 }}>
-            No activities found for today.
-          </Typography>
+            {activities.length === 0 && (
+              <Typography level="body-md" color="neutral" sx={{ padding: 1 }}>
+                No activities found for today.
+              </Typography>
+            )}
+          </>
         )}
       </Sheet>
     </Sheet>
