@@ -36,7 +36,6 @@ export const useActivities = () => {
     )
 
     setError('')
-    setLoading(true)
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/v1/activities`, activityData)
@@ -51,14 +50,16 @@ export const useActivities = () => {
       setError('Failed to create activity. Please try again.')
 
       return { success: false, error: error.message }
-    } finally {
-      setLoading(false)
     }
   }, [])
 
   const deleteActivity = useCallback(async (activityId) => {
     console.log(`Deleting activity with ID: ${activityId}`)
+
     setError('')
+
+    const originalActivities = [...activities]
+    setActivities(prev => prev.filter(act => act.id !== activityId))
 
     try {
       await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
@@ -67,12 +68,14 @@ export const useActivities = () => {
 
       return true
     } catch (error) {
+      setActivities(originalActivities) // Revert optimistic update
+
       console.error(`Error deleting activity with ID ${activityId}:`, error)
       setError('Failed to delete activity. Please try again.')
 
       return false
     }
-  }, [])
+  }, [activities])
 
   return {
     activities,

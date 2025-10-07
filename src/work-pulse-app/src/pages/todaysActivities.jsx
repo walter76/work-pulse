@@ -72,7 +72,7 @@ const TodaysActivities = () => {
       return
     }
 
-    createActivity({
+    await createActivity({
       date: activityDate,
       start_time: startTime,
       end_time: endTime,
