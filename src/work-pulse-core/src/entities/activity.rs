@@ -4,7 +4,7 @@ use chrono::{NaiveDate, NaiveTime};
 use thiserror::Error;
 use uuid::Uuid;
 
-use super::pam::PamCategoryId;
+use super::accounting::PamCategoryId;
 
 /// Errors that can occur when working with `ActivityId`.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]

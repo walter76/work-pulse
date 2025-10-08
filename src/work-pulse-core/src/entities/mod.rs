@@ -1,2 +1,2 @@
 pub mod activity;
-pub mod pam;
+pub mod accounting;

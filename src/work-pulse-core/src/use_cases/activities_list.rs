@@ -3,7 +3,7 @@ use std::{io::Read, sync::{Arc, Mutex}};
 use chrono::{NaiveDate, NaiveTime};
 use thiserror::Error;
 
-use crate::{adapters::{ActivitiesImporter, ActivitiesImporterError, ActivitiesListRepository}, entities::{activity::{Activity, ActivityId}, pam::PamCategoryId}};
+use crate::{adapters::{ActivitiesImporter, ActivitiesImporterError, ActivitiesListRepository}, entities::{activity::{Activity, ActivityId}, accounting::PamCategoryId}};
 
 /// Represents an error that can occur while managing the list of activities.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
@@ -142,7 +142,7 @@ impl ActivitiesList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{entities::pam::PamCategoryId, infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository};
+    use crate::{entities::accounting::PamCategoryId, infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository};
     use chrono::{NaiveDate, NaiveTime};
 
     #[test]

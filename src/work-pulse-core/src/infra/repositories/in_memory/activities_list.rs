@@ -1,7 +1,7 @@
 use chrono::{NaiveDate, NaiveTime};
 use uuid::Uuid;
 
-use crate::{adapters::{ActivitiesListRepository, ActivitiesListRepositoryError}, entities::{activity::{Activity, ActivityId}, pam::PamCategoryId}};
+use crate::{adapters::{ActivitiesListRepository, ActivitiesListRepositoryError}, entities::{activity::{Activity, ActivityId}, accounting::PamCategoryId}};
 
 /// Represents a record for an `Activity`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

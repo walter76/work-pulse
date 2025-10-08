@@ -2,7 +2,7 @@ use std::io::Read;
 
 use thiserror::Error;
 
-use crate::entities::{activity::{Activity, ActivityId}, pam::{PamCategory, PamCategoryId}};
+use crate::entities::{activity::{Activity, ActivityId}, accounting::{PamCategory, PamCategoryId}};
 
 /// Error type for the PAM categories list repository.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]

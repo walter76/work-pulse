@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use thiserror::Error;
 
-use crate::{adapters::PamCategoriesListRepository, entities::pam::{PamCategory, PamCategoryId}};
+use crate::{adapters::PamCategoriesListRepository, entities::accounting::{PamCategory, PamCategoryId}};
 
 /// Represents an error that can occur while managing PAM categories.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]

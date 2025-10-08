@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
-use work_pulse_core::{entities::pam::PamCategoryId, infra::repositories::in_memory::RepositoryFactory, use_cases::pam_categories_list::PamCategoriesList};
+use work_pulse_core::{entities::accounting::PamCategoryId, infra::repositories::in_memory::RepositoryFactory, use_cases::pam_categories_list::PamCategoriesList};
 
 use crate::prelude::PAM_CATEGORIES_SERVICE_TAG;
 
@@ -33,7 +33,7 @@ impl PamCategory {
     /// # Returns
     /// 
     /// - A `PamCategory` DTO containing the data from the entity.
-    fn from_entity(entity: &work_pulse_core::entities::pam::PamCategory) -> Self {
+    fn from_entity(entity: &work_pulse_core::entities::accounting::PamCategory) -> Self {
         Self {
             id: Some(entity.id().to_string()),
             name: entity.name().to_string(),
@@ -137,7 +137,7 @@ async fn update_pam_category(
             ).into_response(),
     };
 
-    let updated_category = work_pulse_core::entities::pam::PamCategory::with_id(category_id, updated_category.name.clone());
+    let updated_category = work_pulse_core::entities::accounting::PamCategory::with_id(category_id, updated_category.name.clone());
 
     match pam_categories_list.update(updated_category.clone()) {
         Ok(_) => (

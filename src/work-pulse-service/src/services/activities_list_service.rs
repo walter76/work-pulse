@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
-use work_pulse_core::{entities::{activity::ActivityId, pam::PamCategoryId}, infra::{importers::csv_activities_importer::CsvActivitiesImporter, repositories::in_memory::RepositoryFactory}, use_cases::activities_list::ActivitiesList};
+use work_pulse_core::{entities::{activity::ActivityId, accounting::PamCategoryId}, infra::{importers::csv_activities_importer::CsvActivitiesImporter, repositories::in_memory::RepositoryFactory}, use_cases::activities_list::ActivitiesList};
 
 use crate::prelude::ACTIVITIES_LIST_SERVICE_TAG;
 
@@ -398,7 +398,7 @@ mod tests {
     use super::*;
 
     use chrono::{NaiveDate, NaiveTime};
-    use work_pulse_core::entities::{activity::ActivityId, pam::PamCategoryId};
+    use work_pulse_core::entities::{activity::ActivityId, accounting::PamCategoryId};
 
     #[test]
     fn activity_from_entity_should_convert_correctly() {

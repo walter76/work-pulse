@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::{adapters::{PamCategoriesListRepository, PamCategoriesListRepositoryError}, entities::pam::{PamCategory, PamCategoryId}};
+use crate::{adapters::{PamCategoriesListRepository, PamCategoriesListRepositoryError}, entities::accounting::{PamCategory, PamCategoryId}};
 
 /// Represents a record for a `PamCategory`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
