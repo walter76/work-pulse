@@ -2,42 +2,45 @@ use std::sync::{Arc, Mutex};
 
 use thiserror::Error;
 
-use crate::{adapters::PamCategoriesListRepository, entities::accounting::{PamCategory, PamCategoryId}};
+use crate::{
+    adapters::AccountingCategoriesListRepository,
+    entities::accounting::{AccountingCategory, AccountingCategoryId},
+};
 
 /// Represents an error that can occur while managing PAM categories.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
 pub enum PamCategoriesListError {
-    /// A PAM category with the specified name already exists.
-    #[error("A PAM category with the name '{0}' already exists.")]
+    /// A accounting category with the specified name already exists.
+    #[error("A accounting category with the name '{0}' already exists.")]
     PamCategoryAlreadyExists(String),
 
-    /// A PAM category with the ID does not exists.
-    #[error("PAM category with the ID `{0}` does not exists.")]
-    NotFound(PamCategoryId),    
+    /// A accounting category with the ID does not exists.
+    #[error("Accounting category with the ID `{0}` does not exists.")]
+    NotFound(AccountingCategoryId),
 }
 
 /// Represents a list of all PAM categories.
 pub struct PamCategoriesList {
     /// The list of PAM categories.
-    repository: Arc<Mutex<dyn PamCategoriesListRepository>>,
+    repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>,
 }
 
 impl PamCategoriesList {
     /// Creates a new `PamCategoriesList`.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// - `repository`: An `Arc<Mutex<dyn PamCategoriesListRepository>>` that provides access to the PAM categories repository.
-    pub fn new(repository: Arc<Mutex<dyn PamCategoriesListRepository>>) -> Self {
+    ///
+    /// - `repository`: An `Arc<Mutex<dyn AccountingCategoriesListRepository>>` that provides access to the accounting categories repository.
+    pub fn new(repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>) -> Self {
         Self { repository }
     }
 
     /// Creates a new `PamCategoriesList` with test data.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// - `repository`: An `Arc<Mutex<dyn PamCategoriesListRepository>>` that provides access to the PAM categories repository.
-    pub fn with_test_data(repository: Arc<Mutex<dyn PamCategoriesListRepository>>) -> Self {
+    ///
+    /// - `repository`: An `Arc<Mutex<dyn AccountingCategoriesListRepository>>` that provides access to the accounting categories repository.
+    pub fn with_test_data(repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>) -> Self {
         // FIXME Remove this test data creation
         let mut pam_categories_list = Self { repository };
 
@@ -49,73 +52,83 @@ impl PamCategoriesList {
         pam_categories_list
     }
 
-    /// Adds a PAM category to the list.
-    /// 
+    /// Adds a accounting category to the list.
+    ///
     /// # Arguments
-    /// 
-    /// - `category_name`: The name of the PAM category to add.
-    /// 
+    ///
+    /// - `category_name`: The name of the accounting category to add.
+    ///
     /// # Returns
-    /// 
-    /// - `Ok(PamCategory)`: If the category was successfully created.
+    ///
+    /// - `Ok(AccountingCategory)`: If the category was successfully created.
     /// - `Err(PamCategoriesListError)`: If a category with the same name already exists.
-    pub fn create(&mut self, category_name: &str) -> Result<PamCategory, PamCategoriesListError> {
+    pub fn create(
+        &mut self,
+        category_name: &str,
+    ) -> Result<AccountingCategory, PamCategoriesListError> {
         let mut repo = self.repository.lock().unwrap();
 
         // Check if a category with the same name already exists.
-        if repo.get_all().iter()
+        if repo
+            .get_all()
+            .iter()
             .find(|category| category.name() == category_name)
-            .is_some() {
-            return Err(PamCategoriesListError::PamCategoryAlreadyExists(category_name.to_string()));
+            .is_some()
+        {
+            return Err(PamCategoriesListError::PamCategoryAlreadyExists(
+                category_name.to_string(),
+            ));
         }
 
-        let pam_category = PamCategory::new(category_name.to_string());
-        repo.add(pam_category.clone());
+        let accounting_category = AccountingCategory::new(category_name.to_string());
+        repo.add(accounting_category.clone());
 
-        Ok(pam_category)
+        Ok(accounting_category)
     }
 
-    /// Returns the list of PAM categories.
-    /// 
+    /// Returns the list of accounting categories.
+    ///
     /// # Returns
-    /// 
-    /// - `Vec<PamCategory>`: A vector containing all PAM categories.
-    pub fn categories(&self) -> Vec<PamCategory> {
+    ///
+    /// - `Vec<AccountingCategory>`: A vector containing all accounting categories.
+    pub fn categories(&self) -> Vec<AccountingCategory> {
         let repo = self.repository.lock().unwrap();
         repo.get_all()
     }
 
-    /// Updates an existing PAM category in the list.
-    /// 
+    /// Updates an existing accounting category in the list.
+    ///
     /// # Arguments
-    /// 
-    /// - `category`: The `PamCategory` instance with updated information to be saved in the repository.
-    /// 
+    ///
+    /// - `category`: The `AccountingCategory` instance with updated information to be saved in the repository.
+    ///
     /// # Returns
-    /// 
+    ///
     /// - `Ok(())`: If the category was successfully updated.
     /// - `Err(PamCategoriesListError)`: If the category with the specified ID does not exist.
-    pub fn update(&mut self, category: PamCategory) -> Result<(), PamCategoriesListError> {
+    pub fn update(&mut self, category: AccountingCategory) -> Result<(), PamCategoriesListError> {
         let mut repo = self.repository.lock().unwrap();
 
         let category_id = category.id().clone();
-        repo.update(category).map_err(|_| PamCategoriesListError::NotFound(category_id))
+        repo.update(category)
+            .map_err(|_| PamCategoriesListError::NotFound(category_id))
     }
 
-    /// Deletes a PAM category from the list.
-    /// 
+    /// Deletes an accounting category from the list.
+    ///
     /// # Arguments
-    /// 
-    /// - `id`: The unique identifier of the PAM category to be deleted.
-    /// 
+    ///
+    /// - `id`: The unique identifier of the accounting category to be deleted.
+    ///
     /// # Returns
-    /// 
+    ///
     /// - `Ok(())`: If the category was successfully deleted.
     /// - `Err(PamCategoriesListError)`: If the category with the specified ID does not exist.
-    pub fn delete(&mut self, id: PamCategoryId) -> Result<(), PamCategoriesListError> {
+    pub fn delete(&mut self, id: AccountingCategoryId) -> Result<(), PamCategoriesListError> {
         let mut repo = self.repository.lock().unwrap();
 
-        repo.delete(id.clone()).map_err(|_| PamCategoriesListError::NotFound(id))
+        repo.delete(id.clone())
+            .map_err(|_| PamCategoriesListError::NotFound(id))
     }
 }
 
@@ -147,9 +160,12 @@ mod tests {
 
         let result = categories_list.create(category_name);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), PamCategoriesListError::PamCategoryAlreadyExists(category_name.to_string()));
+        assert_eq!(
+            result.unwrap_err(),
+            PamCategoriesListError::PamCategoryAlreadyExists(category_name.to_string())
+        );
     }
-    
+
     #[test]
     fn pam_categories_list_should_return_empty_when_no_categories() {
         let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
@@ -162,7 +178,7 @@ mod tests {
     fn pam_categories_list_should_return_all_categories() {
         let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
-        
+
         categories_list.create("Category 1").unwrap();
         categories_list.create("Category 2").unwrap();
 
@@ -179,10 +195,10 @@ mod tests {
 
         let category_name = "Original Category";
         let mut category = categories_list.create(category_name).unwrap();
-        
+
         let updated_name = "Updated Category";
         category.set_name(updated_name.to_string());
-        
+
         categories_list.update(category).unwrap();
 
         let categories = categories_list.categories();
@@ -195,12 +211,18 @@ mod tests {
         let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
 
-        let category = PamCategory::with_id(PamCategoryId::new(), "Non-existent Category".to_string());
+        let category = AccountingCategory::with_id(
+            AccountingCategoryId::new(),
+            "Non-existent Category".to_string(),
+        );
         let category_id = category.id().clone();
-        
+
         let result = categories_list.update(category);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), PamCategoriesListError::NotFound(category_id));
+        assert_eq!(
+            result.unwrap_err(),
+            PamCategoriesListError::NotFound(category_id)
+        );
     }
 
     #[test]
@@ -210,7 +232,7 @@ mod tests {
 
         let category_name = "Category to Delete";
         let category = categories_list.create(category_name).unwrap();
-        
+
         categories_list.delete(category.id().clone()).unwrap();
 
         assert!(categories_list.categories().is_empty());
@@ -221,10 +243,13 @@ mod tests {
         let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
 
-        let non_existent_id = PamCategoryId::new();
-        
+        let non_existent_id = AccountingCategoryId::new();
+
         let result = categories_list.delete(non_existent_id.clone());
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), PamCategoriesListError::NotFound(non_existent_id));
+        assert_eq!(
+            result.unwrap_err(),
+            PamCategoriesListError::NotFound(non_existent_id)
+        );
     }
 }

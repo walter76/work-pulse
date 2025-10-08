@@ -1,13 +1,24 @@
 use std::sync::Arc;
 
-use axum::{extract::{Multipart, Path, Query, State}, response::IntoResponse, Json};
+use axum::{
+    Json,
+    extract::{Multipart, Path, Query, State},
+    response::IntoResponse,
+};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
-use work_pulse_core::{entities::{activity::ActivityId, accounting::PamCategoryId}, infra::{importers::csv_activities_importer::CsvActivitiesImporter, repositories::in_memory::RepositoryFactory}, use_cases::activities_list::ActivitiesList};
+use work_pulse_core::{
+    entities::{accounting::AccountingCategoryId, activity::ActivityId},
+    infra::{
+        importers::csv_activities_importer::CsvActivitiesImporter,
+        repositories::in_memory::RepositoryFactory,
+    },
+    use_cases::activities_list::ActivitiesList,
+};
 
 use crate::prelude::ACTIVITIES_LIST_SERVICE_TAG;
 
@@ -47,13 +58,13 @@ struct Activity {
 
 impl Activity {
     /// Converts a `work_pulse_core::entities::activity::Activity` entity to an `Activity` DTO.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `entity`: A reference to the `work_pulse_core::entities::activity::Activity` entity.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// - An `Activity` DTO containing the data from the entity.
     fn from_entity(entity: &work_pulse_core::entities::activity::Activity) -> Self {
         Self {
@@ -61,15 +72,15 @@ impl Activity {
             date: entity.date().to_string(),
             start_time: entity.start_time().to_string(),
             end_time: entity.end_time().map(|t| t.to_string()),
-            pam_category_id: entity.pam_category_id().to_string(),
+            pam_category_id: entity.accounting_category_id().to_string(),
             task: entity.task().to_string(),
         }
     }
 
     /// Converts the `Activity` DTO to a `work_pulse_core::entities::activity::Activity` entity.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// - A `work_pulse_core::entities::activity::Activity` entity constructed from the DTO.
     fn to_entity(&self) -> work_pulse_core::entities::activity::Activity {
         // TODO Handle potential parsing errors more gracefully
@@ -78,7 +89,8 @@ impl Activity {
             ActivityId::parse_str(self.id.clone().unwrap().as_str()).expect("Invalid ID format"),
             self.date.parse().expect("Invalid date format"),
             self.start_time.parse().expect("Invalid start time format"),
-            PamCategoryId::parse_str(self.pam_category_id.as_str()).expect("Invalid PAM category ID format"),
+            AccountingCategoryId::parse_str(self.pam_category_id.as_str())
+                .expect("Invalid Accounting category ID format"),
             self.task.clone(),
         );
 
@@ -91,8 +103,14 @@ impl Activity {
 }
 
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    let activities_store = Arc::new(Mutex::new(ActivitiesList::new(repository_factory.activities_list_repository.clone())));
-    let csv_activities_importer = Arc::new(Mutex::new(CsvActivitiesImporter::new(repository_factory.pam_categories_list_repository.clone())));
+    let activities_store = Arc::new(Mutex::new(ActivitiesList::new(
+        repository_factory.activities_list_repository.clone(),
+    )));
+    let csv_activities_importer = Arc::new(Mutex::new(CsvActivitiesImporter::new(
+        repository_factory
+            .accounting_categories_list_repository
+            .clone(),
+    )));
 
     let store = ServiceState {
         activities_store,
@@ -104,7 +122,10 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
         .routes(routes!(get_activity_by_id))
         .routes(routes!(update_pam_category))
         .routes(routes!(delete_activity))
-        .routes(routes!(upload_activities_csv_raw, upload_activities_csv_multipart))
+        .routes(routes!(
+            upload_activities_csv_raw,
+            upload_activities_csv_multipart
+        ))
         .with_state(store)
 }
 
@@ -130,7 +151,10 @@ struct ListActivitiesQuery {
         (status = 400, description = "Invalid request - both start_date and end_date are required", body = String)
     )
 )]
-async fn list_activities(State(store): State<ServiceState>, query: Query<ListActivitiesQuery>,) -> impl IntoResponse {
+async fn list_activities(
+    State(store): State<ServiceState>,
+    query: Query<ListActivitiesQuery>,
+) -> impl IntoResponse {
     let activities_list = store.activities_store.lock().await;
 
     let activities = activities_list
@@ -144,19 +168,16 @@ async fn list_activities(State(store): State<ServiceState>, query: Query<ListAct
         (Some(start_date), Some(end_date)) => {
             let filtered_activities = activities
                 .into_iter()
-                .filter(|activity| {
-                    activity.date >= *start_date && activity.date <= *end_date
-                })
+                .filter(|activity| activity.date >= *start_date && activity.date <= *end_date)
                 .collect::<Vec<_>>();
             Json(filtered_activities).into_response()
         }
 
-        (Some(_), None) | (None, Some(_)) => {
-            (
-                StatusCode::BAD_REQUEST,
-                Json("Both start_date and end_date are required when filtering by date.".to_string())
-            ).into_response()
-        }
+        (Some(_), None) | (None, Some(_)) => (
+            StatusCode::BAD_REQUEST,
+            Json("Both start_date and end_date are required when filtering by date.".to_string()),
+        )
+            .into_response(),
 
         (None, None) => Json(activities).into_response(),
     }
@@ -184,19 +205,20 @@ async fn get_activity_by_id(
 
     match ActivityId::parse_str(&id) {
         Ok(activity_id) => match activities_list.get_by_id(&activity_id) {
-            Some(activity) => (
-                StatusCode::OK,
-                Json(Activity::from_entity(&activity)),
-            ).into_response(),
+            Some(activity) => {
+                (StatusCode::OK, Json(Activity::from_entity(&activity))).into_response()
+            }
             None => (
                 StatusCode::NOT_FOUND,
                 Json("Activity not found".to_string()),
-            ).into_response(),
+            )
+                .into_response(),
         },
         Err(_) => (
             StatusCode::BAD_REQUEST,
             Json("Invalid activity ID format".to_string()),
-        ).into_response(),
+        )
+            .into_response(),
     }
 }
 
@@ -218,22 +240,27 @@ async fn create_activity(
     let mut activities_list = store.activities_store.lock().await;
 
     let date = new_activity.date.parse().expect("Invalid date format");
-    let start_time = new_activity.start_time.parse().expect("Invalid start time format");
-    let end_time = new_activity.end_time.as_ref().map(|t| t.parse().expect("Invalid end time format"));
-    let pam_category_id = PamCategoryId::parse_str(new_activity.pam_category_id.as_str()).expect("Invalid PAM category ID format");
+    let start_time = new_activity
+        .start_time
+        .parse()
+        .expect("Invalid start time format");
+    let end_time = new_activity
+        .end_time
+        .as_ref()
+        .map(|t| t.parse().expect("Invalid end time format"));
+    let accounting_category_id =
+        AccountingCategoryId::parse_str(new_activity.pam_category_id.as_str())
+            .expect("Invalid Accounting category ID format");
 
     let activity = activities_list.record(
         date,
         start_time,
         end_time,
-        pam_category_id,
+        accounting_category_id,
         new_activity.task.clone(),
     );
 
-    (
-        StatusCode::CREATED,
-        Json(Activity::from_entity(&activity)),
-    )
+    (StatusCode::CREATED, Json(Activity::from_entity(&activity)))
 }
 
 /// Updates an existing activity.
@@ -257,22 +284,21 @@ async fn update_pam_category(
 
     if updated_activity.id.is_none() {
         return (
-                StatusCode::BAD_REQUEST,
-                Json("An ID for Activity is required".to_string())
-            ).into_response();
+            StatusCode::BAD_REQUEST,
+            Json("An ID for Activity is required".to_string()),
+        )
+            .into_response();
     }
 
     let updated_activity = updated_activity.to_entity();
 
     match activities_list.update(updated_activity.clone()) {
         Ok(_) => (
-                StatusCode::OK,
-                Json(Activity::from_entity(&updated_activity))
-            ).into_response(),
-        Err(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(err.to_string())
-            ).into_response(),
+            StatusCode::OK,
+            Json(Activity::from_entity(&updated_activity)),
+        )
+            .into_response(),
+        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
     }
 }
 
@@ -299,15 +325,13 @@ async fn delete_activity(
     match ActivityId::parse_str(&id) {
         Ok(activity_id) => match activities_list.delete(activity_id) {
             Ok(_) => StatusCode::NO_CONTENT.into_response(),
-            Err(err) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(err.to_string())
-                ).into_response(),
+            Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
         },
         Err(_) => (
-                StatusCode::BAD_REQUEST,
-                Json("Invalid activity ID format".to_string())
-            ).into_response(),
+            StatusCode::BAD_REQUEST,
+            Json("Invalid activity ID format".to_string()),
+        )
+            .into_response(),
     }
 }
 
@@ -337,7 +361,11 @@ async fn upload_activities_csv_raw(
     body: String,
 ) -> impl IntoResponse {
     if body.is_empty() {
-        (StatusCode::BAD_REQUEST, Json("No CSV data provided".to_string())).into_response()
+        (
+            StatusCode::BAD_REQUEST,
+            Json("No CSV data provided".to_string()),
+        )
+            .into_response()
     } else {
         let mut activities_list = store.activities_store.lock().await;
 
@@ -345,7 +373,11 @@ async fn upload_activities_csv_raw(
         let reader = body.as_bytes();
 
         match activities_list.import(&mut *csv_importer, reader, query.activities_year) {
-            Ok(_) => (StatusCode::OK, Json("CSV file processed successfully".to_string())).into_response(),
+            Ok(_) => (
+                StatusCode::OK,
+                Json("CSV file processed successfully".to_string()),
+            )
+                .into_response(),
             Err(err) => (StatusCode::BAD_REQUEST, Json(err.to_string())).into_response(),
         }
     }
@@ -373,7 +405,8 @@ async fn upload_activities_csv_multipart(
 
     while let Some(field) = multipart.next_field().await.unwrap_or(None) {
         if field.name() == Some("file") {
-            csv_content = Some(String::from_utf8_lossy(&field.bytes().await.unwrap_or_default()).to_string());
+            csv_content =
+                Some(String::from_utf8_lossy(&field.bytes().await.unwrap_or_default()).to_string());
             break;
         }
     }
@@ -385,11 +418,19 @@ async fn upload_activities_csv_multipart(
         let reader = csv_content.as_bytes();
 
         match activities_list.import(&mut *csv_importer, reader, query.activities_year) {
-            Ok(_) => (StatusCode::OK, Json("CSV file processed successfully".to_string())).into_response(),
+            Ok(_) => (
+                StatusCode::OK,
+                Json("CSV file processed successfully".to_string()),
+            )
+                .into_response(),
             Err(err) => (StatusCode::BAD_REQUEST, Json(err.to_string())).into_response(),
         }
     } else {
-        (StatusCode::BAD_REQUEST, Json("No file field in multipart data".to_string())).into_response()
+        (
+            StatusCode::BAD_REQUEST,
+            Json("No file field in multipart data".to_string()),
+        )
+            .into_response()
     }
 }
 
@@ -398,7 +439,7 @@ mod tests {
     use super::*;
 
     use chrono::{NaiveDate, NaiveTime};
-    use work_pulse_core::entities::{activity::ActivityId, accounting::PamCategoryId};
+    use work_pulse_core::entities::{accounting::AccountingCategoryId, activity::ActivityId};
 
     #[test]
     fn activity_from_entity_should_convert_correctly() {
@@ -406,7 +447,7 @@ mod tests {
             ActivityId::new(),
             NaiveDate::from_ymd_opt(2023, 1, 10).unwrap(),
             NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
-            PamCategoryId::new(),
+            AccountingCategoryId::new(),
             "Test Task".to_string(),
         );
         entity.set_end_time(Some(NaiveTime::from_hms_opt(15, 30, 0).unwrap()));
@@ -417,7 +458,10 @@ mod tests {
         assert_eq!(activity.date, "2023-01-10");
         assert_eq!(activity.start_time, "14:30:00");
         assert_eq!(activity.end_time, Some("15:30:00".to_string()));
-        assert_eq!(activity.pam_category_id, entity.pam_category_id().to_string());
+        assert_eq!(
+            activity.pam_category_id,
+            entity.accounting_category_id().to_string()
+        );
         assert_eq!(activity.task, "Test Task");
     }
 
@@ -428,7 +472,7 @@ mod tests {
             date: "2023-01-10".to_string(),
             start_time: "14:30:00".to_string(),
             end_time: Some("15:30:00".to_string()),
-            pam_category_id: PamCategoryId::new().to_string(),
+            pam_category_id: AccountingCategoryId::new().to_string(),
             task: "Test Task".to_string(),
         };
 
@@ -437,8 +481,14 @@ mod tests {
         assert_eq!(entity.id().to_string(), activity.id.unwrap());
         assert_eq!(entity.date().to_string(), "2023-01-10");
         assert_eq!(entity.start_time().to_string(), "14:30:00");
-        assert_eq!(entity.end_time().map(|t| t.to_string()), Some("15:30:00".to_string()));
-        assert_eq!(entity.pam_category_id().to_string(), activity.pam_category_id);
+        assert_eq!(
+            entity.end_time().map(|t| t.to_string()),
+            Some("15:30:00".to_string())
+        );
+        assert_eq!(
+            entity.accounting_category_id().to_string(),
+            activity.pam_category_id
+        );
         assert_eq!(entity.task(), "Test Task");
     }
 }

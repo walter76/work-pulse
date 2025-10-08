@@ -1,51 +1,74 @@
-use std::{io::Read, sync::{Arc, Mutex}};
+use std::{
+    io::Read,
+    sync::{Arc, Mutex},
+};
 
 use chrono::{NaiveDate, NaiveTime};
 use csv::Reader;
 use serde::Deserialize;
 
-use crate::{adapters::{ActivitiesImporter, ActivitiesImporterError, PamCategoriesListRepository}, entities::activity::Activity};
+use crate::{
+    adapters::{AccountingCategoriesListRepository, ActivitiesImporter, ActivitiesImporterError},
+    entities::activity::Activity,
+};
 
 pub struct CsvActivitiesImporter {
     /// The list of categories.
-    pam_categories_list_repository: Arc<Mutex<dyn PamCategoriesListRepository>>,    
+    accounting_categories_list_repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>,
 }
 
 impl CsvActivitiesImporter {
-    pub fn new(pam_categories_list_repository: Arc<Mutex<dyn PamCategoriesListRepository>>) -> Self {
-        Self { pam_categories_list_repository }
+    pub fn new(
+        accounting_categories_list_repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>,
+    ) -> Self {
+        Self {
+            accounting_categories_list_repository,
+        }
     }
 }
 
 impl ActivitiesImporter for CsvActivitiesImporter {
-    fn import<R: Read>(&mut self, reader: R, year: u16) -> Result<Vec<Activity>, ActivitiesImporterError> {
+    fn import<R: Read>(
+        &mut self,
+        reader: R,
+        year: u16,
+    ) -> Result<Vec<Activity>, ActivitiesImporterError> {
         let mut csv_reader = Reader::from_reader(reader);
         let mut records = Vec::new();
 
         for result in csv_reader.deserialize() {
-            let record: ActivityTableRecord = result.map_err(|_| ActivitiesImporterError::ParseError)?;
+            let record: ActivityTableRecord =
+                result.map_err(|_| ActivitiesImporterError::ParseError)?;
             records.push(record);
         }
 
         let mut activities = Vec::new();
-        let mut pam_categories_list_repository = self.pam_categories_list_repository.lock().unwrap();
+        let mut accounting_categories_list_repository =
+            self.accounting_categories_list_repository.lock().unwrap();
 
         for activity_record in records {
-            let date = ActivityTableRecord::convert_date_format(&activity_record.date, &year.to_string())?;
+            let date =
+                ActivityTableRecord::convert_date_format(&activity_record.date, &year.to_string())?;
 
-            let pam_category = pam_categories_list_repository.get_or_create_by_name(&activity_record.pam_category)
+            let accounting_category = accounting_categories_list_repository
+                .get_or_create_by_name(&activity_record.accounting_category)
                 .map_err(|_| ActivitiesImporterError::ParseError)?;
 
             let mut activity = Activity::new(
                 date.parse()
                     .map_err(|_| ActivitiesImporterError::ParseError)?,
-                activity_record.check_in.parse::<NaiveTime>()
+                activity_record
+                    .check_in
+                    .parse::<NaiveTime>()
                     .map_err(|_| ActivitiesImporterError::ParseError)?,
-                pam_category.id().clone(),
+                accounting_category.id().clone(),
                 activity_record.task,
             );
 
-            let end_time = activity_record.check_out.parse::<NaiveTime>().map_err(|_| ActivitiesImporterError::ParseError)?;
+            let end_time = activity_record
+                .check_out
+                .parse::<NaiveTime>()
+                .map_err(|_| ActivitiesImporterError::ParseError)?;
             activity.set_end_time(Some(end_time));
 
             activities.push(activity);
@@ -70,7 +93,7 @@ struct ActivityTableRecord {
     pub check_out: String,
 
     #[serde(rename = "PAM Category")]
-    pub pam_category: String,
+    pub accounting_category: String,
 
     #[serde(rename = "Topic")]
     pub task: String,

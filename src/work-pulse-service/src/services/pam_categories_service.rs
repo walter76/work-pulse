@@ -1,12 +1,19 @@
 use std::sync::Arc;
 
-use axum::{extract::{Path, State}, response::IntoResponse, Json};
+use axum::{
+    Json,
+    extract::{Path, State},
+    response::IntoResponse,
+};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
-use work_pulse_core::{entities::accounting::PamCategoryId, infra::repositories::in_memory::RepositoryFactory, use_cases::pam_categories_list::PamCategoriesList};
+use work_pulse_core::{
+    entities::accounting::AccountingCategoryId, infra::repositories::in_memory::RepositoryFactory,
+    use_cases::pam_categories_list::PamCategoriesList,
+};
 
 use crate::prelude::PAM_CATEGORIES_SERVICE_TAG;
 
@@ -25,15 +32,15 @@ struct PamCategory {
 
 impl PamCategory {
     /// Converts a `work_pulse_core::entities::pam::PamCategory` entity to a `PamCategory` DTO.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `entity`: A reference to the `work_pulse_core::entities::pam::PamCategory` entity.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// - A `PamCategory` DTO containing the data from the entity.
-    fn from_entity(entity: &work_pulse_core::entities::accounting::PamCategory) -> Self {
+    fn from_entity(entity: &work_pulse_core::entities::accounting::AccountingCategory) -> Self {
         Self {
             id: Some(entity.id().to_string()),
             name: entity.name().to_string(),
@@ -43,7 +50,11 @@ impl PamCategory {
 
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     // FIXME Remove this temporary generation of test data
-    let store = Arc::new(Mutex::new(PamCategoriesList::with_test_data(repository_factory.pam_categories_list_repository.clone())));
+    let store = Arc::new(Mutex::new(PamCategoriesList::with_test_data(
+        repository_factory
+            .accounting_categories_list_repository
+            .clone(),
+    )));
 
     OpenApiRouter::new()
         .routes(routes!(list_pam_categories, create_pam_category))
@@ -92,14 +103,11 @@ async fn create_pam_category(
 
     match pam_categories_list.create(new_category.name.as_str()) {
         Ok(pam_category) => (
-                StatusCode::CREATED,
-                Json(PamCategory::from_entity(&pam_category))
-            ).into_response(),
-        Err(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(err.to_string())
-            ).into_response()
-        
+            StatusCode::CREATED,
+            Json(PamCategory::from_entity(&pam_category)),
+        )
+            .into_response(),
+        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
     }
 }
 
@@ -124,30 +132,35 @@ async fn update_pam_category(
 
     if updated_category.id.is_none() {
         return (
-                StatusCode::BAD_REQUEST,
-                Json("Category ID is required".to_string())
-            ).into_response();
+            StatusCode::BAD_REQUEST,
+            Json("Category ID is required".to_string()),
+        )
+            .into_response();
     }
 
-    let category_id = match PamCategoryId::parse_str(&updated_category.id.unwrap()) {
+    let category_id = match AccountingCategoryId::parse_str(&updated_category.id.unwrap()) {
         Ok(id) => id,
-        Err(_) => return (
+        Err(_) => {
+            return (
                 StatusCode::BAD_REQUEST,
-                Json("Invalid category ID format".to_string())
-            ).into_response(),
+                Json("Invalid category ID format".to_string()),
+            )
+                .into_response();
+        }
     };
 
-    let updated_category = work_pulse_core::entities::accounting::PamCategory::with_id(category_id, updated_category.name.clone());
+    let updated_category = work_pulse_core::entities::accounting::AccountingCategory::with_id(
+        category_id,
+        updated_category.name.clone(),
+    );
 
     match pam_categories_list.update(updated_category.clone()) {
         Ok(_) => (
-                StatusCode::OK,
-                Json(PamCategory::from_entity(&updated_category))
-            ).into_response(),
-        Err(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(err.to_string())
-            ).into_response(),
+            StatusCode::OK,
+            Json(PamCategory::from_entity(&updated_category)),
+        )
+            .into_response(),
+        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
     }
 }
 
@@ -171,17 +184,15 @@ async fn delete_pam_category(
 ) -> impl IntoResponse {
     let mut pam_categories_list = store.lock().await;
 
-    match PamCategoryId::parse_str(&id) {
+    match AccountingCategoryId::parse_str(&id) {
         Ok(category_id) => match pam_categories_list.delete(category_id) {
             Ok(_) => StatusCode::NO_CONTENT.into_response(),
-            Err(err) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(err.to_string())
-                ).into_response(),
+            Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
         },
         Err(_) => (
-                StatusCode::BAD_REQUEST,
-                Json("Invalid category ID format".to_string())
-            ).into_response(),
+            StatusCode::BAD_REQUEST,
+            Json("Invalid category ID format".to_string()),
+        )
+            .into_response(),
     }
 }

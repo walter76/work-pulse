@@ -1,7 +1,13 @@
 use chrono::{NaiveDate, NaiveTime};
 use uuid::Uuid;
 
-use crate::{adapters::{ActivitiesListRepository, ActivitiesListRepositoryError}, entities::{activity::{Activity, ActivityId}, accounting::PamCategoryId}};
+use crate::{
+    adapters::{ActivitiesListRepository, ActivitiesListRepositoryError},
+    entities::{
+        accounting::AccountingCategoryId,
+        activity::{Activity, ActivityId},
+    },
+};
 
 /// Represents a record for an `Activity`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -18,11 +24,11 @@ struct ActivityRecord {
     /// The time when the activity ended, if applicable.
     end_time: Option<NaiveTime>,
 
-    /// The PAM category ID associated with the activity.
-    pam_category_id: PamCategoryId,
+    /// The accounting category ID associated with the activity.
+    accounting_category_id: AccountingCategoryId,
 
     /// The task itself.
-    task: String,    
+    task: String,
 }
 
 impl ActivityRecord {
@@ -37,7 +43,7 @@ impl ActivityRecord {
             date: activity.date().clone(),
             start_time: activity.start_time().clone(),
             end_time: activity.end_time().cloned(),
-            pam_category_id: activity.pam_category_id().clone(),
+            accounting_category_id: activity.accounting_category_id().clone(),
             task: activity.task().to_string(),
         }
     }
@@ -48,7 +54,7 @@ impl ActivityRecord {
             ActivityId(self.id),
             self.date,
             self.start_time,
-            self.pam_category_id.clone(),
+            self.accounting_category_id.clone(),
             self.task.clone(),
         );
         activity.set_end_time(self.end_time);
@@ -74,7 +80,8 @@ impl InMemoryActivitiesListRepository {
 
 impl ActivitiesListRepository for InMemoryActivitiesListRepository {
     fn get_all(&self) -> Vec<Activity> {
-        self.activities.iter()
+        self.activities
+            .iter()
             .map(|record| record.to_entity())
             .collect()
     }
@@ -90,7 +97,9 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
 
             Ok(())
         } else {
-            Err(ActivitiesListRepositoryError::NotFound(activity.id().clone()))
+            Err(ActivitiesListRepositoryError::NotFound(
+                activity.id().clone(),
+            ))
         }
     }
 
