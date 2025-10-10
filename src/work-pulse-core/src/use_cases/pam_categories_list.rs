@@ -134,13 +134,13 @@ impl PamCategoriesList {
 
 #[cfg(test)]
 mod tests {
-    use crate::infra::repositories::in_memory::pam_categories_list::InMemoryPamCategoriesListRepository;
+    use crate::infra::repositories::in_memory::accounting_categories_list::InMemoryAccountingCategoriesListRepository;
 
     use super::*;
 
     #[test]
     fn pam_categories_list_create_should_add_category() {
-        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
 
         let category_name = "Test Category";
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn pam_categories_list_create_should_fail_when_category_exists() {
-        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
 
         let category_name = "Test Category";
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn pam_categories_list_should_return_empty_when_no_categories() {
-        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let categories_list = PamCategoriesList::new(repository);
 
         assert!(categories_list.categories().is_empty());
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn pam_categories_list_should_return_all_categories() {
-        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
 
         categories_list.create("Category 1").unwrap();
@@ -190,7 +190,7 @@ mod tests {
 
     #[test]
     fn pam_categories_list_update_should_modify_existing_category() {
-        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
 
         let category_name = "Original Category";
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn pam_categories_list_update_should_fail_when_category_not_found() {
-        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
 
         let category = AccountingCategory::with_id(
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn pam_categories_list_delete_should_remove_existing_category() {
-        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
 
         let category_name = "Category to Delete";
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn pam_categories_list_delete_should_fail_when_category_not_found() {
-        let repository = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut categories_list = PamCategoriesList::new(repository);
 
         let non_existent_id = AccountingCategoryId::new();

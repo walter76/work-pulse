@@ -118,7 +118,7 @@ impl ActivityTableRecord {
 
 #[cfg(test)]
 mod tests {
-    use crate::infra::repositories::in_memory::pam_categories_list::InMemoryPamCategoriesListRepository;
+    use crate::infra::repositories::in_memory::accounting_categories_list::InMemoryAccountingCategoriesListRepository;
 
     use super::*;
 
@@ -151,8 +151,8 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 ";
 
         let reader = csv_data.as_bytes();
-        let pam_repo = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
-        let mut importer = CsvActivitiesImporter::new(pam_repo);
+        let accounting_repo = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+        let mut importer = CsvActivitiesImporter::new(accounting_repo);
 
         let activities = importer.import(reader, 2023).unwrap();
         assert_eq!(activities.len(), 2);
@@ -175,8 +175,8 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 11,invalid-date,09:00,17:00,Development,Coding,Worked on project X
 ";
         let reader = csv_data.as_bytes();
-        let pam_repo = Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
-        let mut importer = CsvActivitiesImporter::new(pam_repo);
+        let accounting_repo = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+        let mut importer = CsvActivitiesImporter::new(accounting_repo);
 
         let result = importer.import(reader, 2023);
         assert!(result.is_err());

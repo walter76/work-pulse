@@ -1,5 +1,5 @@
 pub mod activities_list;
-pub mod pam_categories_list;
+pub mod accounting_categories_list;
 
 use std::sync::{Arc, Mutex};
 
@@ -7,7 +7,7 @@ use crate::{
     adapters::{AccountingCategoriesListRepository, ActivitiesListRepository},
     infra::repositories::in_memory::{
         activities_list::InMemoryActivitiesListRepository,
-        pam_categories_list::InMemoryPamCategoriesListRepository,
+        accounting_categories_list::InMemoryAccountingCategoriesListRepository,
     },
 };
 
@@ -23,7 +23,7 @@ impl RepositoryFactory {
         let activities_list_repository =
             Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let accounting_categories_list_repository =
-            Arc::new(Mutex::new(InMemoryPamCategoriesListRepository::new()));
+            Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
 
         Self {
             activities_list_repository,

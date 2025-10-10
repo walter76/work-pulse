@@ -36,20 +36,20 @@ impl AccountingCategoryRecord {
 
 /// In-memory implementation of a repository for accounting categories.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct InMemoryPamCategoriesListRepository {
+pub struct InMemoryAccountingCategoriesListRepository {
     categories: Vec<AccountingCategoryRecord>,
 }
 
-impl InMemoryPamCategoriesListRepository {
+impl InMemoryAccountingCategoriesListRepository {
     /// Creates a new in-memory repository for accounting categories.
     pub fn new() -> Self {
-        InMemoryPamCategoriesListRepository {
+        Self {
             categories: Vec::new(),
         }
     }
 }
 
-impl AccountingCategoriesListRepository for InMemoryPamCategoriesListRepository {
+impl AccountingCategoriesListRepository for InMemoryAccountingCategoriesListRepository {
     fn get_all(&self) -> Vec<AccountingCategory> {
         self.categories
             .iter()
