@@ -32,7 +32,7 @@ impl Category {
     }
 }
 
-const CATEGORY_SERVICE_URL: &str = "http://localhost:8080/api/v1/pam-categories";
+const CATEGORY_SERVICE_URL: &str = "http://localhost:8080/api/v1/accounting-categories";
 
 pub struct CategoryService {
     client: reqwest::blocking::Client,
@@ -64,16 +64,16 @@ impl CategoryService {
     pub fn get_categories(&self) -> Result<Vec<Category>> {
         let response = self.client.get(&self.base_url)
             .send()
-            .with_context(|| format!("Failed to fetch PAM categories from {}", self.base_url))?;
+            .with_context(|| format!("Failed to fetch accounting categories from {}", self.base_url))?;
 
         if response.status().is_success() {
-            let pam_categories: Vec<Category> = response
+            let accounting_categories: Vec<Category> = response
                 .json()
-                .with_context(|| "Failed to parse PAM categories from response")?;
-            Ok(pam_categories)
+                .with_context(|| "Failed to parse accounting categories from response")?;
+            Ok(accounting_categories)
         } else {
             Err(anyhow::anyhow!(
-                "Failed to fetch PAM categories: HTTP {}",
+                "Failed to fetch accounting categories: HTTP {}",
                 response.status()
             ))
         }
