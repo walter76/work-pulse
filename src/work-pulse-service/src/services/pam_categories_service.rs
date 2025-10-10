@@ -12,12 +12,12 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
     entities::accounting::AccountingCategoryId, infra::repositories::in_memory::RepositoryFactory,
-    use_cases::pam_categories_list::PamCategoriesList,
+    use_cases::accounting_categories_list::AccountingCategoriesList,
 };
 
 use crate::prelude::PAM_CATEGORIES_SERVICE_TAG;
 
-type Store = Mutex<PamCategoriesList>;
+type Store = Mutex<AccountingCategoriesList>;
 
 /// The PAM Category.
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
@@ -50,7 +50,7 @@ impl PamCategory {
 
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     // FIXME Remove this temporary generation of test data
-    let store = Arc::new(Mutex::new(PamCategoriesList::with_test_data(
+    let store = Arc::new(Mutex::new(AccountingCategoriesList::with_test_data(
         repository_factory
             .accounting_categories_list_repository
             .clone(),
