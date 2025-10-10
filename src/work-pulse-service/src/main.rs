@@ -1,7 +1,7 @@
 mod services;
 
-use std::net::{Ipv4Addr, SocketAddr};
 use std::io::Error;
+use std::net::{Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
@@ -10,23 +10,23 @@ use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
 
-use services::pam_categories_service;
+use services::accounting_categories_service;
 use work_pulse_core::infra::repositories::in_memory::RepositoryFactory;
 
 use crate::services::activities_list_service;
 
 mod prelude {
     pub const ACTIVITIES_LIST_SERVICE_TAG: &str = "activities-list-service";
-    pub const PAM_CATEGORIES_SERVICE_TAG: &str = "pam-categories-service";
+    pub const ACCOUNTING_CATEGORIES_SERVICE_TAG: &str = "accounting-categories-service";
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Error>{
+async fn main() -> Result<(), Error> {
     #[derive(OpenApi)]
     #[openapi(
         tags(
             (name = prelude::ACTIVITIES_LIST_SERVICE_TAG, description = "Activities List Service"),
-            (name = prelude::PAM_CATEGORIES_SERVICE_TAG, description = "PAM Categories Service")
+            (name = prelude::ACCOUNTING_CATEGORIES_SERVICE_TAG, description = "Accounting Categories Service")
         )
     )]
     struct ApiDoc;
@@ -41,26 +41,33 @@ async fn main() -> Result<(), Error>{
     let repository_factory = RepositoryFactory::new();
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .nest("/api/v1/pam-categories", pam_categories_service::router(&repository_factory))
-        .nest("/api/v1/activities", activities_list_service::router(&repository_factory))
+        .nest(
+            "/api/v1/accounting-categories",
+            accounting_categories_service::router(&repository_factory),
+        )
+        .nest(
+            "/api/v1/activities",
+            activities_list_service::router(&repository_factory),
+        )
         .split_for_parts();
 
-    let router = router
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()));
+    let router =
+        router.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()));
 
     // configure CORS
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
-    
-    let router = router
-        .layer(cors)
-        .layer(TraceLayer::new_for_http());
+
+    let router = router.layer(cors).layer(TraceLayer::new_for_http());
 
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 8080));
     tracing::info!("Starting server at http://{}", address);
-    tracing::info!("OpenAPI documentation available at: http://{}/swagger-ui", address);
+    tracing::info!(
+        "OpenAPI documentation available at: http://{}/swagger-ui",
+        address
+    );
 
     let listener = TcpListener::bind(&address).await?;
     axum::serve(listener, router.into_make_service()).await
