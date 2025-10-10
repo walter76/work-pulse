@@ -38,7 +38,7 @@ impl DailyReport {
         self.total_duration
     }
 
-    fn calculate_activity_duration(activity: &Activity) -> Duration {
+    pub fn calculate_activity_duration(activity: &Activity) -> Duration {
         if let Some(end_time) = activity.end_time() {
             *end_time - *activity.start_time()
         } else {
