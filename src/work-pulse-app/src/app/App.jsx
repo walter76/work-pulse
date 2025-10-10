@@ -1,11 +1,12 @@
 import { Routes, Route } from 'react-router-dom'
 import { Box, Sheet, Typography } from '@mui/joy'
 
-import TodaysActivities from "../pages/todaysActivities"
-import CategoriesConfiguration from "../pages/categoriesConfiguration"
-import EditActivity from "../pages/editActivity"
-import ImportActivities from "../pages/importActivities"
+import TodaysActivities from '../pages/todaysActivities'
+import CategoriesConfiguration from '../pages/categoriesConfiguration'
+import EditActivity from '../pages/editActivity'
+import ImportActivities from '../pages/importActivities'
 import ActivityLog from '../pages/activityLog'
+import DailyReport from '../pages/dailyReport'
 
 import Navigation from './Navigation'
 
@@ -16,7 +17,7 @@ const App = () => (
       sx={{
         padding: 3,
         marginBottom: 2,
-        backgroundColor: 'primary.50'
+        backgroundColor: 'primary.50',
       }}
     >
       <Typography level="h1" sx={{ textAlign: 'center' }}>
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/activities/log" element={<ActivityLog />} />
           <Route path="/categories" element={<CategoriesConfiguration />} />
           <Route path="/import" element={<ImportActivities />} />
+          <Route path="/daily-report" element={<DailyReport />} />
           <Route path="/" element={<TodaysActivities />} />
         </Routes>
       </Box>
