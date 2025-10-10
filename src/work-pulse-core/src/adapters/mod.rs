@@ -1,5 +1,6 @@
 use std::io::Read;
 
+use chrono::NaiveDate;
 use thiserror::Error;
 
 use crate::entities::{
@@ -101,6 +102,16 @@ pub trait ActivitiesListRepository: Send + Sync {
     ///
     /// A vector of `Activity` instances representing all activities in the repository.
     fn get_all(&self) -> Vec<Activity>;
+
+    /// Retrieves a list of activities for a specific date.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `date`: The date for which to retrieve activities.
+    /// 
+    /// # Returns
+    /// A vector of `Activity` instances representing all activities for the specified date.
+    fn get_by_date(&self, date: NaiveDate) -> Vec<Activity>;
 
     /// Adds a new activity to the list.
     ///

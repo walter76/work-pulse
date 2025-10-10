@@ -86,6 +86,14 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
             .collect()
     }
 
+    fn get_by_date(&self, date: NaiveDate) -> Vec<Activity> {
+        self.activities
+            .iter()
+            .filter(|record| record.date == date)
+            .map(|record| record.to_entity())
+            .collect()
+    }
+    
     fn add(&mut self, activity: Activity) {
         let record = ActivityRecord::from_entity(activity);
         self.activities.push(record);
