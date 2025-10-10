@@ -15,7 +15,7 @@ export const useCategories = () => {
     setLoading(true)
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/pam-categories`)
+      const response = await axios.get(`${API_BASE_URL}/api/v1/accounting-categories`)
 
       setCategories(response.data)
 

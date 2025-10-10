@@ -29,7 +29,7 @@ const CategoriesConfiguration = () => {
     setError('')
 
     try {
-      await axios.post(`${API_BASE_URL}/api/v1/pam-categories`, {
+      await axios.post(`${API_BASE_URL}/api/v1/accounting-categories`, {
         name: categoryName,
       })
 
@@ -53,7 +53,7 @@ const CategoriesConfiguration = () => {
     setError('')
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/v1/pam-categories/${categoryId}`)
+      await axios.delete(`${API_BASE_URL}/api/v1/accounting-categories/${categoryId}`)
 
       // Refresh the categories list after deletion
       refreshCategories()
@@ -80,7 +80,7 @@ const CategoriesConfiguration = () => {
     setError('')
 
     try {
-      await axios.put(`${API_BASE_URL}/api/v1/pam-categories`, {
+      await axios.put(`${API_BASE_URL}/api/v1/accounting-categories`, {
         id: editingId,
         name: editingName,
       })
