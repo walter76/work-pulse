@@ -4,7 +4,7 @@ import { Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
 import { useCategories } from '../hooks/useCategories'
-import { formatDateForDisplay, formatDuration } from '../lib/dateUtils'
+import { durationToMinutes, formatDateForDisplay, formatDuration } from '../lib/dateUtils'
 
 import { API_BASE_URL } from '../config/api'
 
@@ -19,6 +19,19 @@ const DailyReport = () => {
   const [loading, setLoading] = useState(false)
 
   const { categories, refreshCategories } = useCategories()
+
+  const getTotalDurationColor = (totalDuration) => {
+    const totalMinutes = durationToMinutes(formatDuration(totalDuration))
+    const totalHours = totalMinutes / 60
+
+    if (totalHours < 8) {
+      return 'warning' // Orange - below 8 hours
+    } else if (totalHours >= 8 && totalHours <= 10) {
+      return 'success' // Green - between 8 and 10 hours
+    } else {
+      return 'danger' // Red - above 10 hours
+    }
+  }
 
   useEffect(() => {
     refreshCategories()
@@ -49,6 +62,10 @@ const DailyReport = () => {
       setLoading(false)
     }
   }
+
+  const totalDurationColor = reportData
+    ? getTotalDurationColor(reportData.total_duration)
+    : 'neutral'
 
   return (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -118,7 +135,11 @@ const DailyReport = () => {
                     style={{ fontWeight: 'bold', backgroundColor: 'var(--joy-palette-neutral-50)' }}
                   >
                     <td colSpan={2}>Total:</td>
-                    <td>{formatDuration(reportData.total_duration)}</td>
+                    <td>
+                      <Typography color={totalDurationColor} fontWeight="bold">
+                        {formatDuration(reportData.total_duration)}
+                      </Typography>
+                    </td>
                     <td colSpan={2}></td>
                   </tr>
                 </tfoot>

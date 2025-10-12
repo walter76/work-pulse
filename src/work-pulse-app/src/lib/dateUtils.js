@@ -231,3 +231,21 @@ export const formatDateForDisplay = (dateString) => {
   }
   return date.toLocaleDateString(undefined, options)
 }
+
+/**
+ * Converts a duration string in "HH:MM" format to total minutes as a number.
+ *
+ * @param {string} duration - The duration string in "HH:MM" format.
+ * @returns {number} The total duration in minutes.
+ *
+ * @example
+ * durationToMinutes("01:30") // Returns 90
+ * durationToMinutes("00:45") // Returns 45
+ * durationToMinutes("02:00") // Returns 120
+ */
+export const durationToMinutes = (duration) => {
+  if (!duration) return 0
+
+  const [hours, minutes] = duration.split(':').map(Number)
+  return (hours || 0) * 60 + (minutes || 0)
+}
