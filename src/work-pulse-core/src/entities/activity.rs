@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use chrono::{NaiveDate, NaiveTime};
+use chrono::{Duration, NaiveDate, NaiveTime};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -180,6 +180,20 @@ impl Activity {
     pub fn set_task(&mut self, task: String) {
         self.task = task;
     }
+
+    /// Calculates the duration of the activity.
+    /// If the end time is not set, the duration is considered to be zero.
+    /// 
+    /// # Returns
+    /// 
+    /// The duration of the activity as a `Duration`. 
+    pub fn duration(&self) -> Duration {
+        if let Some(end_time) = self.end_time() {
+            *end_time - *self.start_time()
+        } else {
+            Duration::zero()
+        }
+    }
 }
 
 #[cfg(test)]
@@ -255,4 +269,40 @@ mod tests {
         assert_eq!(activity.accounting_category_id(), &accounting_category_id);
         assert_eq!(activity.task(), task);
     }
+
+    #[test]
+    fn duration_should_return_correct_duration() {
+        let start_time = NaiveTime::from_hms_opt(9, 0, 0).unwrap();
+        let end_time = NaiveTime::from_hms_opt(10, 30, 0).unwrap();
+
+        let mut activity = Activity::new(
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
+            start_time,
+            AccountingCategoryId::new(),
+            "Test Task".to_string(),
+        );
+
+        // Initially, end_time is None, so duration should be zero
+        assert_eq!(activity.duration(), Duration::zero());
+
+        // Set the end_time and check the duration
+        activity.set_end_time(Some(end_time));
+        assert_eq!(activity.duration(), Duration::minutes(90));
+    }
+
+    #[test]
+    fn duration_should_return_zero_for_ongoing_activity() {
+        let start_time = NaiveTime::from_hms_opt(9, 0, 0).unwrap();
+
+        let activity = Activity::new(
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
+            start_time,
+            AccountingCategoryId::new(),
+            "Test Task".to_string(),
+        );
+
+        // Since end_time is None, duration should be zero
+        assert_eq!(activity.duration(), Duration::zero());
+    }
+
 }

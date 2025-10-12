@@ -16,7 +16,7 @@ impl DailyReport {
 
         let total_duration = activities
             .iter()
-            .map(|activity| Self::calculate_activity_duration(activity))
+            .map(|activity| activity.duration())
             .sum();
 
         DailyReport {
@@ -37,14 +37,6 @@ impl DailyReport {
     pub fn total_duration(&self) -> Duration {
         self.total_duration
     }
-
-    pub fn calculate_activity_duration(activity: &Activity) -> Duration {
-        if let Some(end_time) = activity.end_time() {
-            *end_time - *activity.start_time()
-        } else {
-            Duration::zero()
-        }
-    }
 }
 
 #[cfg(test)]
@@ -60,45 +52,6 @@ mod tests {
     };
 
     use super::*;
-
-    #[test]
-    fn calculate_activity_duration_should_return_correct_duration() {
-        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
-        let mut activities_list = ActivitiesList::new(repository);
-
-        let start_time = NaiveTime::from_hms_opt(9, 0, 0).unwrap();
-        let end_time = NaiveTime::from_hms_opt(10, 30, 0).unwrap();
-
-        let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            start_time,
-            Some(end_time),
-            AccountingCategoryId::new(),
-            "Test Task".to_string(),
-        );
-
-        let duration = DailyReport::calculate_activity_duration(&activity);
-        assert_eq!(duration, Duration::minutes(90));
-    }
-
-    #[test]
-    fn calculate_activity_duration_should_return_zero_for_ongoing_activity() {
-        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
-        let mut activities_list = ActivitiesList::new(repository);
-
-        let start_time = NaiveTime::from_hms_opt(9, 0, 0).unwrap();
-
-        let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            start_time,
-            None,
-            AccountingCategoryId::new(),
-            "Ongoing Task".to_string(),
-        );
-
-        let duration = DailyReport::calculate_activity_duration(&activity);
-        assert_eq!(duration, Duration::zero());
-    }
 
     #[test]
     fn daily_report_should_aggregate_activities_and_total_duration() {

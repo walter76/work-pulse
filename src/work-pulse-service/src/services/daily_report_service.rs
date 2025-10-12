@@ -101,7 +101,7 @@ async fn generate_daily_report(
         .iter()
         .map(|activity| DailyReportActivity {
             id: Some(activity.id().to_string()),
-            duration: use_cases::daily_report::DailyReport::calculate_activity_duration(activity).to_string(),
+            duration: activity.duration().to_string(),
             start_time: activity.start_time().to_string(),
             end_time: activity.end_time().map(|t| t.to_string()),
             accounting_category_id: activity.accounting_category_id().to_string(),
