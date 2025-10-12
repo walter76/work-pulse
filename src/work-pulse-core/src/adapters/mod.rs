@@ -113,6 +113,17 @@ pub trait ActivitiesListRepository: Send + Sync {
     /// A vector of `Activity` instances representing all activities for the specified date.
     fn get_by_date(&self, date: NaiveDate) -> Vec<Activity>;
 
+    /// Retrieves a list of activities within a specified date range.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `start`: The start date of the range (inclusive).
+    /// - `end`: The end date of the range (inclusive).
+    /// 
+    /// # Returns
+    /// A vector of `Activity` instances representing all activities within the specified date range.
+    fn get_by_date_range(&self, start: NaiveDate, end: NaiveDate) -> Vec<Activity>;
+
     /// Adds a new activity to the list.
     ///
     /// # Arguments
