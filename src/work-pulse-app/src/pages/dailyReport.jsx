@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Input, Sheet, Table, Typography } from '@mui/joy'
 import { Refresh } from '@mui/icons-material'
 import axios from 'axios'
+
+import { useCategories } from '../hooks/useCategories'
+import { formatDateForDisplay, formatDuration } from '../lib/dateUtils'
 
 import { API_BASE_URL } from '../config/api'
 
@@ -14,6 +17,12 @@ const DailyReport = () => {
 
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const { categories, refreshCategories } = useCategories()
+
+  useEffect(() => {
+    refreshCategories()
+  }, [refreshCategories])
 
   const handleDateChanged = (e) => {
     setSelectedDate(e.target.value)
@@ -65,16 +74,7 @@ const DailyReport = () => {
       </Sheet>
 
       <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
-        <Typography level="h3">Report for {selectedDate}</Typography>
-
-        <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 2 }}>
-          <Typography level="body1">
-            Total Activities: {reportData?.activities?.length || 0}
-          </Typography>
-          <Typography fontWeight="bold" color="primary">
-            Total Hours: {reportData?.total_duration || 0}
-          </Typography>
-        </Sheet>
+        <Typography level="h3">{formatDateForDisplay(selectedDate)}</Typography>
 
         {loading ? (
           <Typography level="body-md" sx={{ textAlign: 'center', padding: 3 }}>
@@ -87,25 +87,49 @@ const DailyReport = () => {
                 <tr>
                   <th>Start Time</th>
                   <th>End Time</th>
-                  <th>Duration (hours)</th>
+                  <th>Duration (HH:MM)</th>
                   <th>Category</th>
                   <th>Activity</th>
                 </tr>
               </thead>
               <tbody>
-                {reportData?.activities?.map((activity) => {
-                  return (
-                    <tr key={activity.id}>
-                      <td>{activity.start_time}</td>
-                      <td>{activity.end_time}</td>
-                      <td>{activity.duration}</td>
-                      <td>{activity.accounting_category_id}</td>
-                      <td>{activity.task}</td>
-                    </tr>
-                  )
-                })}
+                {reportData?.activities
+                  .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                  .map((activity) => {
+                    const category = categories.find(
+                      (cat) => cat.id === activity.accounting_category_id,
+                    )
+                    const categoryName = category ? category.name : 'Unknown'
+
+                    return (
+                      <tr key={activity.id}>
+                        <td>{activity.start_time}</td>
+                        <td>{activity.end_time}</td>
+                        <td>{formatDuration(activity.duration)}</td>
+                        <td>{categoryName}</td>
+                        <td>{activity.task}</td>
+                      </tr>
+                    )
+                  })}
               </tbody>
+              {reportData?.activities.length > 0 && (
+                <tfoot>
+                  <tr
+                    style={{ fontWeight: 'bold', backgroundColor: 'var(--joy-palette-neutral-50)' }}
+                  >
+                    <td colSpan={2}>Total:</td>
+                    <td>{formatDuration(reportData.total_duration)}</td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              )}
             </Table>
+
+            {reportData?.activities.length === 0 && (
+              <Typography level="body-md" color="neutral" sx={{ textAlign: 'center', padding: 3 }}>
+                No activities found for the selected date.
+              </Typography>
+            )}
           </>
         )}
       </Sheet>

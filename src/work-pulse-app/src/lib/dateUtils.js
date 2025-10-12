@@ -148,13 +148,12 @@ export const groupActivitiesByWeek = (activities) => {
 }
 
 /**
- * 
  * Gets the first and last day of the current month in YYYY-MM-DD format.
- * 
+ *
  * @returns {Object} An object containing the start and end dates of the current month.
  * @returns {string} returns.start - The first day of the current month (YYYY-MM-DD).
  * @returns {string} returns.end - The last day of the current month (YYYY-MM-DD).
- * 
+ *
  * @example
  * // If current date is 2025-10-15
  * getCurrentMonthRange()
@@ -173,4 +172,62 @@ export const getCurrentMonthRange = () => {
     start: firstDay.toISOString().split('T')[0],
     end: lastDay.toISOString().split('T')[0],
   }
+}
+
+/**
+ * Formats an ISO 8601 duration string into a more readable format.
+ *
+ * @param {string} isoDuration - The ISO 8601 duration string (e.g., "PT1H30M").
+ * @returns {string} The formatted duration string (e.g., "01:30").
+ *
+ * @example
+ * formatDuration("PT1H30M") // Returns "01:30"
+ * formatDuration("PT45M")   // Returns "00:45"
+ * formatDuration("PT2H")    // Returns "02:00"
+ */
+export const formatDuration = (isoDuration) => {
+  if (!isoDuration) return '00:00'
+
+  // Parse the ISO 8601 duration format (e.g., "PT1H30M", "PT45M", "PT2H")
+  const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/
+  const matches = isoDuration.match(regex)
+
+  if (!matches) return '00:00'
+
+  const hours = parseInt(matches[1] || '0', 10)
+  const minutes = parseInt(matches[2] || '0', 10)
+  const seconds = parseInt(matches[3] || '0', 10) // Not used in output
+
+  // Convert everything to total minutes first
+  const totalMinutes = hours * 60 + minutes + Math.floor(seconds / 60)
+
+  // Convert back to hours and minutes
+  const finalHours = Math.floor(totalMinutes / 60)
+  const finalMinutes = totalMinutes % 60
+
+  // Format with leading zeros as HH:MM
+  const formattedHours = finalHours.toString().padStart(2, '0')
+  const formattedMinutes = finalMinutes.toString().padStart(2, '0')
+
+  return `${formattedHours}:${formattedMinutes}`
+}
+
+/**
+ * Formats a date string (YYYY-MM-DD) into a more readable format.
+ *
+ * @param {string} dateString - The date string to format.
+ * @returns {string} The formatted date string.
+ *
+ * @example
+ * formatDateForDisplay("2025-10-15") // Returns "Wednesday, October 15, 2025"
+ */
+export const formatDateForDisplay = (dateString) => {
+  const date = new Date(dateString)
+  const options = {
+    weekday: 'long',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }
+  return date.toLocaleDateString(undefined, options)
 }
