@@ -19,7 +19,10 @@ mod prelude {
     pub const ACTIVITIES_LIST_SERVICE_TAG: &str = "activities-list-service";
     pub const ACCOUNTING_CATEGORIES_SERVICE_TAG: &str = "accounting-categories-service";
     pub const DAILY_REPORT_SERVICE_TAG: &str = "daily-report-service";
+    pub const WEEKLY_REPORT_SERVICE_TAG: &str = "weekly-report-service";
 }
+
+// TODO Implement health check service
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -28,7 +31,8 @@ async fn main() -> Result<(), Error> {
         tags(
             (name = prelude::ACTIVITIES_LIST_SERVICE_TAG, description = "Activities List Service"),
             (name = prelude::ACCOUNTING_CATEGORIES_SERVICE_TAG, description = "Accounting Categories Service"),
-            (name = prelude::DAILY_REPORT_SERVICE_TAG, description = "Daily Report Service")
+            (name = prelude::DAILY_REPORT_SERVICE_TAG, description = "Daily Report Service"),
+            (name = prelude::WEEKLY_REPORT_SERVICE_TAG, description = "Weekly Report Service"),
         )
     )]
     struct ApiDoc;
@@ -54,6 +58,10 @@ async fn main() -> Result<(), Error> {
         .nest(
             "/api/v1/daily-report",
             services::daily_report_service::router(&repository_factory),
+        )
+        .nest(
+            "/api/v1/weekly-report",
+            services::weekly_report_service::router(&repository_factory),
         )
         .split_for_parts();
 
