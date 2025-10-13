@@ -249,3 +249,94 @@ export const durationToMinutes = (duration) => {
   const [hours, minutes] = duration.split(':').map(Number)
   return (hours || 0) * 60 + (minutes || 0)
 }
+
+/**
+ * Get the current week in "YYYY-Www" format for HTML week input.
+ *
+ * @returns {string} The current week in "YYYY-Www" format.
+ *
+ * @example
+ * // If current date is 2025-10-15
+ * getCurrentWeek()
+ * // Returns:
+ * // "2025-W42"
+ */
+export const getCurrentWeek = () => {
+  const now = new Date()
+  const weekNumber = getWeekNumber(now)
+  const year = now.getFullYear()
+
+  return `${year}-W${weekNumber.toString().padStart(2, '0')}`
+}
+
+/**
+ * Formats a week string (YYYY-Www) for display.
+ *
+ * @param {string} weekString - The week string to format.
+ * @returns {string} The formatted week string.
+ *
+ * @example
+ * formatWeekForDisplay("2025-W42") // Returns "Week 42, 2025 (October 13 - October 19)"
+ */
+export const formatWeekForDisplay = (weekString) => {
+  if (!weekString) return ''
+
+  const [year, week] = weekString.split('-W')
+  const weekNumber = parseInt(week, 10)
+
+  // Calculate the Monday of the specified week
+  const jan4 = new Date(year, 0, 4)
+  const jan4DayOfWeek = jan4.getDay()
+  const jan4DaysSinceMonday = (jan4DayOfWeek + 6) % 7
+  const jan4DaysToThursday = 3 - jan4DaysSinceMonday
+
+  const firstThursday = new Date(jan4)
+  firstThursday.setDate(jan4.getDate() + jan4DaysToThursday)
+
+  const targetThursday = new Date(firstThursday)
+  targetThursday.setDate(firstThursday.getDate() + (weekNumber - 1) * 7)
+
+  const monday = new Date(targetThursday)
+  monday.setDate(targetThursday.getDate() - 3) // Go back to Monday
+
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6) // Go forward to Sunday
+
+  const mondayStr = monday.toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+
+  const sundayStr = sunday.toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+
+  return `Week ${weekNumber}, ${year} (${mondayStr} - ${sundayStr})`
+}
+
+export const getWeekStartDate = (weekString) => {
+  if (!weekString) return null
+
+  const [year, week] = weekString.split('-W')
+  const weekNumber = parseInt(week, 10)
+
+  // Calculate the Sunday of the specified week
+  const jan4 = new Date(year, 0, 4)
+  const jan4DayOfWeek = jan4.getDay()
+  const jan4DaysSinceMonday = (jan4DayOfWeek + 6) % 7
+  const jan4DaysToThursday = 3 - jan4DaysSinceMonday
+
+  const firstThursday = new Date(jan4)
+  firstThursday.setDate(jan4.getDate() + jan4DaysToThursday)
+
+  const targetThursday = new Date(firstThursday)
+  targetThursday.setDate(firstThursday.getDate() + (weekNumber - 1) * 7)
+
+  const monday = new Date(targetThursday)
+  monday.setDate(targetThursday.getDate() - 3) // Go back to Monday
+
+  return monday
+}

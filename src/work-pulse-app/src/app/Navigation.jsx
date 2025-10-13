@@ -45,7 +45,9 @@ const Navigation = () => {
       </Button>
 
       <Button
-        variant="soft"
+        component={Link}
+        to="/weekly-report"
+        variant={location.pathname === '/weekly-report' ? 'solid' : 'soft'}
         startDecorator={<ViewList />}
         fullWidth
         sx={{ justifyContent: 'flex-start' }}

@@ -7,6 +7,7 @@ import EditActivity from '../pages/editActivity'
 import ImportActivities from '../pages/importActivities'
 import ActivityLog from '../pages/activityLog'
 import DailyReport from '../pages/dailyReport'
+import WeeklyReport from '../pages/weeklyReport'
 
 import Navigation from './Navigation'
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/categories" element={<CategoriesConfiguration />} />
           <Route path="/import" element={<ImportActivities />} />
           <Route path="/daily-report" element={<DailyReport />} />
+          <Route path="/weekly-report" element={<WeeklyReport />} />
           <Route path="/" element={<TodaysActivities />} />
         </Routes>
       </Box>
