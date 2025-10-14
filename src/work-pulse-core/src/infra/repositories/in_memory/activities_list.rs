@@ -32,7 +32,7 @@ struct ActivityRecord {
 }
 
 impl ActivityRecord {
-    /// Converts an `Activity` entity to an `ActivityRecord`.
+    /// Converts an `Activity` entity to a `ActivityRecord`.
     ///
     /// # Arguments
     ///
@@ -48,7 +48,7 @@ impl ActivityRecord {
         }
     }
 
-    /// Converts an `ActivityRecord` to an `Activity` entity.
+    /// Converts a `ActivityRecord` to an `Activity` entity.
     fn to_entity(&self) -> Activity {
         let mut activity = Activity::with_id(
             ActivityId(self.id),
@@ -66,6 +66,7 @@ impl ActivityRecord {
 /// In-memory implementation of a repository for activities list.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct InMemoryActivitiesListRepository {
+    /// The list of activities that are stored in memory.
     activities: Vec<ActivityRecord>,
 }
 
@@ -93,7 +94,7 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
             .map(|record| record.to_entity())
             .collect()
     }
-    
+
     fn get_by_date_range(&self, start: NaiveDate, end: NaiveDate) -> Vec<Activity> {
         self.activities
             .iter()
@@ -101,7 +102,7 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
             .map(|record| record.to_entity())
             .collect()
     }
-    
+
     fn add(&mut self, activity: Activity) {
         let record = ActivityRecord::from_entity(activity);
         self.activities.push(record);
