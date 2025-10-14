@@ -26,7 +26,7 @@ pub enum ActivitiesListError {
 ///
 /// It is used to record activities that the user did during his working day.
 pub struct ActivitiesList {
-    /// The repository for a list of activities.
+    /// The repository holding the list of activities.
     repository: Arc<Mutex<dyn ActivitiesListRepository>>,
 }
 
@@ -35,7 +35,7 @@ impl ActivitiesList {
     ///
     /// # Arguments
     ///
-    /// - `repository`: The repository for a list of activities.
+    /// - `repository`: The repository holding the list of activities.
     pub fn new(repository: Arc<Mutex<dyn ActivitiesListRepository>>) -> Self {
         Self { repository }
     }
@@ -176,9 +176,9 @@ mod tests {
         let mut activities_list = ActivitiesList::new(repository);
 
         let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid time")),
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
             AccountingCategoryId::new(),
             "Test Task".to_string(),
         );
@@ -193,8 +193,8 @@ mod tests {
         let mut activities_list = ActivitiesList::new(repository);
 
         let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
             None,
             AccountingCategoryId::new(),
             "Test Task".to_string(),
@@ -218,16 +218,16 @@ mod tests {
         let mut activities_list = ActivitiesList::new(repository);
 
         activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid time")),
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
             AccountingCategoryId::new(),
             "Task 1".to_string(),
         );
 
         activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid date"),
-            NaiveTime::from_hms_opt(11, 0, 0).expect("Valid time"),
+            NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid activity date"),
+            NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
             None,
             AccountingCategoryId::new(),
             "Task 2".to_string(),
@@ -243,9 +243,9 @@ mod tests {
         let mut activities_list = ActivitiesList::new(repository);
 
         let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid time")),
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
             AccountingCategoryId::new(),
             "Test Task".to_string(),
         );
@@ -271,9 +271,9 @@ mod tests {
         let mut activities_list = ActivitiesList::new(repository);
 
         let mut activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid time")),
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
             AccountingCategoryId::new(),
             "Test Task".to_string(),
         );
@@ -292,8 +292,8 @@ mod tests {
 
         let activity = Activity::with_id(
             ActivityId::new(),
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
             AccountingCategoryId::new(),
             "Non-existent Task".to_string(),
         );
@@ -313,9 +313,9 @@ mod tests {
         let mut activities_list = ActivitiesList::new(repository);
 
         let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid time")),
+            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
             AccountingCategoryId::new(),
             "Test Task".to_string(),
         );
