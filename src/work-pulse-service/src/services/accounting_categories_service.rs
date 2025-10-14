@@ -17,12 +17,13 @@ use work_pulse_core::{
 
 use crate::prelude::ACCOUNTING_CATEGORIES_SERVICE_TAG;
 
-type Store = Mutex<AccountingCategoriesList>;
+type AccountingCategoriesListStore = Mutex<AccountingCategoriesList>;
 
 /// The Accounting Category.
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
 struct AccountingCategory {
     /// The unique identifier for the category.
+    #[schema(example = "550e8400-e29b-41d4-a716-446655440000")]
     id: Option<String>,
 
     /// The name of the category.
@@ -48,9 +49,17 @@ impl AccountingCategory {
     }
 }
 
+/// Creates an OpenAPI router for accounting categories service.
+///
+/// # Arguments
+///
+/// - `repository_factory`: A reference to the `RepositoryFactory` used to create repositories.
+///
+/// # Returns
+///
+/// - An `OpenApiRouter` configured with routes for managing accounting categories.
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    // FIXME Remove this temporary generation of test data
-    let store = Arc::new(Mutex::new(AccountingCategoriesList::with_test_data(
+    let store = Arc::new(Mutex::new(AccountingCategoriesList::new(
         repository_factory
             .accounting_categories_list_repository
             .clone(),
@@ -67,6 +76,14 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 }
 
 /// Lists all accounting categories.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the `AccountingCategoriesListStore`.
+///
+/// # Returns
+///
+/// - A JSON response containing a list of `AccountingCategory` DTOs.
 #[utoipa::path(
     get,
     path = "",
@@ -76,7 +93,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     )
 )]
 async fn list_accounting_categories(
-    State(store): State<Arc<Store>>,
+    State(store): State<Arc<AccountingCategoriesListStore>>,
 ) -> Json<Vec<AccountingCategory>> {
     let accounting_categories_list = store.lock().await;
 
@@ -90,6 +107,15 @@ async fn list_accounting_categories(
 }
 
 /// Creates a new accounting category.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the `AccountingCategoriesListStore`.
+/// - `Json(new_category)`: The new accounting category data from the request body.
+///
+/// # Returns
+///
+/// - A response indicating the result of the creation operation. In case of success, returns the created `AccountingCategory` DTO.
 #[utoipa::path(
     post,
     path = "",
@@ -101,7 +127,7 @@ async fn list_accounting_categories(
     ),
 )]
 async fn create_accounting_category(
-    State(store): State<Arc<Store>>,
+    State(store): State<Arc<AccountingCategoriesListStore>>,
     Json(new_category): Json<AccountingCategory>,
 ) -> impl IntoResponse {
     let mut accounting_categories_list = store.lock().await;
@@ -117,6 +143,15 @@ async fn create_accounting_category(
 }
 
 /// Updates an existing accounting category.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the `AccountingCategoriesListStore`.
+/// - `Json(updated_category)`: The updated accounting category data from the request body.
+///
+/// # Returns
+///
+/// - A response indicating the result of the update operation. In case of success, returns the updated `AccountingCategory` DTO.
 #[utoipa::path(
     put,
     path = "",
@@ -130,7 +165,7 @@ async fn create_accounting_category(
     ),
 )]
 async fn update_accounting_category(
-    State(store): State<Arc<Store>>,
+    State(store): State<Arc<AccountingCategoriesListStore>>,
     Json(updated_category): Json<AccountingCategory>,
 ) -> impl IntoResponse {
     let mut accounting_categories_list = store.lock().await;
@@ -170,6 +205,15 @@ async fn update_accounting_category(
 }
 
 /// Deletes an accounting category by ID.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the `AccountingCategoriesListStore`.
+/// - `Path(id)`: The unique identifier of the accounting category to delete from the request path.
+///
+/// # Returns
+///
+/// - A response indicating the result of the deletion operation. In case of success, returns no content.
 #[utoipa::path(
     delete,
     path = "/{id}",
@@ -185,7 +229,7 @@ async fn update_accounting_category(
 )]
 async fn delete_accounting_category(
     Path(id): Path<String>,
-    State(store): State<Arc<Store>>,
+    State(store): State<Arc<AccountingCategoriesListStore>>,
 ) -> impl IntoResponse {
     let mut accounting_categories_list = store.lock().await;
 
