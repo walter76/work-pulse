@@ -88,3 +88,137 @@ impl WeeklyReport {
         &self.duration_per_category
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use chrono::NaiveTime;
+
+    use crate::{
+        entities::accounting::AccountingCategoryId,
+        infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository,
+        use_cases::activities_list::ActivitiesList,
+    };
+
+    use super::*;
+
+    #[test]
+    fn weekly_report_should_aggregate_activities_and_calculate_total_duration() {
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let mut activities_list = ActivitiesList::new(repository.clone());
+
+        let _activity1 = activities_list.record(
+            NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid activity date"), // Monday
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+            AccountingCategoryId::new(),
+            "Activity 1".to_string(),
+        );
+
+        let _activity2 = activities_list.record(
+            NaiveDate::from_ymd_opt(2023, 10, 4).expect("Valid activity date"), // Wednesday
+            NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
+            AccountingCategoryId::new(),
+            "Activity 2".to_string(),
+        );
+
+        let _activity3 = activities_list.record(
+            NaiveDate::from_ymd_opt(2023, 10, 6).expect("Valid activity date"), // Friday
+            NaiveTime::from_hms_opt(14, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(15, 15, 0).expect("Valid activity end time")),
+            AccountingCategoryId::new(),
+            "Activity 3".to_string(),
+        );
+
+        let report = WeeklyReport::new(
+            NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(), // Start of the week (Monday)
+            &*repository.lock().unwrap(),
+        );
+
+        assert_eq!(
+            report.week_start(),
+            NaiveDate::from_ymd_opt(2023, 10, 2).unwrap()
+        );
+        assert_eq!(
+            report.week_end(),
+            NaiveDate::from_ymd_opt(2023, 10, 9).unwrap()
+        );
+        assert_eq!(report.activities().len(), 3);
+        assert_eq!(
+            report.total_duration(),
+            Duration::hours(3) + Duration::minutes(45)
+        );
+    }
+
+    #[test]
+    fn weekly_report_with_no_activities_should_have_zero_duration() {
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+
+        let report = WeeklyReport::new(
+            NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(), // Start of the week (Monday)
+            &*repository.lock().unwrap(),
+        );
+
+        assert_eq!(
+            report.week_start(),
+            NaiveDate::from_ymd_opt(2023, 10, 2).unwrap()
+        );
+        assert_eq!(
+            report.week_end(),
+            NaiveDate::from_ymd_opt(2023, 10, 9).unwrap()
+        );
+        assert_eq!(report.activities().len(), 0);
+        assert_eq!(report.total_duration(), Duration::zero());
+    }
+
+    #[test]
+    fn weekly_report_should_calculate_duration_per_category() {
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let mut activities_list = ActivitiesList::new(repository.clone());
+
+        let category1 = AccountingCategoryId::new();
+        let category2 = AccountingCategoryId::new();
+
+        let _activity1 = activities_list.record(
+            NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid activity date"), // Monday
+            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+            category1.clone(),
+            "Activity 1".to_string(),
+        );
+
+        let _activity2 = activities_list.record(
+            NaiveDate::from_ymd_opt(2023, 10, 4).expect("Valid activity date"), // Wednesday
+            NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
+            category2.clone(),
+            "Activity 2".to_string(),
+        );
+
+        let _activity3 = activities_list.record(
+            NaiveDate::from_ymd_opt(2023, 10, 6).expect("Valid activity date"), // Friday
+            NaiveTime::from_hms_opt(14, 0, 0).expect("Valid activity start time"),
+            Some(NaiveTime::from_hms_opt(15, 15, 0).expect("Valid activity end time")),
+            category2.clone(),
+            "Activity 3".to_string(),
+        );
+
+        let report = WeeklyReport::new(
+            NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(), // Start of the week (Monday)
+            &*repository.lock().unwrap(),
+        );
+
+        let mut duration_map = std::collections::HashMap::new();
+        for (category_id, duration) in report.duration_per_category() {
+            duration_map.insert(category_id.clone(), *duration);
+        }
+
+        assert_eq!(duration_map.get(&category1), Some(&Duration::hours(1)));
+        assert_eq!(
+            duration_map.get(&category2),
+            Some(&(Duration::hours(2) + Duration::minutes(45)))
+        );
+    }
+}
