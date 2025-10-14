@@ -97,15 +97,6 @@ struct GenerateDailyReportQuery {
 }
 
 /// Generates a daily report for the specified date.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the activities repository.
-/// - `query`: The query parameters containing the report date.
-///
-/// # Returns
-///
-/// - A response containing the generated daily report.
 #[utoipa::path(
     get,
     path = "",

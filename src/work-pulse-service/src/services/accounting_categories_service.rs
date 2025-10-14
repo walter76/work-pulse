@@ -77,14 +77,6 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 }
 
 /// Lists all accounting categories.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the `AccountingCategoriesListStore`.
-///
-/// # Returns
-///
-/// - A JSON response containing a list of `AccountingCategory` DTOs.
 #[utoipa::path(
     get,
     path = "",
@@ -108,15 +100,6 @@ async fn list_accounting_categories(
 }
 
 /// Creates a new accounting category.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the `AccountingCategoriesListStore`.
-/// - `Json(new_category)`: The new accounting category data from the request body.
-///
-/// # Returns
-///
-/// - A response indicating the result of the creation operation. In case of success, returns the created `AccountingCategory` DTO.
 #[utoipa::path(
     post,
     path = "",
@@ -144,15 +127,6 @@ async fn create_accounting_category(
 }
 
 /// Updates an existing accounting category.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the `AccountingCategoriesListStore`.
-/// - `Json(updated_category)`: The updated accounting category data from the request body.
-///
-/// # Returns
-///
-/// - A response indicating the result of the update operation. In case of success, returns the updated `AccountingCategory` DTO.
 #[utoipa::path(
     put,
     path = "",
@@ -206,15 +180,6 @@ async fn update_accounting_category(
 }
 
 /// Deletes an accounting category by ID.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the `AccountingCategoriesListStore`.
-/// - `Path(id)`: The unique identifier of the accounting category to delete from the request path.
-///
-/// # Returns
-///
-/// - A response indicating the result of the deletion operation. In case of success, returns no content.
 #[utoipa::path(
     delete,
     path = "/{id}",

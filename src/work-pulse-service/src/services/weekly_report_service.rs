@@ -70,15 +70,6 @@ struct GenerateWeeklyReportQuery {
 }
 
 /// Generates a weekly report for the specified week starting date.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the activities repository.
-/// - `query`: The query parameters containing the week start date.
-///
-/// # Returns
-///
-/// - A tuple containing the HTTP status code and the generated weekly report in JSON format.
 #[utoipa::path(
     get,
     path = "",

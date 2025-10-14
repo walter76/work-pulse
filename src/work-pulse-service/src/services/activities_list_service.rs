@@ -161,15 +161,6 @@ struct ListActivitiesQuery {
 }
 
 /// Lists all activities.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the `ActivitiesStore`.
-/// - `Query(query)`: The query parameters for filtering activities.
-///
-/// # Returns
-///
-/// - A JSON response containing a list of `Activity` DTOs, optionally filtered by date range.
 #[utoipa::path(
     get,
     path = "",
@@ -214,16 +205,7 @@ async fn list_activities(
     }
 }
 
-/// Get an activity by ID.
-///
-/// # Arguments
-///
-/// - `Path(id)`: The unique identifier of the activity to retrieve.
-/// - `State(store)`: The shared state containing the `ActivitiesStore`.
-///
-/// # Returns
-///
-/// - A response containing the `Activity` DTO if found, or an error message if not found or if the ID format is invalid.
+/// Gets an activity by ID.
 #[utoipa::path(
     get,
     path = "/{id}",
@@ -263,15 +245,6 @@ async fn get_activity_by_id(
 }
 
 /// Creates a new Activity.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the `ActivitiesStore`.
-/// - `Json(new_activity)`: The new activity data from the request body.
-///
-/// # Returns
-///
-/// - A response containing the created `Activity` DTO or an error message if the creation fails.
 #[utoipa::path(
     post,
     path = "",
@@ -313,15 +286,6 @@ async fn create_activity(
 }
 
 /// Updates an existing activity.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the `ActivitiesStore`.
-/// - `Json(updated_activity)`: The updated activity data from the request body.
-///
-/// # Returns
-///
-/// - A response indicating the result of the update operation. In case of success, returns the updated `Activity` DTO.
 #[utoipa::path(
     put,
     path = "",
@@ -361,15 +325,6 @@ async fn update_activity(
 }
 
 /// Deletes an activity by ID.
-///
-/// # Arguments
-///
-/// - `Path(id)`: The unique identifier of the activity to delete.
-/// - `State(store)`: The shared state containing the `ActivitiesStore`.
-///
-/// # Returns
-///
-/// - A response indicating the result of the delete operation.
 #[utoipa::path(
     delete,
     path = "/{id}",
@@ -411,16 +366,6 @@ struct UploadActivitiesQuery {
 }
 
 /// Uploads activities from a CSV file provided as raw text in the request body.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the `ActivitiesStore`.
-/// - `Query(query)`: The query parameters for the upload.
-/// - `body`: The raw CSV data as a string.
-///
-/// # Returns
-///
-/// - A response indicating the result of the upload operation. In case of success, returns a success message; otherwise, returns an error message.
 #[utoipa::path(
     put,
     path = "/upload-csv",
@@ -463,16 +408,6 @@ async fn upload_activities_csv_raw(
 }
 
 /// Uploads activities from a CSV file provided as multipart/form-data.
-///
-/// # Arguments
-///
-/// - `State(store)`: The shared state containing the `ActivitiesStore`.
-/// - `Query(query)`: The query parameters for the upload.
-/// - `mut multipart`: The multipart form data containing the CSV file.
-///
-/// # Returns
-///
-/// - A response indicating the result of the upload operation. In case of success, returns a success message; otherwise, returns an error message.
 #[utoipa::path(
     post,
     path = "/upload-csv",
