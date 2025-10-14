@@ -21,7 +21,7 @@ pub enum AccountingCategoriesListError {
 
 /// Represents a list of all accounting categories.
 pub struct AccountingCategoriesList {
-    /// The list of accounting categories.
+    /// The repository that provides access to the accounting categories.
     repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>,
 }
 
@@ -35,28 +35,11 @@ impl AccountingCategoriesList {
         Self { repository }
     }
 
-    /// Creates a new `AccountingCategoriesList` with test data.
+    /// Createss a new accounting category and adds it to the list.
     ///
     /// # Arguments
     ///
-    /// - `repository`: An `Arc<Mutex<dyn AccountingCategoriesListRepository>>` that provides access to the accounting categories repository.
-    pub fn with_test_data(repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>) -> Self {
-        // FIXME Remove this test data creation
-        let mut accounting_categories_list = Self { repository };
-
-        accounting_categories_list.create("Current Version").unwrap();
-        accounting_categories_list.create("SWA Trainer").unwrap();
-        accounting_categories_list.create("Techno Cluster").unwrap();
-        accounting_categories_list.create("Other").unwrap();
-
-        accounting_categories_list
-    }
-
-    /// Adds an accounting category to the list.
-    ///
-    /// # Arguments
-    ///
-    /// - `category_name`: The name of the accounting category to add.
+    /// - `category_name`: The name of the accounting category to create.
     ///
     /// # Returns
     ///
@@ -75,9 +58,11 @@ impl AccountingCategoriesList {
             .find(|category| category.name() == category_name)
             .is_some()
         {
-            return Err(AccountingCategoriesListError::AccountingCategoryAlreadyExists(
-                category_name.to_string(),
-            ));
+            return Err(
+                AccountingCategoriesListError::AccountingCategoryAlreadyExists(
+                    category_name.to_string(),
+                ),
+            );
         }
 
         let accounting_category = AccountingCategory::new(category_name.to_string());
@@ -106,7 +91,10 @@ impl AccountingCategoriesList {
     ///
     /// - `Ok(())`: If the category was successfully updated.
     /// - `Err(AccountingCategoriesListError)`: If the category with the specified ID does not exist.
-    pub fn update(&mut self, category: AccountingCategory) -> Result<(), AccountingCategoriesListError> {
+    pub fn update(
+        &mut self,
+        category: AccountingCategory,
+    ) -> Result<(), AccountingCategoriesListError> {
         let mut repo = self.repository.lock().unwrap();
 
         let category_id = category.id().clone();
@@ -124,7 +112,10 @@ impl AccountingCategoriesList {
     ///
     /// - `Ok(())`: If the category was successfully deleted.
     /// - `Err(AccountingCategoriesListError)`: If the category with the specified ID does not exist.
-    pub fn delete(&mut self, id: AccountingCategoryId) -> Result<(), AccountingCategoriesListError> {
+    pub fn delete(
+        &mut self,
+        id: AccountingCategoryId,
+    ) -> Result<(), AccountingCategoriesListError> {
         let mut repo = self.repository.lock().unwrap();
 
         repo.delete(id.clone())
@@ -162,7 +153,9 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            AccountingCategoriesListError::AccountingCategoryAlreadyExists(category_name.to_string())
+            AccountingCategoriesListError::AccountingCategoryAlreadyExists(
+                category_name.to_string()
+            )
         );
     }
 
