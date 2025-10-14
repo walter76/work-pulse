@@ -33,15 +33,27 @@ struct WeeklyReport {
     pub duration_per_category: HashMap<String, String>,
 }
 
-struct ActivitiesStore {
-    pub repository: Arc<std::sync::Mutex<dyn ActivitiesListRepository>>,
+/// State for the Weekly Report Service.
+struct WeeklyReportServiceState {
+    /// The repository for accessing activities.
+    pub activities_repository: Arc<std::sync::Mutex<dyn ActivitiesListRepository>>,
 }
 
-type Store = Mutex<ActivitiesStore>;
+/// Type alias for a thread-safe, asynchronous mutex wrapping the service state.
+type WeeklyReportStore = Mutex<WeeklyReportServiceState>;
 
+/// Creates an OpenAPI router for the weekly report service.
+///
+/// # Arguments
+///
+/// - `repository_factory`: A reference to the `RepositoryFactory` used to create repositories.
+///
+/// # Returns
+///
+/// - An `OpenApiRouter` configured with routes and state for the weekly report service.
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    let store = Arc::new(Mutex::new(ActivitiesStore {
-        repository: repository_factory.activities_list_repository.clone(),
+    let store = Arc::new(Mutex::new(WeeklyReportServiceState {
+        activities_repository: repository_factory.activities_list_repository.clone(),
     }));
 
     OpenApiRouter::new()
@@ -57,6 +69,16 @@ struct GenerateWeeklyReportQuery {
     week_start_date: String,
 }
 
+/// Generates a weekly report for the specified week starting date.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the activities repository.
+/// - `query`: The query parameters containing the week start date.
+///
+/// # Returns
+///
+/// - A tuple containing the HTTP status code and the generated weekly report in JSON format.
 #[utoipa::path(
     get,
     path = "",
@@ -69,13 +91,14 @@ struct GenerateWeeklyReportQuery {
     )
 )]
 async fn generate_weekly_report(
-    State(store): State<Arc<Store>>,
+    State(store): State<Arc<WeeklyReportStore>>,
     query: Query<GenerateWeeklyReportQuery>,
 ) -> impl IntoResponse {
     let week_start_date = query.week_start_date.parse().unwrap();
     let store = store.lock().await;
-    let repository = store.repository.lock().unwrap();
-    let weekly_report = use_cases::weekly_report::WeeklyReport::new(week_start_date, &*repository);
+    let activities_repository = store.activities_repository.lock().unwrap();
+    let weekly_report =
+        use_cases::weekly_report::WeeklyReport::new(week_start_date, &*activities_repository);
 
     let response = WeeklyReport {
         week_start: weekly_report.week_start().to_string(),

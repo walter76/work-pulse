@@ -92,6 +92,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 #[derive(Deserialize, IntoParams)]
 struct GenerateDailyReportQuery {
     /// The date of the activities being reported.
+    #[param(example = "2025-10-12")]
     report_date: String,
 }
 

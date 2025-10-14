@@ -152,9 +152,11 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 #[derive(Deserialize, IntoParams)]
 struct ListActivitiesQuery {
     /// The optional start date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
+    #[param(example = "2025-10-12")]
     start_date: Option<String>,
 
     /// The optional end date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
+    #[param(example = "2025-10-12")]
     end_date: Option<String>,
 }
 
@@ -404,6 +406,7 @@ async fn delete_activity(
 #[derive(Deserialize, IntoParams)]
 struct UploadActivitiesQuery {
     /// The year of the activities being uploaded.
+    #[param(example = "2025")]
     activities_year: u16,
 }
 
