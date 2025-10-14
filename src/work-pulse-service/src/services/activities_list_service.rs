@@ -22,11 +22,16 @@ use work_pulse_core::{
 
 use crate::prelude::ACTIVITIES_LIST_SERVICE_TAG;
 
+/// Type alias for a thread-safe, asynchronous mutex wrapping an `ActivitiesList`.
 type ActivitiesStore = Mutex<ActivitiesList>;
 
+/// Shared state for the activities service.
 #[derive(Clone)]
-struct ServiceState {
+struct ActivitiesServiceState {
+    /// The activities store.
     activities_store: Arc<ActivitiesStore>,
+
+    /// The CSV activities importer.
     csv_activities_importer: Arc<Mutex<CsvActivitiesImporter>>,
 }
 
@@ -34,6 +39,7 @@ struct ServiceState {
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
 struct Activity {
     /// The unique identifier for the activity.
+    #[schema(example = "550e8400-e29b-41d4-a716-446655440000")]
     id: Option<String>,
 
     /// The date when the activity was performed in ISO 8601 format (YYYY-MM-DD).
@@ -48,8 +54,9 @@ struct Activity {
     #[schema(example = "15:30:00")]
     end_time: Option<String>,
 
-    /// The PAM category ID associated with the activity.
-    pam_category_id: String,
+    /// The accounting category ID associated with the activity.
+    #[schema(example = "550e8400-e29b-41d4-a716-446655440000")]
+    accounting_category_id: String,
 
     /// The task itself.
     #[schema(example = "Code Review")]
@@ -72,7 +79,7 @@ impl Activity {
             date: entity.date().to_string(),
             start_time: entity.start_time().to_string(),
             end_time: entity.end_time().map(|t| t.to_string()),
-            pam_category_id: entity.accounting_category_id().to_string(),
+            accounting_category_id: entity.accounting_category_id().to_string(),
             task: entity.task().to_string(),
         }
     }
@@ -86,22 +93,34 @@ impl Activity {
         // TODO Handle potential parsing errors more gracefully
 
         let mut activity = work_pulse_core::entities::activity::Activity::with_id(
-            ActivityId::parse_str(self.id.clone().unwrap().as_str()).expect("Invalid ID format"),
-            self.date.parse().expect("Invalid date format"),
+            ActivityId::parse_str(self.id.clone().unwrap().as_str())
+                .expect("Invalid activity ID format"),
+            self.date.parse().expect("Invalid activity date format"),
             self.start_time.parse().expect("Invalid start time format"),
-            AccountingCategoryId::parse_str(self.pam_category_id.as_str())
-                .expect("Invalid Accounting category ID format"),
+            AccountingCategoryId::parse_str(self.accounting_category_id.as_str())
+                .expect("Invalid accounting category ID format"),
             self.task.clone(),
         );
 
         if let Some(end_time) = &self.end_time {
-            activity.set_end_time(Some(end_time.parse().expect("Invalid end time format")));
+            activity.set_end_time(Some(
+                end_time.parse().expect("Invalid activitiy end time format"),
+            ));
         }
 
         activity
     }
 }
 
+/// Creates an OpenAPI router for activities service.
+///
+/// # Arguments
+///
+/// - `repository_factory`: A reference to the `RepositoryFactory` used to create repositories.
+///
+/// # Returns
+///
+/// - An `OpenApiRouter` configured with routes for managing activities.
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     let activities_store = Arc::new(Mutex::new(ActivitiesList::new(
         repository_factory.activities_list_repository.clone(),
@@ -112,7 +131,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
             .clone(),
     )));
 
-    let store = ServiceState {
+    let store = ActivitiesServiceState {
         activities_store,
         csv_activities_importer,
     };
@@ -120,7 +139,7 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     OpenApiRouter::new()
         .routes(routes!(list_activities, create_activity))
         .routes(routes!(get_activity_by_id))
-        .routes(routes!(update_pam_category))
+        .routes(routes!(update_activity))
         .routes(routes!(delete_activity))
         .routes(routes!(
             upload_activities_csv_raw,
@@ -132,13 +151,23 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
 /// Query parameters for listing activities.
 #[derive(Deserialize, IntoParams)]
 struct ListActivitiesQuery {
-    /// The start date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
+    /// The optional start date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
     start_date: Option<String>,
-    /// The end date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
+
+    /// The optional end date to filter activities by, in ISO 8601 format (YYYY-MM-DD).
     end_date: Option<String>,
 }
 
 /// Lists all activities.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the `ActivitiesStore`.
+/// - `Query(query)`: The query parameters for filtering activities.
+///
+/// # Returns
+///
+/// - A JSON response containing a list of `Activity` DTOs, optionally filtered by date range.
 #[utoipa::path(
     get,
     path = "",
@@ -152,7 +181,7 @@ struct ListActivitiesQuery {
     )
 )]
 async fn list_activities(
-    State(store): State<ServiceState>,
+    State(store): State<ActivitiesServiceState>,
     query: Query<ListActivitiesQuery>,
 ) -> impl IntoResponse {
     let activities_list = store.activities_store.lock().await;
@@ -163,7 +192,7 @@ async fn list_activities(
         .map(Activity::from_entity)
         .collect::<Vec<_>>();
 
-    // Filter activities by date rangeif provided
+    // Filter activities by date range if provided
     match (&query.start_date, &query.end_date) {
         (Some(start_date), Some(end_date)) => {
             let filtered_activities = activities
@@ -184,6 +213,15 @@ async fn list_activities(
 }
 
 /// Get an activity by ID.
+///
+/// # Arguments
+///
+/// - `Path(id)`: The unique identifier of the activity to retrieve.
+/// - `State(store)`: The shared state containing the `ActivitiesStore`.
+///
+/// # Returns
+///
+/// - A response containing the `Activity` DTO if found, or an error message if not found or if the ID format is invalid.
 #[utoipa::path(
     get,
     path = "/{id}",
@@ -199,7 +237,7 @@ async fn list_activities(
 )]
 async fn get_activity_by_id(
     Path(id): Path<String>,
-    State(store): State<ServiceState>,
+    State(store): State<ActivitiesServiceState>,
 ) -> impl IntoResponse {
     let activities_list = store.activities_store.lock().await;
 
@@ -223,6 +261,15 @@ async fn get_activity_by_id(
 }
 
 /// Creates a new Activity.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the `ActivitiesStore`.
+/// - `Json(new_activity)`: The new activity data from the request body.
+///
+/// # Returns
+///
+/// - A response containing the created `Activity` DTO or an error message if the creation fails.
 #[utoipa::path(
     post,
     path = "",
@@ -234,7 +281,7 @@ async fn get_activity_by_id(
     ),
 )]
 async fn create_activity(
-    State(store): State<ServiceState>,
+    State(store): State<ActivitiesServiceState>,
     Json(new_activity): Json<Activity>,
 ) -> impl IntoResponse {
     let mut activities_list = store.activities_store.lock().await;
@@ -249,7 +296,7 @@ async fn create_activity(
         .as_ref()
         .map(|t| t.parse().expect("Invalid end time format"));
     let accounting_category_id =
-        AccountingCategoryId::parse_str(new_activity.pam_category_id.as_str())
+        AccountingCategoryId::parse_str(new_activity.accounting_category_id.as_str())
             .expect("Invalid Accounting category ID format");
 
     let activity = activities_list.record(
@@ -264,6 +311,15 @@ async fn create_activity(
 }
 
 /// Updates an existing activity.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the `ActivitiesStore`.
+/// - `Json(updated_activity)`: The updated activity data from the request body.
+///
+/// # Returns
+///
+/// - A response indicating the result of the update operation. In case of success, returns the updated `Activity` DTO.
 #[utoipa::path(
     put,
     path = "",
@@ -276,8 +332,8 @@ async fn create_activity(
         (status = 500, description = "Internal server error", body = String)
     ),
 )]
-async fn update_pam_category(
-    State(store): State<ServiceState>,
+async fn update_activity(
+    State(store): State<ActivitiesServiceState>,
     Json(updated_activity): Json<Activity>,
 ) -> impl IntoResponse {
     let mut activities_list = store.activities_store.lock().await;
@@ -303,6 +359,15 @@ async fn update_pam_category(
 }
 
 /// Deletes an activity by ID.
+///
+/// # Arguments
+///
+/// - `Path(id)`: The unique identifier of the activity to delete.
+/// - `State(store)`: The shared state containing the `ActivitiesStore`.
+///
+/// # Returns
+///
+/// - A response indicating the result of the delete operation.
 #[utoipa::path(
     delete,
     path = "/{id}",
@@ -318,7 +383,7 @@ async fn update_pam_category(
 )]
 async fn delete_activity(
     Path(id): Path<String>,
-    State(store): State<ServiceState>,
+    State(store): State<ActivitiesServiceState>,
 ) -> impl IntoResponse {
     let mut activities_list = store.activities_store.lock().await;
 
@@ -342,6 +407,17 @@ struct UploadActivitiesQuery {
     activities_year: u16,
 }
 
+/// Uploads activities from a CSV file provided as raw text in the request body.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the `ActivitiesStore`.
+/// - `Query(query)`: The query parameters for the upload.
+/// - `body`: The raw CSV data as a string.
+///
+/// # Returns
+///
+/// - A response indicating the result of the upload operation. In case of success, returns a success message; otherwise, returns an error message.
 #[utoipa::path(
     put,
     path = "/upload-csv",
@@ -356,7 +432,7 @@ struct UploadActivitiesQuery {
     )
 )]
 async fn upload_activities_csv_raw(
-    State(store): State<ServiceState>,
+    State(store): State<ActivitiesServiceState>,
     query: Query<UploadActivitiesQuery>,
     body: String,
 ) -> impl IntoResponse {
@@ -383,6 +459,17 @@ async fn upload_activities_csv_raw(
     }
 }
 
+/// Uploads activities from a CSV file provided as multipart/form-data.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the `ActivitiesStore`.
+/// - `Query(query)`: The query parameters for the upload.
+/// - `mut multipart`: The multipart form data containing the CSV file.
+///
+/// # Returns
+///
+/// - A response indicating the result of the upload operation. In case of success, returns a success message; otherwise, returns an error message.
 #[utoipa::path(
     post,
     path = "/upload-csv",
@@ -397,7 +484,7 @@ async fn upload_activities_csv_raw(
     )
 )]
 async fn upload_activities_csv_multipart(
-    State(store): State<ServiceState>,
+    State(store): State<ActivitiesServiceState>,
     query: Query<UploadActivitiesQuery>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
@@ -459,7 +546,7 @@ mod tests {
         assert_eq!(activity.start_time, "14:30:00");
         assert_eq!(activity.end_time, Some("15:30:00".to_string()));
         assert_eq!(
-            activity.pam_category_id,
+            activity.accounting_category_id,
             entity.accounting_category_id().to_string()
         );
         assert_eq!(activity.task, "Test Task");
@@ -472,7 +559,7 @@ mod tests {
             date: "2023-01-10".to_string(),
             start_time: "14:30:00".to_string(),
             end_time: Some("15:30:00".to_string()),
-            pam_category_id: AccountingCategoryId::new().to_string(),
+            accounting_category_id: AccountingCategoryId::new().to_string(),
             task: "Test Task".to_string(),
         };
 
@@ -487,7 +574,7 @@ mod tests {
         );
         assert_eq!(
             entity.accounting_category_id().to_string(),
-            activity.pam_category_id
+            activity.accounting_category_id
         );
         assert_eq!(entity.task(), "Test Task");
     }

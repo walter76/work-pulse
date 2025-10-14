@@ -17,6 +17,7 @@ use work_pulse_core::{
 
 use crate::prelude::ACCOUNTING_CATEGORIES_SERVICE_TAG;
 
+/// Type alias for a thread-safe, asynchronous mutex wrapping an `AccountingCategoriesList`.
 type AccountingCategoriesListStore = Mutex<AccountingCategoriesList>;
 
 /// The Accounting Category.
