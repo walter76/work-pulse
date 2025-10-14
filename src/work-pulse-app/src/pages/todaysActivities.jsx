@@ -66,7 +66,7 @@ const TodaysActivities = () => {
       date: activityDate,
       start_time: startTime,
       end_time: endTime,
-      pam_category_id: categoryId,
+      accounting_category_id: categoryId,
       task: task,
     })
   }

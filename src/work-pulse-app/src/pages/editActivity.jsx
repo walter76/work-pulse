@@ -39,7 +39,7 @@ const EditActivity = () => {
       setActivityDate(activityData.date)
       setStartTime(activityData.start_time)
       setEndTime(activityData.end_time)
-      setCategoryId(activityData.pam_category_id)
+      setCategoryId(activityData.accounting_category_id)
       setTask(activityData.task)
 
       console.log('Activity fetched successfully!')
@@ -82,7 +82,7 @@ const EditActivity = () => {
       date: activityDate,
       start_time: startTime,
       end_time: endTime,
-      pam_category_id: categoryId,
+      accounting_category_id: categoryId,
       task: task,
     })
 

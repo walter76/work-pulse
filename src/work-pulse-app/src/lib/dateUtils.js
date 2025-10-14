@@ -91,15 +91,15 @@ export const getWeekRange = (date) => {
  * @param {string} activities[].date - Activity date in YYYY-MM-DD format.
  * @param {string} activities[].start_time - Activity start time in HH:MM format.
  * @param {string} activities[].end_time - Activity end time in HH:MM format.
- * @param {number} activities[].pam_category_id - ID of the activity category.
+ * @param {number} activities[].accounting_category_id - ID of the activity category.
  * @param {string} activities[].task - Description of the activity task.
  * @returns {Object} An object where keys are week identifiers (e.g., "2025-W01") and values are objects containing week details and activities.
  *
  * @example
  * const activities = [
- *  { date: '2025-01-06', start_time: '09:00', end_time: '10:00', pam_category_id: 1, task: 'Task A' },
- *  { date: '2025-01-07', start_time: '10:00', end_time: '11:00', pam_category_id: 1, task: 'Task B' },
- *  { date: '2025-01-08', start_time: '11:00', end_time: '12:00', pam_category_id: 2, task: 'Task C' },
+ *  { date: '2025-01-06', start_time: '09:00', end_time: '10:00', accounting_category_id: 1, task: 'Task A' },
+ *  { date: '2025-01-07', start_time: '10:00', end_time: '11:00', accounting_category_id: 1, task: 'Task B' },
+ *  { date: '2025-01-08', start_time: '11:00', end_time: '12:00', accounting_category_id: 2, task: 'Task C' },
  * ]
  * groupActivitiesByWeek(activities)
  * // Returns:
@@ -109,8 +109,8 @@ export const getWeekRange = (date) => {
  * //     year: 2025,
  * //     weekRange: { start: '2025-01-01', end: '2025-01-07' },
  * //     activities: [
- * //       { date: '2025-01-06', start_time: '09:00', end_time: '10:00', pam_category_id: 1, task: 'Task A' },
- * //       { date: '2025-01-07', start_time: '10:00', end_time: '11:00', pam_category_id: 1, task: 'Task B' },
+ * //       { date: '2025-01-06', start_time: '09:00', end_time: '10:00', accounting_category_id: 1, task: 'Task A' },
+ * //       { date: '2025-01-07', start_time: '10:00', end_time: '11:00', accounting_category_id: 1, task: 'Task B' },
  * //     ]
  * //   },
  * //   '2025-W02': {
@@ -118,7 +118,7 @@ export const getWeekRange = (date) => {
  * //     year: 2025,
  * //     weekRange: { start: '2025-01-08', end: '2025-01-14' },
  * //     activities: [
- * //       { date: '2025-01-08', start_time: '11:00', end_time: '12:00', pam_category_id: 2, task: 'Task C' },
+ * //       { date: '2025-01-08', start_time: '11:00', end_time: '12:00', accounting_category_id: 2, task: 'Task C' },
  * //     ]
  * //   }
  * // }

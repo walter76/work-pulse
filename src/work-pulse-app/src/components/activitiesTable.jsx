@@ -30,7 +30,7 @@ const ActivitiesTable = ({ activities, categories, onEditActivity, onDeleteActiv
       </thead>
       <tbody>
         {activities.map((activity) => {
-          const category = categories.find((cat) => cat.id === activity.pam_category_id)
+          const category = categories.find((cat) => cat.id === activity.accounting_category_id)
           const categoryName = category ? category.name : 'Unknown'
 
           return (
