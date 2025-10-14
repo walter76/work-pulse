@@ -37,6 +37,7 @@ impl AccountingCategoryRecord {
 /// In-memory implementation of a repository for accounting categories.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct InMemoryAccountingCategoriesListRepository {
+    /// The list of accounting categories that are stored in memory.
     categories: Vec<AccountingCategoryRecord>,
 }
 
