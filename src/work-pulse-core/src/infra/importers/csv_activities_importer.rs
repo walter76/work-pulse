@@ -12,12 +12,18 @@ use crate::{
     entities::activity::Activity,
 };
 
+/// An importer for activities from CSV files.
 pub struct CsvActivitiesImporter {
-    /// The list of categories.
+    /// The repository for managing accounting categories.
     accounting_categories_list_repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>,
 }
 
 impl CsvActivitiesImporter {
+    /// Creates a new `CsvActivitiesImporter`.
+    ///
+    /// # Arguments
+    ///
+    /// - `accounting_categories_list_repository`: An `Arc<Mutex<dyn AccountingCategoriesListRepository>>` to manage accounting categories.
     pub fn new(
         accounting_categories_list_repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>,
     ) -> Self {
@@ -28,6 +34,17 @@ impl CsvActivitiesImporter {
 }
 
 impl ActivitiesImporter for CsvActivitiesImporter {
+    /// Imports activities from a CSV reader for a specific year.
+    ///
+    /// # Arguments
+    ///
+    /// - `reader`: A reader that provides the CSV data.
+    /// - `year`: The year to associate with the imported activities.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Vec<Activity>)` if the import is successful.
+    /// - `Err(ActivitiesImporterError)` if there is an error during import.
     fn import<R: Read>(
         &mut self,
         reader: R,
@@ -51,7 +68,7 @@ impl ActivitiesImporter for CsvActivitiesImporter {
                 ActivityTableRecord::convert_date_format(&activity_record.date, &year.to_string())?;
 
             let accounting_category = accounting_categories_list_repository
-                .get_or_create_by_name(&activity_record.accounting_category)
+                .get_or_create_by_name(&activity_record.pam_category)
                 .map_err(|_| ActivitiesImporterError::ParseError)?;
 
             let mut activity = Activity::new(
@@ -78,6 +95,8 @@ impl ActivitiesImporter for CsvActivitiesImporter {
     }
 }
 
+/// A record representing a row in the activity CSV file.
+/// The fields correspond to the columns in the CSV file.
 #[derive(Debug, Clone, Default, Eq, PartialEq, Deserialize)]
 struct ActivityTableRecord {
     #[serde(rename = "CW")]
@@ -93,7 +112,7 @@ struct ActivityTableRecord {
     pub check_out: String,
 
     #[serde(rename = "PAM Category")]
-    pub accounting_category: String,
+    pub pam_category: String,
 
     #[serde(rename = "Topic")]
     pub task: String,
@@ -103,6 +122,17 @@ struct ActivityTableRecord {
 }
 
 impl ActivityTableRecord {
+    /// Converts a date string from "dd.mm." format to "yyyy-mm-dd" format by adding the specified year.
+    ///
+    /// # Arguments
+    ///
+    /// - `date`: A string slice representing the date in "dd.mm." format.
+    /// - `year`: A string slice representing the year to be added.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(String)` containing the date in "yyyy-mm-dd" format if successful.
+    /// - `Err(ActivitiesImporterError)` if the date cannot be parsed.
     fn convert_date_format(date: &str, year: &str) -> Result<String, ActivitiesImporterError> {
         // add the year of the activity
         let date = format!("{}{}", date, year);
@@ -151,7 +181,8 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 ";
 
         let reader = csv_data.as_bytes();
-        let accounting_repo = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+        let accounting_repo =
+            Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut importer = CsvActivitiesImporter::new(accounting_repo);
 
         let activities = importer.import(reader, 2023).unwrap();
@@ -175,7 +206,8 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 11,invalid-date,09:00,17:00,Development,Coding,Worked on project X
 ";
         let reader = csv_data.as_bytes();
-        let accounting_repo = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+        let accounting_repo =
+            Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut importer = CsvActivitiesImporter::new(accounting_repo);
 
         let result = importer.import(reader, 2023);
