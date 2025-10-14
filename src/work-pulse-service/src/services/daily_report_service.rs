@@ -1,13 +1,18 @@
 use std::sync::Arc;
 
-use axum::{extract::{Query, State}, response::IntoResponse, Json};
+use axum::{
+    Json,
+    extract::{Query, State},
+    response::IntoResponse,
+};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
-    adapters::ActivitiesListRepository, infra::repositories::in_memory::RepositoryFactory, use_cases,
+    adapters::ActivitiesListRepository, infra::repositories::in_memory::RepositoryFactory,
+    use_cases,
 };
 
 use crate::prelude::DAILY_REPORT_SERVICE_TAG;
@@ -16,6 +21,7 @@ use crate::prelude::DAILY_REPORT_SERVICE_TAG;
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
 struct DailyReportActivity {
     /// The unique identifier for the activity.
+    #[schema(example = "550e8400-e29b-41d4-a716-446655440000")]
     id: Option<String>,
 
     /// The duration of the activity in ISO 8601 format (PT1H).
@@ -31,6 +37,7 @@ struct DailyReportActivity {
     end_time: Option<String>,
 
     /// The accounting category ID associated with the activity.
+    #[schema(example = "550e8400-e29b-41d4-a716-446655440000")]
     accounting_category_id: String,
 
     /// The task itself.
@@ -53,15 +60,27 @@ struct DailyReport {
     activities: Vec<DailyReportActivity>,
 }
 
-struct ActivitiesStore {
-    pub repository: Arc<std::sync::Mutex<dyn ActivitiesListRepository>>,
+/// State for the Daily Report Service.
+struct DailyReportServiceState {
+    /// The repository for accessing activities.
+    activities_repository: Arc<std::sync::Mutex<dyn ActivitiesListRepository>>,
 }
 
-type Store = Mutex<ActivitiesStore>;
+/// Type alias for a thread-safe, asynchronous mutex wrapping the DailyReportServiceState.
+type DailyReportStore = Mutex<DailyReportServiceState>;
 
+/// Creates an OpenAPI router for the Daily Report Service.
+///
+/// # Arguments
+///
+/// - `repository_factory`: A reference to the `RepositoryFactory` used to create repositories.
+///
+/// # Returns
+///
+/// - An `OpenApiRouter` configured with routes for generating daily reports.
 pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    let store = Arc::new(Mutex::new(ActivitiesStore {
-        repository: repository_factory.activities_list_repository.clone(),
+    let store = Arc::new(Mutex::new(DailyReportServiceState {
+        activities_repository: repository_factory.activities_list_repository.clone(),
     }));
 
     OpenApiRouter::new()
@@ -76,6 +95,16 @@ struct GenerateDailyReportQuery {
     report_date: String,
 }
 
+/// Generates a daily report for the specified date.
+///
+/// # Arguments
+///
+/// - `State(store)`: The shared state containing the activities repository.
+/// - `query`: The query parameters containing the report date.
+///
+/// # Returns
+///
+/// - A response containing the generated daily report.
 #[utoipa::path(
     get,
     path = "",
@@ -88,13 +117,14 @@ struct GenerateDailyReportQuery {
     )
 )]
 async fn generate_daily_report(
-    State(store): State<Arc<Store>>,
+    State(store): State<Arc<DailyReportStore>>,
     query: Query<GenerateDailyReportQuery>,
 ) -> impl IntoResponse {
     let report_date = query.report_date.parse().unwrap();
     let store = store.lock().await;
-    let repository = store.repository.lock().unwrap();
-    let daily_report = use_cases::daily_report::DailyReport::new(report_date, &*repository);
+    let activities_repository = store.activities_repository.lock().unwrap();
+    let daily_report =
+        use_cases::daily_report::DailyReport::new(report_date, &*activities_repository);
 
     let activities: Vec<DailyReportActivity> = daily_report
         .activities()
