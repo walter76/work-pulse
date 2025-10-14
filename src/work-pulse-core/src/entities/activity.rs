@@ -183,10 +183,10 @@ impl Activity {
 
     /// Calculates the duration of the activity.
     /// If the end time is not set, the duration is considered to be zero.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// The duration of the activity as a `Duration`. 
+    ///
+    /// The duration of the activity as a `Duration`.
     pub fn duration(&self) -> Duration {
         if let Some(end_time) = self.end_time() {
             *end_time - *self.start_time()
@@ -228,8 +228,8 @@ mod tests {
 
     #[test]
     fn activity_new_should_create_activity_with_random_id() {
-        let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date");
-        let start_time = NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time");
+        let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date");
+        let start_time = NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time");
         let accounting_category_id = AccountingCategoryId::new();
         let task = "Test Task".to_string();
 
@@ -250,8 +250,8 @@ mod tests {
     #[test]
     fn activity_with_id_should_create_activity_with_specific_id() {
         let id = ActivityId::new();
-        let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date");
-        let start_time = NaiveTime::from_hms_opt(9, 0, 0).expect("Valid time");
+        let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date");
+        let start_time = NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time");
         let accounting_category_id = AccountingCategoryId::new();
         let task = "Test Task".to_string();
 
@@ -271,16 +271,14 @@ mod tests {
     }
 
     #[test]
-    fn duration_should_return_correct_duration() {
-        let start_time = NaiveTime::from_hms_opt(9, 0, 0).unwrap();
-        let end_time = NaiveTime::from_hms_opt(10, 30, 0).unwrap();
+    fn duration_should_calculate_duration_with_valid_end_time() {
+        let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date");
+        let start_time = NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time");
+        let end_time = NaiveTime::from_hms_opt(10, 30, 0).expect("Valid activity end time");
+        let accounting_category_id = AccountingCategoryId::new();
+        let task = "Test Task".to_string();
 
-        let mut activity = Activity::new(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            start_time,
-            AccountingCategoryId::new(),
-            "Test Task".to_string(),
-        );
+        let mut activity = Activity::new(date, start_time, accounting_category_id, task);
 
         // Initially, end_time is None, so duration should be zero
         assert_eq!(activity.duration(), Duration::zero());
@@ -292,17 +290,14 @@ mod tests {
 
     #[test]
     fn duration_should_return_zero_for_ongoing_activity() {
-        let start_time = NaiveTime::from_hms_opt(9, 0, 0).unwrap();
+        let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date");
+        let start_time = NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time");
+        let accounting_category_id = AccountingCategoryId::new();
+        let task = "Test Task".to_string();
 
-        let activity = Activity::new(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid date"),
-            start_time,
-            AccountingCategoryId::new(),
-            "Test Task".to_string(),
-        );
+        let activity = Activity::new(date, start_time, accounting_category_id, task);
 
         // Since end_time is None, duration should be zero
         assert_eq!(activity.duration(), Duration::zero());
     }
-
 }
