@@ -339,4 +339,49 @@ mod tests {
             ActivitiesListError::NotFound(non_existent_id)
         );
     }
+
+    #[test]
+    fn activities_list_import_should_add_activities() {
+        struct MockImporter;
+
+        impl ActivitiesImporter for MockImporter {
+            fn import<R: Read>(
+                &mut self,
+                _reader: R,
+                year: u16,
+            ) -> Result<Vec<Activity>, ActivitiesImporterError> {
+                let activity1 = Activity::with_id(
+                    ActivityId::new(),
+                    NaiveDate::from_ymd_opt(year as i32, 10, 1).expect("Valid activity date"),
+                    NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                    AccountingCategoryId::new(),
+                    "Imported Task 1".to_string(),
+                );
+
+                let activity2 = Activity::with_id(
+                    ActivityId::new(),
+                    NaiveDate::from_ymd_opt(year as i32, 10, 2).expect("Valid activity date"),
+                    NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity start time"),
+                    AccountingCategoryId::new(),
+                    "Imported Task 2".to_string(),
+                );
+
+                Ok(vec![activity1, activity2])
+            }
+        }
+
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let mut activities_list = ActivitiesList::new(repository);
+
+        let mut importer = MockImporter;
+        let data = b"mock data";
+        activities_list
+            .import(&mut importer, &data[..], 2023)
+            .unwrap();
+
+        let activities = activities_list.activities();
+        assert_eq!(activities.len(), 2);
+        assert_eq!(activities[0].task(), "Imported Task 1");
+        assert_eq!(activities[1].task(), "Imported Task 2");
+    }
 }
