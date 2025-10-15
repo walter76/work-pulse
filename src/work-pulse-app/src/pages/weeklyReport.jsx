@@ -3,6 +3,8 @@ import { Button, Input, Sheet, Table, Typography } from '@mui/joy'
 import { Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
+import ErrorMessage from '../components/errorMessage'
+
 import { useCategories } from '../hooks/useCategories'
 import {
   getCurrentWeek,
@@ -82,11 +84,7 @@ const WeeklyReport = () => {
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <Typography level="h2">Weekly Report</Typography>
 
-      {error && (
-        <Typography level="body2" color="danger" sx={{ padding: 1 }}>
-          {error}
-        </Typography>
-      )}
+      <ErrorMessage message={error} />
 
       <Sheet variant="outlined" sx={{ display: 'flex', gap: 2, padding: 2 }}>
         <Input

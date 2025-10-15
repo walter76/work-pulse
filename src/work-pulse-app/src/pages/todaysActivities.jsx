@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { Button, CircularProgress, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Add, Refresh } from '@mui/icons-material'
 
-import { useActivities } from '../hooks/useActivities'
 import ActivitiesTable from '../components/activitiesTable'
+import ErrorMessage from '../components/errorMessage'
+
+import { useActivities } from '../hooks/useActivities'
 import { useCategories } from '../hooks/useCategories'
 
 const TodaysActivities = () => {
@@ -93,11 +95,7 @@ const TodaysActivities = () => {
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <Typography level="h2">Today's Activities</Typography>
 
-      {error && (
-        <Typography level="body-md" color="danger" sx={{ padding: 1 }}>
-          {error}
-        </Typography>
-      )}
+      <ErrorMessage message={error} />
 
       <Sheet variant="outlined" sx={{ display: 'flex', gap: 2, padding: 2 }}>
         <Input

@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { Button, CircularProgress, Divider, Input, Sheet, Typography } from '@mui/joy'
 import { Refresh } from '@mui/icons-material'
 
+import ActivitiesTable from '../components/activitiesTable'
+import ErrorMessage from '../components/errorMessage'
+
 import { useActivities } from '../hooks/useActivities'
 import { useCategories } from '../hooks/useCategories'
-import ActivitiesTable from '../components/activitiesTable'
 
 import { getCurrentMonthRange, groupActivitiesByWeek } from '../lib/dateUtils'
 
@@ -49,11 +51,7 @@ const ActivityLog = () => {
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <Typography level="h2">Activities Log</Typography>
 
-      {error && (
-        <Typography level="body-md" color="danger" sx={{ padding: 1 }}>
-          {error}
-        </Typography>
-      )}
+      <ErrorMessage message={error} />
 
       <Sheet variant="outlined" sx={{ display: 'flex', gap: 2, padding: 2 }}>
         <Input

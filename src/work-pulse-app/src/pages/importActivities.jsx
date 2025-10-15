@@ -3,6 +3,8 @@ import { Box, Button, Input, Sheet, Typography } from '@mui/joy'
 import { CloudUpload } from '@mui/icons-material'
 import axios from 'axios'
 
+import ErrorMessage from '../components/errorMessage'
+
 import { API_BASE_URL } from '../config/api'
 
 const ImportActivities = () => {
@@ -69,11 +71,7 @@ const ImportActivities = () => {
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <Typography level="h2">Import Activities</Typography>
 
-      {error && (
-        <Typography level="body-md" color="danger" sx={{ padding: 1 }}>
-          {error}
-        </Typography>
-      )}
+      <ErrorMessage message={error} />
 
       {success && (
         <Typography level="body-md" color="success" sx={{ padding: 1 }}>

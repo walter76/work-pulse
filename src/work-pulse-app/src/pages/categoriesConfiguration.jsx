@@ -3,6 +3,8 @@ import { Button, IconButton, Input, Sheet, Table, Typography } from '@mui/joy'
 import { Add, Check, Close, Delete, Edit, Refresh } from '@mui/icons-material'
 import axios from 'axios'
 
+import ErrorMessage from '../components/errorMessage'
+
 import { API_BASE_URL } from '../config/api'
 import { useCategories } from '../hooks/useCategories'
 
@@ -101,11 +103,7 @@ const CategoriesConfiguration = () => {
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <Typography level="h2">Categories Configuration</Typography>
 
-      {error && (
-        <Typography level="body-md" color="danger" sx={{ padding: 1 }}>
-          {error}
-        </Typography>
-      )}
+      <ErrorMessage message={error} />
 
       <Sheet variant="outlined" sx={{ display: 'flex', gap: 2, padding: 2 }}>
         <Input
