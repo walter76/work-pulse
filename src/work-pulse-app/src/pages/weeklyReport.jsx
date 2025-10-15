@@ -110,22 +110,11 @@ const WeeklyReport = () => {
           <>
             {reportData ? (
               <>
-                <Sheet sx={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 2 }}>
-                  <Typography level="body-md">Week Start: {reportData.week_start}</Typography>
-                  <Typography level="body-md" fontWeight="bold" color="primary">
-                    Total Duration: {formatDuration(reportData.total_duration)}
-                  </Typography>
-                </Sheet>
-
-                <Typography level="h4" sx={{ marginTop: 3, marginBottom: 2 }}>
-                  Duration per Category
-                </Typography>
-
                 <Table>
                   <thead>
                     <tr>
                       <th>Category</th>
-                      <th>Duration</th>
+                      <th>Duration (HH:MM)</th>
                     </tr>
                   </thead>
                   <tbody>
