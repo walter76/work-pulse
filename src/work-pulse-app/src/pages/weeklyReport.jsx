@@ -75,24 +75,54 @@ const WeeklyReport = () => {
     }
   }
 
-  const getCategoryDurationData = () => {
-    if (!reportData?.duration_per_category || !categories.length) {
-      return []
-    }
-
-    return Object.entries(reportData.duration_per_category).map(([categoryId, duration]) => {
-      const category = categories.find((cat) => cat.id.toString() === categoryId)
-
-      return {
-        categoryId,
-        categoryName: category ? category.name : 'Unknown',
-        duration,
-        formattedDuration: formatDuration(duration),
-      }
+  // Helper function to format date for display (e.g., "Mon 2025-10-14")
+  const formatDateForDisplay = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString(undefined, {
+      weekday: 'short',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
     })
   }
 
-  const categoryDurationData = getCategoryDurationData()
+  // Get all unique categories that appear in the weekly report
+  const getReportCategories = () => {
+    if (!reportData?.daily_durations_per_category) return []
+
+    const categoryIds = new Set()
+
+    Object.values(reportData.daily_durations_per_category).forEach((dailyData) => {
+      Object.keys(dailyData).forEach((categoryId) => categoryIds.add(categoryId))
+    })
+
+    return Array.from(categoryIds)
+      .map((categoryId) => {
+        const category = categories.find((cat) => cat.id.toString() === categoryId)
+
+        return {
+          id: categoryId,
+          name: category ? category.name : 'Unknown',
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  // Calculate total duration per category across all days
+  const getCategoryTotals = () => {
+    if (!reportData?.duration_per_category) return {}
+
+    const totals = {}
+
+    Object.entries(reportData.duration_per_category).forEach(([categoryId, duration]) => {
+      totals[categoryId] = formatDuration(duration)
+    })
+
+    return totals
+  }
+
+  const reportCategories = getReportCategories()
+  const categoryTotals = getCategoryTotals()
   const totalDurationColor = reportData
     ? getTotalDurationColor(reportData.total_duration)
     : 'neutral'
@@ -130,19 +160,37 @@ const WeeklyReport = () => {
                 <Table>
                   <thead>
                     <tr>
-                      <th>Category</th>
-                      <th>Duration (HH:MM)</th>
+                      <th>Day</th>
+                      {reportCategories.map((category) => (
+                        <th key={category.id}>{category.name} (HH:MM)</th>
+                      ))}
+                      <th>Daily Total (HH:MM)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {categoryDurationData
-                      .sort((a, b) => a.categoryName.localeCompare(b.categoryName))
-                      .map(({ categoryName, formattedDuration }) => (
-                        <tr key={categoryName}>
-                          <td>{categoryName}</td>
-                          <td>{formattedDuration}</td>
-                        </tr>
-                      ))}
+                    {Object.entries(reportData.daily_durations_per_category || {})
+                      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+                      .map(([date, dailyData]) => {
+                        // Calculate daily total
+                        const dailyTotal = Object.values(dailyData).reduce((total, duration) => {
+                          const minutes = durationToMinutes(formatDuration(duration))
+
+                          return total + minutes
+                        }, 0)
+                        const dailyTotalFormatted = formatDuration(`PT${dailyTotal}M`)
+
+                        return (
+                          <tr key={date}>
+                            <td>{formatDateForDisplay(date)}</td>
+                            {reportCategories.map((category) => (
+                              <td key={category.id}>
+                                {formatDuration(dailyData[category.id] || 0)}
+                              </td>
+                            ))}
+                            <td>{dailyTotalFormatted}</td>
+                          </tr>
+                        )
+                      })}
                   </tbody>
                   <tfoot>
                     <tr
@@ -152,6 +200,9 @@ const WeeklyReport = () => {
                       }}
                     >
                       <td>Total:</td>
+                      {reportCategories.map((category) => (
+                        <td key={category.id}>{categoryTotals[category.id] || '00:00'}</td>
+                      ))}
                       <td>
                         <Typography color={totalDurationColor} fontWeight="bold">
                           {formatDuration(reportData.total_duration)}
@@ -161,7 +212,7 @@ const WeeklyReport = () => {
                   </tfoot>
                 </Table>
 
-                {categoryDurationData.length === 0 && (
+                {Object.keys(reportData.daily_durations_per_category || {}).length === 0 && (
                   <Typography
                     level="body-md"
                     color="neutral"
