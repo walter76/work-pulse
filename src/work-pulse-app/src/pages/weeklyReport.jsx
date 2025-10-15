@@ -11,6 +11,7 @@ import {
   getWeekStartDate,
   formatDuration,
   formatWeekForDisplay,
+  durationToMinutes,
 } from '../lib/dateUtils'
 
 import { API_BASE_URL } from '../config/api'
@@ -25,6 +26,19 @@ const WeeklyReport = () => {
   const [loading, setLoading] = useState(false)
 
   const { categories, refreshCategories } = useCategories()
+
+  const getTotalDurationColor = (totalDuration) => {
+    const totalMinutes = durationToMinutes(formatDuration(totalDuration))
+    const totalHours = totalMinutes / 60
+
+    if (totalHours < 40) {
+      return 'warning' // Orange - below 40 hours
+    } else if (totalHours >= 40 && totalHours <= 50) {
+      return 'success' // Green - between 40 and 50 hours
+    } else {
+      return 'danger' // Red - above 50 hours
+    }
+  }
 
   useEffect(() => {
     refreshCategories()
@@ -79,6 +93,9 @@ const WeeklyReport = () => {
   }
 
   const categoryDurationData = getCategoryDurationData()
+  const totalDurationColor = reportData
+    ? getTotalDurationColor(reportData.total_duration)
+    : 'neutral'
 
   return (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -134,8 +151,12 @@ const WeeklyReport = () => {
                         backgroundColor: 'var(--joy-palette-neutral-50)',
                       }}
                     >
-                      <td>Total</td>
-                      <td>{formatDuration(reportData.total_duration)}</td>
+                      <td>Total:</td>
+                      <td>
+                        <Typography color={totalDurationColor} fontWeight="bold">
+                          {formatDuration(reportData.total_duration)}
+                        </Typography>
+                      </td>
                     </tr>
                   </tfoot>
                 </Table>
