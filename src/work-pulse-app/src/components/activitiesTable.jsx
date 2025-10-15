@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { IconButton, Table } from '@mui/joy'
 import { Delete, Edit } from '@mui/icons-material'
 
+import { formatDateForDisplay } from '../lib/dateUtils'
+
 const ActivitiesTable = ({ activities, categories, onEditActivity, onDeleteActivity }) => {
   const navigate = useNavigate()
 
@@ -35,7 +37,7 @@ const ActivitiesTable = ({ activities, categories, onEditActivity, onDeleteActiv
 
           return (
             <tr key={activity.id}>
-              <td>{activity.date}</td>
+              <td>{formatDateForDisplay(activity.date)}</td>
               <td>{activity.start_time}</td>
               <td>{activity.end_time}</td>
               <td>{categoryName}</td>
