@@ -24,6 +24,10 @@ struct WeeklyReport {
     #[schema(example = "2025-10-12")]
     pub week_start: String,
 
+    /// The date (a saturday) when the week ended in ISO 8601 format (YYYY-MM-DD).
+    #[schema(example = "2025-10-18")]
+    pub week_end: String,
+
     /// The total duration of all activities in the week in ISO 8601 format (PT1H).
     #[schema(example = "PT1800S")]
     pub total_duration: String,
@@ -31,6 +35,13 @@ struct WeeklyReport {
     /// A map of accounting category IDs to total duration spent in that category in ISO 8601 format (PT1H).
     #[schema(example = r#"{"category-1": "PT3600S", "category-2": "PT7200S"}"#)]
     pub duration_per_category: HashMap<String, String>,
+
+    /// A nested map where the outer key is the date (YYYY-MM-DD) and the inner map contains
+    /// accounting category IDs to total duration spent in that category on that day in ISO 8601 format (PT1H).
+    #[schema(
+        example = r#"{"2025-10-12": {"category-1": "PT3600S"}, "2025-10-13": {"category-2": "PT7200S"}}"#
+    )]
+    pub daily_durations_per_category: HashMap<String, HashMap<String, String>>,
 }
 
 /// State for the Weekly Report Service.
@@ -91,14 +102,30 @@ async fn generate_weekly_report(
     let weekly_report =
         use_cases::weekly_report::WeeklyReport::new(week_start_date, &*activities_repository);
 
+    let daily_durations_per_category = weekly_report
+        .daily_durations_per_category()
+        .iter()
+        .map(|(date, category_map)| {
+            (
+                date.to_string(),
+                category_map
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .collect(),
+            )
+        })
+        .collect();
+
     let response = WeeklyReport {
         week_start: weekly_report.week_start().to_string(),
+        week_end: weekly_report.week_end().to_string(),
         total_duration: weekly_report.total_duration().to_string(),
         duration_per_category: weekly_report
             .duration_per_category()
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
+        daily_durations_per_category,
     };
 
     (StatusCode::CREATED, Json(response))

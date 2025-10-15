@@ -22,6 +22,9 @@ pub struct WeeklyReport {
 
     /// A vector of tuples containing accounting category IDs and their corresponding total durations.
     duration_per_category: Vec<(AccountingCategoryId, Duration)>,
+
+    /// A vector of tuples containing each day of the week and a vector of tuples with accounting category IDs and their corresponding total durations for that day.
+    daily_durations_per_category: Vec<(NaiveDate, Vec<(AccountingCategoryId, Duration)>)>,
 }
 
 // TODO: Implement the sum of durations for every day of the week.
@@ -54,13 +57,45 @@ impl WeeklyReport {
             duration_per_category.push((category_id, duration));
         }
 
+        let daily_durations_per_category =
+            Self::calculate_daily_durations_per_category(&activities, week_start);
+
         WeeklyReport {
             week_start,
             week_end,
             activities,
             total_duration,
+            daily_durations_per_category,
             duration_per_category,
         }
+    }
+
+    fn calculate_daily_durations_per_category(
+        activities: &[Activity],
+        week_start: NaiveDate,
+    ) -> Vec<(NaiveDate, Vec<(AccountingCategoryId, Duration)>)> {
+        let mut daily_durations = Vec::new();
+
+        // iterate through each day of the week
+        for day_offset in 0..7 {
+            let current_date = week_start + Duration::days(day_offset);
+
+            // group activities by category for this specific date
+            let mut daily_category_durations = std::collections::HashMap::new();
+
+            for activity in activities.iter().filter(|a| *a.date() == current_date) {
+                let category_id = activity.accounting_category_id().clone();
+                let duration = activity.duration();
+                *daily_category_durations
+                    .entry(category_id)
+                    .or_insert(Duration::zero()) += duration;
+            }
+
+            // Convert the daily category durations into a vector and add it to the daily durations
+            daily_durations.push((current_date, daily_category_durations.into_iter().collect()));
+        }
+
+        daily_durations
     }
 
     /// Returns the starting date (Monday) of the week for the report.
@@ -86,6 +121,13 @@ impl WeeklyReport {
     /// Returns a vector of tuples containing accounting category IDs and their corresponding total durations.
     pub fn duration_per_category(&self) -> &[(AccountingCategoryId, Duration)] {
         &self.duration_per_category
+    }
+
+    /// Returns a vector of tuples containing each day of the week and a vector of tuples with accounting category IDs and their corresponding total durations for that day.
+    pub fn daily_durations_per_category(
+        &self,
+    ) -> &[(NaiveDate, Vec<(AccountingCategoryId, Duration)>)] {
+        &self.daily_durations_per_category
     }
 }
 
