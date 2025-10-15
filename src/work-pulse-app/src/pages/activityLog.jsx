@@ -87,13 +87,6 @@ const ActivityLog = () => {
         </Sheet>
       ) : (
         <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
-          <Sheet
-            sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}
-          >
-            <Typography>Number of Records: {activities.length}</Typography>
-            <Typography>Weeks: {sortedWeeks.length}</Typography>
-          </Sheet>
-
           {sortedWeeks.map((weekKey, weekIndex) => {
             const weekData = groupedActivities[weekKey]
             const sortedActivities = weekData.activities.sort((a, b) => {
@@ -108,8 +101,7 @@ const ActivityLog = () => {
                 <Typography level="h4" sx={{ marginBottom: 2, color: 'primary.500' }}>
                   Week {weekData.weekNumber}, {weekData.year}
                   <Typography level="body-sm" sx={{ marginLeft: 1 }}>
-                    ({weekData.weekRange.start} to {weekData.weekRange.end}) -{' '}
-                    {weekData.activities.length} activities
+                    ({weekData.weekRange.start} to {weekData.weekRange.end})
                   </Typography>
                 </Typography>
 
