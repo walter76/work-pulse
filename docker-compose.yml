@@ -1,11 +1,35 @@
 version: '3.9'
 
 services:
+  work-pulse-db:
+    image: postgres:16
+    container_name: work-pulse-db
+    environment:
+      - POSTGRES_USER=workpulse
+      - POSTGRES_PASSWORD=supersecret
+      - POSTGRES_DB=workpulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workpulse -d workpulse"]
+      interval: 10s
+      timeout: 2s
+      retries: 5
+    networks:
+      - work-pulse-network
+
   work-pulse-backend:
     image: work-pulse-service:latest
     container_name: work-pulse-backend
     ports:
       - "8080:8080"
+    depends_on:
+      work-pulse-db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://workpulse:supersecret@work-pulse-db:5432/workpulse?sslmode=disable
     networks:
       - work-pulse-network
 
@@ -18,6 +42,22 @@ services:
       - work-pulse-network
     environment:
       - VITE_API_BASE_URL=http://work-pulse-backend:8080
+
+  # DbMate service for running migrations
+  work-pulse-migrate:
+    image: amacneil/dbmate
+    container_name: work-pulse-migrate
+    environment:
+      - DATABASE_URL=postgres://workpulse:supersecret@work-pulse-db:5432/workpulse?sslmode=disable
+    volumes:
+      - ./db:/db
+    depends_on:
+      work-pulse-db:
+        condition: service_healthy
+    networks:
+      - work-pulse-network
+    profiles:
+      - migration
 
 networks:
   work-pulse-network:
