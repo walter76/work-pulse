@@ -14,6 +14,10 @@ pub enum AccountingCategoriesListRepositoryError {
     /// Error indicating that the requested accounting category was not found.
     #[error("Accounting category with ID {0} not found")]
     NotFound(AccountingCategoryId),
+
+    /// Error indicating a database-related issue.
+    #[error("Database error: {0}")]
+    DatabaseError(String),
 }
 
 /// Repository trait for managing accounting categories.
