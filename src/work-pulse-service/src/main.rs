@@ -11,6 +11,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
 
 use services::accounting_categories_service;
+use work_pulse_core::infra::repositories::in_memory::accounting_categories_list::InMemoryAccountingCategoriesListRepository;
 use work_pulse_core::infra::repositories::in_memory::RepositoryFactory;
 
 use crate::services::activities_list_service;
@@ -21,6 +22,8 @@ mod prelude {
     pub const DAILY_REPORT_SERVICE_TAG: &str = "daily-report-service";
     pub const WEEKLY_REPORT_SERVICE_TAG: &str = "weekly-report-service";
 }
+
+const CONNECTION_STRING: &str = "postgres://workpulse:supersecret@localhost:5432/workpulse";
 
 // TODO Implement health check service
 
@@ -45,11 +48,12 @@ async fn main() -> Result<(), Error> {
         .init();
 
     let repository_factory = RepositoryFactory::new();
+    let accounting_categories_repository = InMemoryAccountingCategoriesListRepository::new();
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest(
             "/api/v1/accounting-categories",
-            accounting_categories_service::router(&repository_factory),
+            accounting_categories_service::router(accounting_categories_repository),
         )
         .nest(
             "/api/v1/activities",

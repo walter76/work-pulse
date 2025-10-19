@@ -1,5 +1,6 @@
 use std::io::Read;
 
+use async_trait::async_trait;
 use chrono::NaiveDate;
 use thiserror::Error;
 
@@ -21,13 +22,14 @@ pub enum AccountingCategoriesListRepositoryError {
 }
 
 /// Repository trait for managing accounting categories.
+#[async_trait]
 pub trait AccountingCategoriesListRepository: Send + Sync {
     /// Retrieves a list of all accounting categories.
     ///
     /// # Returns
     ///
     /// A vector of `AccountingCategory` instances representing all available accounting categories.
-    fn get_all(&self) -> Vec<AccountingCategory>;
+    async fn get_all(&self) -> Vec<AccountingCategory>;
 
     /// Retrieves a specific accounting category by its unique identifier.
     ///

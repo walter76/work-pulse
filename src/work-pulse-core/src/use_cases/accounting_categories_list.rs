@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use thiserror::Error;
 
 use crate::{
@@ -20,18 +18,18 @@ pub enum AccountingCategoriesListError {
 }
 
 /// Represents a list of all accounting categories.
-pub struct AccountingCategoriesList {
+pub struct AccountingCategoriesList<R> {
     /// The repository that provides access to the accounting categories.
-    repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>,
+    repository: R,
 }
 
-impl AccountingCategoriesList {
+impl<R: AccountingCategoriesListRepository> AccountingCategoriesList<R> {
     /// Creates a new `AccountingCategoriesList`.
     ///
     /// # Arguments
     ///
     /// - `repository`: An `Arc<Mutex<dyn AccountingCategoriesListRepository>>` that provides access to the accounting categories repository.
-    pub fn new(repository: Arc<Mutex<dyn AccountingCategoriesListRepository>>) -> Self {
+    pub fn new(repository: R) -> Self {
         Self { repository }
     }
 
@@ -45,15 +43,15 @@ impl AccountingCategoriesList {
     ///
     /// - `Ok(AccountingCategory)`: If the category was successfully created.
     /// - `Err(AccountingCategoriesListError)`: If a category with the same name already exists.
-    pub fn create(
+    pub async fn create(
         &mut self,
         category_name: &str,
     ) -> Result<AccountingCategory, AccountingCategoriesListError> {
-        let mut repo = self.repository.lock().unwrap();
-
         // Check if a category with the same name already exists.
-        if repo
+        if self
+            .repository
             .get_all()
+            .await
             .iter()
             .find(|category| category.name() == category_name)
             .is_some()
@@ -66,7 +64,7 @@ impl AccountingCategoriesList {
         }
 
         let accounting_category = AccountingCategory::new(category_name.to_string());
-        repo.add(accounting_category.clone());
+        self.repository.add(accounting_category.clone());
 
         Ok(accounting_category)
     }
@@ -76,9 +74,8 @@ impl AccountingCategoriesList {
     /// # Returns
     ///
     /// - `Vec<AccountingCategory>`: A vector containing all accounting categories.
-    pub fn categories(&self) -> Vec<AccountingCategory> {
-        let repo = self.repository.lock().unwrap();
-        repo.get_all()
+    pub async fn categories(&self) -> Vec<AccountingCategory> {
+        self.repository.get_all().await
     }
 
     /// Updates an existing accounting category in the list.
@@ -95,10 +92,10 @@ impl AccountingCategoriesList {
         &mut self,
         category: AccountingCategory,
     ) -> Result<(), AccountingCategoriesListError> {
-        let mut repo = self.repository.lock().unwrap();
-
         let category_id = category.id().clone();
-        repo.update(category)
+
+        self.repository
+            .update(category)
             .map_err(|_| AccountingCategoriesListError::NotFound(category_id))
     }
 
@@ -116,9 +113,8 @@ impl AccountingCategoriesList {
         &mut self,
         id: AccountingCategoryId,
     ) -> Result<(), AccountingCategoriesListError> {
-        let mut repo = self.repository.lock().unwrap();
-
-        repo.delete(id.clone())
+        self.repository
+            .delete(id.clone())
             .map_err(|_| AccountingCategoriesListError::NotFound(id))
     }
 }
@@ -129,27 +125,27 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn accounting_categories_list_create_should_add_category() {
-        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+    #[tokio::test]
+    async fn accounting_categories_list_create_should_add_category() {
+        let repository = InMemoryAccountingCategoriesListRepository::new();
         let mut categories_list = AccountingCategoriesList::new(repository);
 
         let category_name = "Test Category";
-        categories_list.create(category_name).unwrap();
+        categories_list.create(category_name).await.unwrap();
 
-        assert_eq!(categories_list.categories().len(), 1);
-        assert_eq!(categories_list.categories()[0].name(), category_name);
+        assert_eq!(categories_list.categories().await.len(), 1);
+        assert_eq!(categories_list.categories().await[0].name(), category_name);
     }
 
-    #[test]
-    fn accounting_categories_list_create_should_fail_when_category_exists() {
-        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+    #[tokio::test]
+    async fn accounting_categories_list_create_should_fail_when_category_exists() {
+        let repository = InMemoryAccountingCategoriesListRepository::new();
         let mut categories_list = AccountingCategoriesList::new(repository);
 
         let category_name = "Test Category";
-        categories_list.create(category_name).unwrap();
+        categories_list.create(category_name).await.unwrap();
 
-        let result = categories_list.create(category_name);
+        let result = categories_list.create(category_name).await;
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -159,49 +155,49 @@ mod tests {
         );
     }
 
-    #[test]
-    fn accounting_categories_list_should_return_empty_when_no_categories() {
-        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+    #[tokio::test]
+    async fn accounting_categories_list_should_return_empty_when_no_categories() {
+        let repository = InMemoryAccountingCategoriesListRepository::new();
         let categories_list = AccountingCategoriesList::new(repository);
 
-        assert!(categories_list.categories().is_empty());
+        assert!(categories_list.categories().await.is_empty());
     }
 
-    #[test]
-    fn accounting_categories_list_should_return_all_categories() {
-        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+    #[tokio::test]
+    async fn accounting_categories_list_should_return_all_categories() {
+        let repository = InMemoryAccountingCategoriesListRepository::new();
         let mut categories_list = AccountingCategoriesList::new(repository);
 
-        categories_list.create("Category 1").unwrap();
-        categories_list.create("Category 2").unwrap();
+        categories_list.create("Category 1").await.unwrap();
+        categories_list.create("Category 2").await.unwrap();
 
-        let categories = categories_list.categories();
+        let categories = categories_list.categories().await;
         assert_eq!(categories.len(), 2);
         assert_eq!(categories[0].name(), "Category 1");
         assert_eq!(categories[1].name(), "Category 2");
     }
 
-    #[test]
-    fn accounting_categories_list_update_should_modify_existing_category() {
-        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+    #[tokio::test]
+    async fn accounting_categories_list_update_should_modify_existing_category() {
+        let repository = InMemoryAccountingCategoriesListRepository::new();
         let mut categories_list = AccountingCategoriesList::new(repository);
 
         let category_name = "Original Category";
-        let mut category = categories_list.create(category_name).unwrap();
+        let mut category = categories_list.create(category_name).await.unwrap();
 
         let updated_name = "Updated Category";
         category.set_name(updated_name.to_string());
 
         categories_list.update(category).unwrap();
 
-        let categories = categories_list.categories();
+        let categories = categories_list.categories().await;
         let actual_name = categories.first().map(|c| c.name()).unwrap();
         assert_eq!(actual_name, updated_name);
     }
 
     #[test]
     fn accounting_categories_list_update_should_fail_when_category_not_found() {
-        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+        let repository = InMemoryAccountingCategoriesListRepository::new();
         let mut categories_list = AccountingCategoriesList::new(repository);
 
         let category = AccountingCategory::with_id(
@@ -218,22 +214,22 @@ mod tests {
         );
     }
 
-    #[test]
-    fn accounting_categories_list_delete_should_remove_existing_category() {
-        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+    #[tokio::test]
+    async fn accounting_categories_list_delete_should_remove_existing_category() {
+        let repository = InMemoryAccountingCategoriesListRepository::new();
         let mut categories_list = AccountingCategoriesList::new(repository);
 
         let category_name = "Category to Delete";
-        let category = categories_list.create(category_name).unwrap();
+        let category = categories_list.create(category_name).await.unwrap();
 
         categories_list.delete(category.id().clone()).unwrap();
 
-        assert!(categories_list.categories().is_empty());
+        assert!(categories_list.categories().await.is_empty());
     }
 
     #[test]
     fn accounting_categories_list_delete_should_fail_when_category_not_found() {
-        let repository = Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
+        let repository = InMemoryAccountingCategoriesListRepository::new();
         let mut categories_list = AccountingCategoriesList::new(repository);
 
         let non_existent_id = AccountingCategoryId::new();

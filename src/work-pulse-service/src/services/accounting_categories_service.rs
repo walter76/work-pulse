@@ -11,14 +11,11 @@ use tokio::sync::Mutex;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
-    entities::accounting::AccountingCategoryId, infra::repositories::in_memory::RepositoryFactory,
+    entities::accounting::AccountingCategoryId, infra::repositories::{in_memory::{accounting_categories_list::InMemoryAccountingCategoriesListRepository, RepositoryFactory}, postgres},
     use_cases::accounting_categories_list::AccountingCategoriesList,
 };
 
 use crate::prelude::ACCOUNTING_CATEGORIES_SERVICE_TAG;
-
-/// Type alias for a thread-safe, asynchronous mutex wrapping an `AccountingCategoriesList`.
-type AccountingCategoriesListStore = Mutex<AccountingCategoriesList>;
 
 /// The Accounting Category.
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
@@ -59,18 +56,11 @@ impl AccountingCategory {
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for managing accounting categories.
-pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    let store = Arc::new(Mutex::new(AccountingCategoriesList::new(
-        repository_factory
-            .accounting_categories_list_repository
-            .clone(),
-    )));
+pub fn router(repository: InMemoryAccountingCategoriesListRepository) -> OpenApiRouter {
+    let store = Arc::new(Mutex::new(repository));
 
     OpenApiRouter::new()
-        .routes(routes!(
-            list_accounting_categories,
-            create_accounting_category
-        ))
+        .routes(routes!(list_accounting_categories, create_accounting_category))
         .routes(routes!(update_accounting_category))
         .routes(routes!(delete_accounting_category))
         .with_state(store)
@@ -86,17 +76,19 @@ pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
     )
 )]
 async fn list_accounting_categories(
-    State(store): State<Arc<AccountingCategoriesListStore>>,
-) -> Json<Vec<AccountingCategory>> {
-    let accounting_categories_list = store.lock().await;
+    State(store): State<Arc<Mutex<InMemoryAccountingCategoriesListRepository>>>,
+) -> impl IntoResponse {
+    let repository = store.lock().await;
+    let accounting_categories_list = AccountingCategoriesList::new(repository.clone());
 
-    let categories = accounting_categories_list
-        .categories()
+    let categories_vec = accounting_categories_list.categories().await;
+
+    let categories: Vec<AccountingCategory> = categories_vec
         .iter()
         .map(AccountingCategory::from_entity)
         .collect();
 
-    Json(categories)
+    (StatusCode::OK, Json(categories)).into_response()
 }
 
 /// Creates a new accounting category.
@@ -111,12 +103,12 @@ async fn list_accounting_categories(
     ),
 )]
 async fn create_accounting_category(
-    State(store): State<Arc<AccountingCategoriesListStore>>,
+    State(store): State<InMemoryAccountingCategoriesListRepository>,
     Json(new_category): Json<AccountingCategory>,
 ) -> impl IntoResponse {
-    let mut accounting_categories_list = store.lock().await;
+    let mut accounting_categories_list = AccountingCategoriesList::new(store);
 
-    match accounting_categories_list.create(new_category.name.as_str()) {
+    match accounting_categories_list.create(new_category.name.as_str()).await {
         Ok(accounting_category) => (
             StatusCode::CREATED,
             Json(AccountingCategory::from_entity(&accounting_category)),
@@ -140,10 +132,10 @@ async fn create_accounting_category(
     ),
 )]
 async fn update_accounting_category(
-    State(store): State<Arc<AccountingCategoriesListStore>>,
+    State(store): State<InMemoryAccountingCategoriesListRepository>,
     Json(updated_category): Json<AccountingCategory>,
 ) -> impl IntoResponse {
-    let mut accounting_categories_list = store.lock().await;
+    let mut accounting_categories_list = AccountingCategoriesList::new(store);
 
     if updated_category.id.is_none() {
         return (
@@ -195,9 +187,9 @@ async fn update_accounting_category(
 )]
 async fn delete_accounting_category(
     Path(id): Path<String>,
-    State(store): State<Arc<AccountingCategoriesListStore>>,
+    State(store): State<InMemoryAccountingCategoriesListRepository>,
 ) -> impl IntoResponse {
-    let mut accounting_categories_list = store.lock().await;
+    let mut accounting_categories_list = AccountingCategoriesList::new(store);
 
     match AccountingCategoryId::parse_str(&id) {
         Ok(category_id) => match accounting_categories_list.delete(category_id) {

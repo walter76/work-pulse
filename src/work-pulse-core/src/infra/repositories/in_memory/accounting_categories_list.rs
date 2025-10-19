@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::{
@@ -50,8 +51,9 @@ impl InMemoryAccountingCategoriesListRepository {
     }
 }
 
+#[async_trait]
 impl AccountingCategoriesListRepository for InMemoryAccountingCategoriesListRepository {
-    fn get_all(&self) -> Vec<AccountingCategory> {
+    async fn get_all(&self) -> Vec<AccountingCategory> {
         self.categories
             .iter()
             .map(|record| record.to_entity())
