@@ -12,7 +12,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
     entities::accounting::AccountingCategoryId,
-    infra::repositories::in_memory::accounting_categories_list::InMemoryAccountingCategoriesListRepository,
+    infra::repositories::postgres::{accounting_categories_list::PsqlAccountingCategoriesListRepository},
     use_cases::accounting_categories_list::AccountingCategoriesList,
 };
 
@@ -57,7 +57,7 @@ impl AccountingCategory {
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for managing accounting categories.
-pub fn router(repository: InMemoryAccountingCategoriesListRepository) -> OpenApiRouter {
+pub fn router(repository: PsqlAccountingCategoriesListRepository) -> OpenApiRouter {
     let store = Arc::new(Mutex::new(repository));
 
     OpenApiRouter::new()
@@ -80,7 +80,7 @@ pub fn router(repository: InMemoryAccountingCategoriesListRepository) -> OpenApi
     )
 )]
 async fn list_accounting_categories(
-    State(store): State<Arc<Mutex<InMemoryAccountingCategoriesListRepository>>>,
+    State(store): State<Arc<Mutex<PsqlAccountingCategoriesListRepository>>>,
 ) -> impl IntoResponse {
     let accounting_categories_list = AccountingCategoriesList::new(store.clone());
 
@@ -106,7 +106,7 @@ async fn list_accounting_categories(
     ),
 )]
 async fn create_accounting_category(
-    State(store): State<Arc<Mutex<InMemoryAccountingCategoriesListRepository>>>,
+    State(store): State<Arc<Mutex<PsqlAccountingCategoriesListRepository>>>,
     Json(new_category): Json<AccountingCategory>,
 ) -> impl IntoResponse {
     let mut accounting_categories_list = AccountingCategoriesList::new(store.clone());
@@ -138,7 +138,7 @@ async fn create_accounting_category(
     ),
 )]
 async fn update_accounting_category(
-    State(store): State<Arc<Mutex<InMemoryAccountingCategoriesListRepository>>>,
+    State(store): State<Arc<Mutex<PsqlAccountingCategoriesListRepository>>>,
     Json(updated_category): Json<AccountingCategory>,
 ) -> impl IntoResponse {
     let mut accounting_categories_list = AccountingCategoriesList::new(store.clone());
@@ -196,7 +196,7 @@ async fn update_accounting_category(
 )]
 async fn delete_accounting_category(
     Path(id): Path<String>,
-    State(store): State<Arc<Mutex<InMemoryAccountingCategoriesListRepository>>>,
+    State(store): State<Arc<Mutex<PsqlAccountingCategoriesListRepository>>>,
 ) -> impl IntoResponse {
     let mut accounting_categories_list = AccountingCategoriesList::new(store.clone());
 

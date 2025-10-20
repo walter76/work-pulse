@@ -13,6 +13,8 @@ use utoipa_swagger_ui::SwaggerUi;
 use services::accounting_categories_service;
 use work_pulse_core::infra::repositories::in_memory::accounting_categories_list::InMemoryAccountingCategoriesListRepository;
 use work_pulse_core::infra::repositories::in_memory::RepositoryFactory;
+use work_pulse_core::infra::repositories::postgres;
+use work_pulse_core::infra::repositories::postgres::accounting_categories_list::PsqlAccountingCategoriesListRepository;
 
 use crate::services::activities_list_service;
 
@@ -48,12 +50,13 @@ async fn main() -> Result<(), Error> {
         .init();
 
     let repository_factory = RepositoryFactory::new();
-    let accounting_categories_repository = InMemoryAccountingCategoriesListRepository::new();
+    let psql_repository = PsqlAccountingCategoriesListRepository::with_database_url(CONNECTION_STRING).await;
+    // let accounting_categories_repository = InMemoryAccountingCategoriesListRepository::new();
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest(
             "/api/v1/accounting-categories",
-            accounting_categories_service::router(accounting_categories_repository),
+            accounting_categories_service::router(psql_repository),
         )
         .nest(
             "/api/v1/activities",
