@@ -11,7 +11,8 @@ use tokio::sync::Mutex;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
-    entities::accounting::AccountingCategoryId, infra::repositories::{in_memory::{accounting_categories_list::InMemoryAccountingCategoriesListRepository, RepositoryFactory}, postgres},
+    entities::accounting::AccountingCategoryId,
+    infra::repositories::in_memory::accounting_categories_list::InMemoryAccountingCategoriesListRepository,
     use_cases::accounting_categories_list::AccountingCategoriesList,
 };
 
@@ -60,7 +61,10 @@ pub fn router(repository: InMemoryAccountingCategoriesListRepository) -> OpenApi
     let store = Arc::new(Mutex::new(repository));
 
     OpenApiRouter::new()
-        .routes(routes!(list_accounting_categories, create_accounting_category))
+        .routes(routes!(
+            list_accounting_categories,
+            create_accounting_category
+        ))
         .routes(routes!(update_accounting_category))
         .routes(routes!(delete_accounting_category))
         .with_state(store)
@@ -78,8 +82,7 @@ pub fn router(repository: InMemoryAccountingCategoriesListRepository) -> OpenApi
 async fn list_accounting_categories(
     State(store): State<Arc<Mutex<InMemoryAccountingCategoriesListRepository>>>,
 ) -> impl IntoResponse {
-    let repository = store.lock().await;
-    let accounting_categories_list = AccountingCategoriesList::new(repository.clone());
+    let accounting_categories_list = AccountingCategoriesList::new(store.clone());
 
     let categories_vec = accounting_categories_list.categories().await;
 
@@ -103,12 +106,15 @@ async fn list_accounting_categories(
     ),
 )]
 async fn create_accounting_category(
-    State(store): State<InMemoryAccountingCategoriesListRepository>,
+    State(store): State<Arc<Mutex<InMemoryAccountingCategoriesListRepository>>>,
     Json(new_category): Json<AccountingCategory>,
 ) -> impl IntoResponse {
-    let mut accounting_categories_list = AccountingCategoriesList::new(store);
+    let mut accounting_categories_list = AccountingCategoriesList::new(store.clone());
 
-    match accounting_categories_list.create(new_category.name.as_str()).await {
+    match accounting_categories_list
+        .create(new_category.name.as_str())
+        .await
+    {
         Ok(accounting_category) => (
             StatusCode::CREATED,
             Json(AccountingCategory::from_entity(&accounting_category)),
@@ -132,10 +138,10 @@ async fn create_accounting_category(
     ),
 )]
 async fn update_accounting_category(
-    State(store): State<InMemoryAccountingCategoriesListRepository>,
+    State(store): State<Arc<Mutex<InMemoryAccountingCategoriesListRepository>>>,
     Json(updated_category): Json<AccountingCategory>,
 ) -> impl IntoResponse {
-    let mut accounting_categories_list = AccountingCategoriesList::new(store);
+    let mut accounting_categories_list = AccountingCategoriesList::new(store.clone());
 
     if updated_category.id.is_none() {
         return (
@@ -161,7 +167,10 @@ async fn update_accounting_category(
         updated_category.name.clone(),
     );
 
-    match accounting_categories_list.update(updated_category.clone()) {
+    match accounting_categories_list
+        .update(updated_category.clone())
+        .await
+    {
         Ok(_) => (
             StatusCode::OK,
             Json(AccountingCategory::from_entity(&updated_category)),
@@ -187,12 +196,12 @@ async fn update_accounting_category(
 )]
 async fn delete_accounting_category(
     Path(id): Path<String>,
-    State(store): State<InMemoryAccountingCategoriesListRepository>,
+    State(store): State<Arc<Mutex<InMemoryAccountingCategoriesListRepository>>>,
 ) -> impl IntoResponse {
-    let mut accounting_categories_list = AccountingCategoriesList::new(store);
+    let mut accounting_categories_list = AccountingCategoriesList::new(store.clone());
 
     match AccountingCategoryId::parse_str(&id) {
-        Ok(category_id) => match accounting_categories_list.delete(category_id) {
+        Ok(category_id) => match accounting_categories_list.delete(category_id).await {
             Ok(_) => StatusCode::NO_CONTENT.into_response(),
             Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
         },
