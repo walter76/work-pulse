@@ -60,19 +60,19 @@ impl AccountingCategoriesListRepository for InMemoryAccountingCategoriesListRepo
             .collect()
     }
 
-    fn get_by_id(&self, id: AccountingCategoryId) -> Option<AccountingCategory> {
+    async fn get_by_id(&self, id: AccountingCategoryId) -> Option<AccountingCategory> {
         self.categories
             .iter()
             .find(|&record| record.id == id.0)
             .map(|record| record.to_entity())
     }
 
-    fn add(&mut self, category: AccountingCategory) {
+    async fn add(&mut self, category: AccountingCategory) {
         let record = AccountingCategoryRecord::from_entity(category);
         self.categories.push(record);
     }
 
-    fn update(
+    async fn update(
         &mut self,
         category: AccountingCategory,
     ) -> Result<(), AccountingCategoriesListRepositoryError> {
@@ -87,7 +87,7 @@ impl AccountingCategoriesListRepository for InMemoryAccountingCategoriesListRepo
         }
     }
 
-    fn delete(
+    async fn delete(
         &mut self,
         id: AccountingCategoryId,
     ) -> Result<(), AccountingCategoriesListRepositoryError> {
@@ -99,7 +99,7 @@ impl AccountingCategoriesListRepository for InMemoryAccountingCategoriesListRepo
         }
     }
 
-    fn get_or_create_by_name(
+    async fn get_or_create_by_name(
         &mut self,
         name: &str,
     ) -> Result<AccountingCategory, AccountingCategoriesListRepositoryError> {

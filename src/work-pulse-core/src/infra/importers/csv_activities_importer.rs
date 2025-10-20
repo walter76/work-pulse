@@ -33,6 +33,7 @@ impl CsvActivitiesImporter {
     }
 }
 
+#[async_trait]
 impl ActivitiesImporter for CsvActivitiesImporter {
     /// Imports activities from a CSV reader for a specific year.
     ///
@@ -45,7 +46,7 @@ impl ActivitiesImporter for CsvActivitiesImporter {
     ///
     /// - `Ok(Vec<Activity>)` if the import is successful.
     /// - `Err(ActivitiesImporterError)` if there is an error during import.
-    fn import<R: Read>(
+    async fn import<R: Read>(
         &mut self,
         reader: R,
         year: u16,
@@ -69,6 +70,7 @@ impl ActivitiesImporter for CsvActivitiesImporter {
 
             let accounting_category = accounting_categories_list_repository
                 .get_or_create_by_name(&activity_record.pam_category)
+                .await
                 .map_err(|_| ActivitiesImporterError::ParseError)?;
 
             let mut activity = Activity::new(

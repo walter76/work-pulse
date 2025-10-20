@@ -3,7 +3,7 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::{
-    adapters::AccountingCategoriesListRepository,
+    adapters::{AccountingCategoriesListRepository, AccountingCategoriesListRepositoryError},
     entities::accounting::{AccountingCategory, AccountingCategoryId},
 };
 
@@ -40,35 +40,74 @@ impl AccountingCategoriesListRepository for PsqlAccountingCategoriesListReposito
             .collect()
     }
 
-    fn get_by_id(&self, id: AccountingCategoryId) -> Option<AccountingCategory> {
-        unimplemented!()
+    async fn get_by_id(&self, id: AccountingCategoryId) -> Option<AccountingCategory> {
+        let row = sqlx::query("SELECT id, name FROM accounting_categories WHERE id = $1")
+            .bind(id.0)
+            .fetch_optional(&self.connection_pool)
+            .await
+            .unwrap();
+
+        row.map(|row| {
+            let id: Uuid = row.get("id");
+            let name: String = row.get("name");
+            AccountingCategory::with_id(AccountingCategoryId(id), name)
+        })
     }
 
-    fn add(&mut self, category: crate::entities::accounting::AccountingCategory) {
-        unimplemented!()
+    async fn add(&mut self, category: AccountingCategory) {
+        sqlx::query("INSERT INTO accounting_categories (id, name) VALUES ($1, $2)")
+            .bind(category.id().0)
+            .bind(category.name())
+            .execute(&self.connection_pool)
+            .await
+            .unwrap();
     }
 
-    fn update(
+    async fn update(
         &mut self,
-        category: crate::entities::accounting::AccountingCategory,
-    ) -> Result<(), crate::adapters::AccountingCategoriesListRepositoryError> {
-        unimplemented!()
+        category: AccountingCategory,
+    ) -> Result<(), AccountingCategoriesListRepositoryError> {
+        sqlx::query("UPDATE accounting_categories SET name = $1 WHERE id = $2")
+            .bind(category.name())
+            .bind(category.id().0)
+            .execute(&self.connection_pool)
+            .await
+            .map_err(|e| AccountingCategoriesListRepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
     }
 
-    fn delete(
+    async fn delete(
         &mut self,
-        id: crate::entities::accounting::AccountingCategoryId,
-    ) -> Result<(), crate::adapters::AccountingCategoriesListRepositoryError> {
-        unimplemented!()
+        id: AccountingCategoryId,
+    ) -> Result<(), AccountingCategoriesListRepositoryError> {
+        sqlx::query("DELETE FROM accounting_categories WHERE id = $1")
+            .bind(id.0)
+            .execute(&self.connection_pool)
+            .await
+            .map_err(|e| AccountingCategoriesListRepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
     }
 
-    fn get_or_create_by_name(
+    async fn get_or_create_by_name(
         &mut self,
         name: &str,
-    ) -> Result<
-        crate::entities::accounting::AccountingCategory,
-        crate::adapters::AccountingCategoriesListRepositoryError,
-    > {
-        unimplemented!()
+    ) -> Result<AccountingCategory, AccountingCategoriesListRepositoryError> {
+        let row = sqlx::query("SELECT id, name FROM accounting_categories WHERE name = $1")
+            .bind(name)
+            .fetch_optional(&self.connection_pool)
+            .await
+            .map_err(|e| AccountingCategoriesListRepositoryError::DatabaseError(e.to_string()))?;
+
+        if let Some(row) = row {
+            let id: Uuid = row.get("id");
+            let name: String = row.get("name");
+            Ok(AccountingCategory::with_id(AccountingCategoryId(id), name))
+        } else {
+            let new_category = AccountingCategory::new(name.to_string());
+            self.add(new_category.clone()).await;
+            Ok(new_category)
+        }
     }
 }

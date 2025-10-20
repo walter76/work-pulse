@@ -68,7 +68,7 @@ impl<R: AccountingCategoriesListRepository> AccountingCategoriesList<R> {
         }
 
         let accounting_category = AccountingCategory::new(category_name.to_string());
-        repository.add(accounting_category.clone());
+        repository.add(accounting_category.clone()).await;
 
         Ok(accounting_category)
     }
@@ -102,6 +102,7 @@ impl<R: AccountingCategoriesListRepository> AccountingCategoriesList<R> {
 
         repository
             .update(category)
+            .await
             .map_err(|_| AccountingCategoriesListError::NotFound(category_id))
     }
 
@@ -123,6 +124,7 @@ impl<R: AccountingCategoriesListRepository> AccountingCategoriesList<R> {
 
         repository
             .delete(id.clone())
+            .await
             .map_err(|_| AccountingCategoriesListError::NotFound(id))
     }
 }

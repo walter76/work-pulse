@@ -40,14 +40,14 @@ pub trait AccountingCategoriesListRepository: Send + Sync {
     /// # Returns
     ///
     /// An `Option<AccountingCategory>` that contains the requested category if found, or `None` if not found.
-    fn get_by_id(&self, id: AccountingCategoryId) -> Option<AccountingCategory>;
+    async fn get_by_id(&self, id: AccountingCategoryId) -> Option<AccountingCategory>;
 
     /// Adds a new accounting category to the repository.
     ///
     /// # Arguments
     ///
     /// - `category`: The `AccountingCategory` instance to be added to the repository.
-    fn add(&mut self, category: AccountingCategory);
+    async fn add(&mut self, category: AccountingCategory);
 
     /// Updates an existing accounting category in the repository.
     ///
@@ -58,7 +58,7 @@ pub trait AccountingCategoriesListRepository: Send + Sync {
     /// # Returns
     ///
     /// `Result<(), AccountingCategoriesListRepositoryError>` indicating success or failure of the update operation.
-    fn update(
+    async fn update(
         &mut self,
         category: AccountingCategory,
     ) -> Result<(), AccountingCategoriesListRepositoryError>;
@@ -72,7 +72,7 @@ pub trait AccountingCategoriesListRepository: Send + Sync {
     /// # Returns
     ///
     /// `Result<(), AccountingCategoriesListRepositoryError>` indicating success or failure of the delete operation.
-    fn delete(
+    async fn delete(
         &mut self,
         id: AccountingCategoryId,
     ) -> Result<(), AccountingCategoriesListRepositoryError>;
@@ -86,7 +86,7 @@ pub trait AccountingCategoriesListRepository: Send + Sync {
     /// # Returns
     ///
     /// `Result<AccountingCategory, AccountingCategoriesListRepositoryError>` containing the retrieved or newly created accounting category.
-    fn get_or_create_by_name(
+    async fn get_or_create_by_name(
         &mut self,
         name: &str,
     ) -> Result<AccountingCategory, AccountingCategoriesListRepositoryError>;
@@ -167,6 +167,7 @@ pub enum ActivitiesImporterError {
     ParseError,
 }
 
+#[async_trait]
 pub trait ActivitiesImporter {
     /// Imports activities from a source.
     ///
@@ -177,7 +178,7 @@ pub trait ActivitiesImporter {
     /// # Returns
     ///
     /// A `Result` indicating success or failure of the import operation.
-    fn import<R: Read>(
+    async fn import<R: Read>(
         &mut self,
         reader: R,
         year: u16,
