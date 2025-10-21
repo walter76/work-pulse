@@ -15,24 +15,23 @@ use work_pulse_core::{
     entities::{accounting::AccountingCategoryId, activity::ActivityId},
     infra::{
         importers::csv_activities_importer::CsvActivitiesImporter,
-        repositories::in_memory::RepositoryFactory,
+        repositories::{
+            in_memory::activities_list::InMemoryActivitiesListRepository,
+            postgres::accounting_categories_list::PsqlAccountingCategoriesListRepository,
+        },
     },
     use_cases::activities_list::ActivitiesList,
 };
 
 use crate::prelude::ACTIVITIES_LIST_SERVICE_TAG;
 
-/// Type alias for a thread-safe, asynchronous mutex wrapping an `ActivitiesList`.
-type ActivitiesStore = Mutex<ActivitiesList>;
-
 /// Shared state for the activities service.
-#[derive(Clone)]
 struct ActivitiesServiceState {
-    /// The activities store.
-    activities_store: Arc<ActivitiesStore>,
+    /// The activities list repository.
+    activities_list_repository: Arc<Mutex<InMemoryActivitiesListRepository>>,
 
-    /// The CSV activities importer.
-    csv_activities_importer: Arc<Mutex<CsvActivitiesImporter>>,
+    /// The accounting categories repository.
+    accounting_categories_repository: Arc<Mutex<PsqlAccountingCategoriesListRepository>>,
 }
 
 /// The Activity.
@@ -121,20 +120,14 @@ impl Activity {
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for managing activities.
-pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    let activities_store = Arc::new(Mutex::new(ActivitiesList::new(
-        repository_factory.activities_list_repository.clone(),
-    )));
-    let csv_activities_importer = Arc::new(Mutex::new(CsvActivitiesImporter::new(
-        repository_factory
-            .accounting_categories_list_repository
-            .clone(),
-    )));
-
-    let store = ActivitiesServiceState {
-        activities_store,
-        csv_activities_importer,
-    };
+pub fn router(
+    activities_list_repository: InMemoryActivitiesListRepository,
+    accounting_categories_repository: PsqlAccountingCategoriesListRepository,
+) -> OpenApiRouter {
+    let store = Arc::new(Mutex::new(ActivitiesServiceState {
+        activities_list_repository: Arc::new(Mutex::new(activities_list_repository)),
+        accounting_categories_repository: Arc::new(Mutex::new(accounting_categories_repository)),
+    }));
 
     OpenApiRouter::new()
         .routes(routes!(list_activities, create_activity))
@@ -174,13 +167,15 @@ struct ListActivitiesQuery {
     )
 )]
 async fn list_activities(
-    State(store): State<ActivitiesServiceState>,
+    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
     query: Query<ListActivitiesQuery>,
 ) -> impl IntoResponse {
-    let activities_list = store.activities_store.lock().await;
+    let service_state = store.lock().await;
+    let activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
     let activities = activities_list
         .activities()
+        .await
         .iter()
         .map(Activity::from_entity)
         .collect::<Vec<_>>();
@@ -221,12 +216,13 @@ async fn list_activities(
 )]
 async fn get_activity_by_id(
     Path(id): Path<String>,
-    State(store): State<ActivitiesServiceState>,
+    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
 ) -> impl IntoResponse {
-    let activities_list = store.activities_store.lock().await;
+    let service_state = store.lock().await;
+    let activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
     match ActivityId::parse_str(&id) {
-        Ok(activity_id) => match activities_list.get_by_id(&activity_id) {
+        Ok(activity_id) => match activities_list.get_by_id(&activity_id).await {
             Some(activity) => {
                 (StatusCode::OK, Json(Activity::from_entity(&activity))).into_response()
             }
@@ -256,10 +252,11 @@ async fn get_activity_by_id(
     ),
 )]
 async fn create_activity(
-    State(store): State<ActivitiesServiceState>,
+    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
     Json(new_activity): Json<Activity>,
 ) -> impl IntoResponse {
-    let mut activities_list = store.activities_store.lock().await;
+    let service_state = store.lock().await;
+    let mut activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
     let date = new_activity.date.parse().expect("Invalid date format");
     let start_time = new_activity
@@ -274,13 +271,15 @@ async fn create_activity(
         AccountingCategoryId::parse_str(new_activity.accounting_category_id.as_str())
             .expect("Invalid Accounting category ID format");
 
-    let activity = activities_list.record(
-        date,
-        start_time,
-        end_time,
-        accounting_category_id,
-        new_activity.task.clone(),
-    );
+    let activity = activities_list
+        .record(
+            date,
+            start_time,
+            end_time,
+            accounting_category_id,
+            new_activity.task.clone(),
+        )
+        .await;
 
     (StatusCode::CREATED, Json(Activity::from_entity(&activity)))
 }
@@ -299,10 +298,11 @@ async fn create_activity(
     ),
 )]
 async fn update_activity(
-    State(store): State<ActivitiesServiceState>,
+    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
     Json(updated_activity): Json<Activity>,
 ) -> impl IntoResponse {
-    let mut activities_list = store.activities_store.lock().await;
+    let service_state = store.lock().await;
+    let mut activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
     if updated_activity.id.is_none() {
         return (
@@ -314,7 +314,7 @@ async fn update_activity(
 
     let updated_activity = updated_activity.to_entity();
 
-    match activities_list.update(updated_activity.clone()) {
+    match activities_list.update(updated_activity.clone()).await {
         Ok(_) => (
             StatusCode::OK,
             Json(Activity::from_entity(&updated_activity)),
@@ -340,12 +340,13 @@ async fn update_activity(
 )]
 async fn delete_activity(
     Path(id): Path<String>,
-    State(store): State<ActivitiesServiceState>,
+    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
 ) -> impl IntoResponse {
-    let mut activities_list = store.activities_store.lock().await;
+    let service_state = store.lock().await;
+    let mut activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
     match ActivityId::parse_str(&id) {
-        Ok(activity_id) => match activities_list.delete(activity_id) {
+        Ok(activity_id) => match activities_list.delete(activity_id).await {
             Ok(_) => StatusCode::NO_CONTENT.into_response(),
             Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(err.to_string())).into_response(),
         },
@@ -380,7 +381,7 @@ struct UploadActivitiesQuery {
     )
 )]
 async fn upload_activities_csv_raw(
-    State(store): State<ActivitiesServiceState>,
+    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
     query: Query<UploadActivitiesQuery>,
     body: String,
 ) -> impl IntoResponse {
@@ -391,12 +392,18 @@ async fn upload_activities_csv_raw(
         )
             .into_response()
     } else {
-        let mut activities_list = store.activities_store.lock().await;
+        let service_state = store.lock().await;
+        let mut activities_list =
+            ActivitiesList::new(service_state.activities_list_repository.clone());
 
-        let mut csv_importer = store.csv_activities_importer.lock().await;
+        let mut csv_importer =
+            CsvActivitiesImporter::new(service_state.accounting_categories_repository.clone());
         let reader = body.as_bytes();
 
-        match activities_list.import(&mut *csv_importer, reader, query.activities_year) {
+        match activities_list
+            .import(&mut csv_importer, reader, query.activities_year)
+            .await
+        {
             Ok(_) => (
                 StatusCode::OK,
                 Json("CSV file processed successfully".to_string()),
@@ -422,7 +429,7 @@ async fn upload_activities_csv_raw(
     )
 )]
 async fn upload_activities_csv_multipart(
-    State(store): State<ActivitiesServiceState>,
+    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
     query: Query<UploadActivitiesQuery>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
@@ -437,12 +444,18 @@ async fn upload_activities_csv_multipart(
     }
 
     if let Some(csv_content) = csv_content {
-        let mut activities_list = store.activities_store.lock().await;
+        let service_state = store.lock().await;
+        let mut activities_list =
+            ActivitiesList::new(service_state.activities_list_repository.clone());
 
-        let mut csv_importer = store.csv_activities_importer.lock().await;
+        let mut csv_importer =
+            CsvActivitiesImporter::new(service_state.accounting_categories_repository.clone());
         let reader = csv_content.as_bytes();
 
-        match activities_list.import(&mut *csv_importer, reader, query.activities_year) {
+        match activities_list
+            .import(&mut csv_importer, reader, query.activities_year)
+            .await
+        {
             Ok(_) => (
                 StatusCode::OK,
                 Json("CSV file processed successfully".to_string()),

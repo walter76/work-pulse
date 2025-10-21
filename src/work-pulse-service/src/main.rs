@@ -11,9 +11,8 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
 
 use services::accounting_categories_service;
-use work_pulse_core::infra::repositories::in_memory::accounting_categories_list::InMemoryAccountingCategoriesListRepository;
 use work_pulse_core::infra::repositories::in_memory::RepositoryFactory;
-use work_pulse_core::infra::repositories::postgres;
+use work_pulse_core::infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository;
 use work_pulse_core::infra::repositories::postgres::accounting_categories_list::PsqlAccountingCategoriesListRepository;
 
 use crate::services::activities_list_service;
@@ -50,17 +49,22 @@ async fn main() -> Result<(), Error> {
         .init();
 
     let repository_factory = RepositoryFactory::new();
-    let psql_repository = PsqlAccountingCategoriesListRepository::with_database_url(CONNECTION_STRING).await;
+    let psql_accounting_categories_repository =
+        PsqlAccountingCategoriesListRepository::with_database_url(CONNECTION_STRING).await;
     // let accounting_categories_repository = InMemoryAccountingCategoriesListRepository::new();
+    let in_memory_activities_list_repository = InMemoryActivitiesListRepository::new();
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest(
             "/api/v1/accounting-categories",
-            accounting_categories_service::router(psql_repository),
+            accounting_categories_service::router(psql_accounting_categories_repository.clone()),
         )
         .nest(
             "/api/v1/activities",
-            activities_list_service::router(&repository_factory),
+            activities_list_service::router(
+                in_memory_activities_list_repository,
+                psql_accounting_categories_repository,
+            ),
         )
         .nest(
             "/api/v1/daily-report",

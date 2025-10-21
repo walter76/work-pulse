@@ -23,18 +23,18 @@ pub enum ActivitiesListError {
 /// Represents a list of activities.
 ///
 /// It is used to record activities that the user did during his working day.
-pub struct ActivitiesList {
+pub struct ActivitiesList<R> {
     /// The repository holding the list of activities.
-    repository: Arc<Mutex<dyn ActivitiesListRepository>>,
+    repository: Arc<Mutex<R>>,
 }
 
-impl ActivitiesList {
+impl<R: ActivitiesListRepository> ActivitiesList<R> {
     /// Creates a new `ActivitiesList`.
     ///
     /// # Arguments
     ///
     /// - `repository`: The repository holding the list of activities.
-    pub fn new(repository: Arc<Mutex<dyn ActivitiesListRepository>>) -> Self {
+    pub fn new(repository: Arc<Mutex<R>>) -> Self {
         Self { repository }
     }
 
@@ -141,10 +141,10 @@ impl ActivitiesList {
     ///
     /// - `Ok(())`: If the import was successful.
     /// - `Err(ActivitiesImporterError)`: If an error occurred during the import process.
-    pub async fn import<I: ActivitiesImporter, R: Read + Send>(
+    pub async fn import<I: ActivitiesImporter, D: Read + Send>(
         &mut self,
         importer: &mut I,
-        reader: R,
+        reader: D,
         year: u16,
     ) -> Result<(), ActivitiesImporterError> {
         let mut repo = self.repository.lock().await;
