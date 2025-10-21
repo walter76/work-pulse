@@ -1,11 +1,10 @@
-use std::{
-    io::Read,
-    sync::{Arc, Mutex},
-};
+use std::{io::Read, sync::Arc};
 
+use async_trait::async_trait;
 use chrono::{NaiveDate, NaiveTime};
 use csv::Reader;
 use serde::Deserialize;
+use tokio::sync::Mutex;
 
 use crate::{
     adapters::{AccountingCategoriesListRepository, ActivitiesImporter, ActivitiesImporterError},
@@ -46,11 +45,14 @@ impl ActivitiesImporter for CsvActivitiesImporter {
     ///
     /// - `Ok(Vec<Activity>)` if the import is successful.
     /// - `Err(ActivitiesImporterError)` if there is an error during import.
-    async fn import<R: Read>(
+    async fn import<R>(
         &mut self,
         reader: R,
         year: u16,
-    ) -> Result<Vec<Activity>, ActivitiesImporterError> {
+    ) -> Result<Vec<Activity>, ActivitiesImporterError>
+    where
+        R: Read + Send,
+    {
         let mut csv_reader = Reader::from_reader(reader);
         let mut records = Vec::new();
 
@@ -62,7 +64,7 @@ impl ActivitiesImporter for CsvActivitiesImporter {
 
         let mut activities = Vec::new();
         let mut accounting_categories_list_repository =
-            self.accounting_categories_list_repository.lock().unwrap();
+            self.accounting_categories_list_repository.lock().await;
 
         for activity_record in records {
             let date =
@@ -174,8 +176,8 @@ mod tests {
         assert_eq!(result.unwrap_err(), ActivitiesImporterError::ParseError);
     }
 
-    #[test]
-    fn import_should_import_activities_from_csv() {
+    #[tokio::test]
+    async fn import_should_import_activities_from_csv() {
         let csv_data = "\
 CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 11,15.03.,09:00,17:00,Development,Coding,Worked on project X
@@ -187,7 +189,7 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
             Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut importer = CsvActivitiesImporter::new(accounting_repo);
 
-        let activities = importer.import(reader, 2023).unwrap();
+        let activities = importer.import(reader, 2023).await.unwrap();
         assert_eq!(activities.len(), 2);
 
         assert_eq!(activities[0].date().to_string(), "2023-03-15");
@@ -201,8 +203,8 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
         assert_eq!(activities[1].task(), "Team Meeting");
     }
 
-    #[test]
-    fn import_should_fail_with_invalid_csv() {
+    #[tokio::test]
+    async fn import_should_fail_with_invalid_csv() {
         let csv_data = "\
 CW,Date,Check In,Check Out,PAM Category,Topic,Comment
 11,invalid-date,09:00,17:00,Development,Coding,Worked on project X
@@ -212,7 +214,7 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
             Arc::new(Mutex::new(InMemoryAccountingCategoriesListRepository::new()));
         let mut importer = CsvActivitiesImporter::new(accounting_repo);
 
-        let result = importer.import(reader, 2023);
+        let result = importer.import(reader, 2023).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ActivitiesImporterError::ParseError);
     }

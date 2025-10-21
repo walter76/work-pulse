@@ -52,9 +52,10 @@ impl DailyReport {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
 
     use chrono::NaiveTime;
+    use tokio::sync::Mutex;
 
     use crate::{
         entities::accounting::AccountingCategoryId,
@@ -64,8 +65,8 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn daily_report_should_aggregate_activities_and_total_duration() {
+    #[tokio::test]
+    async fn daily_report_should_aggregate_activities_and_total_duration() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository.clone());
 
@@ -77,7 +78,7 @@ mod tests {
             Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
             AccountingCategoryId::new(),
             "Task 1".to_string(),
-        );
+        ).await;
 
         let activity2 = activities_list.record(
             date,
@@ -85,9 +86,9 @@ mod tests {
             Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
             AccountingCategoryId::new(),
             "Task 2".to_string(),
-        );
+        ).await;
 
-        let daily_report = DailyReport::new(date, &*repository.lock().unwrap());
+        let daily_report = DailyReport::new(date, &*repository.lock().await);
 
         assert_eq!(daily_report.date(), date);
         assert_eq!(

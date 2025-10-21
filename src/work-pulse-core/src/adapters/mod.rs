@@ -168,7 +168,7 @@ pub enum ActivitiesImporterError {
 }
 
 #[async_trait]
-pub trait ActivitiesImporter {
+pub trait ActivitiesImporter: Send + Sync {
     /// Imports activities from a source.
     ///
     /// # Arguments
@@ -178,9 +178,11 @@ pub trait ActivitiesImporter {
     /// # Returns
     ///
     /// A `Result` indicating success or failure of the import operation.
-    async fn import<R: Read>(
+    async fn import<R>(
         &mut self,
         reader: R,
         year: u16,
-    ) -> Result<Vec<Activity>, ActivitiesImporterError>;
+    ) -> Result<Vec<Activity>, ActivitiesImporterError>
+    where
+        R: Read + Send;
 }

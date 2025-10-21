@@ -1,10 +1,8 @@
-use std::{
-    io::Read,
-    sync::{Arc, Mutex},
-};
+use std::{io::Read, sync::Arc};
 
 use chrono::{NaiveDate, NaiveTime};
 use thiserror::Error;
+use tokio::sync::Mutex;
 
 use crate::{
     adapters::{ActivitiesImporter, ActivitiesImporterError, ActivitiesListRepository},
@@ -53,7 +51,7 @@ impl ActivitiesList {
     /// # Returns
     ///
     /// - `Activity`: The created activity.
-    pub fn record(
+    pub async fn record(
         &mut self,
         date: NaiveDate,
         start_time: NaiveTime,
@@ -61,7 +59,7 @@ impl ActivitiesList {
         accounting_category_id: AccountingCategoryId,
         task: String,
     ) -> Activity {
-        let mut repo = self.repository.lock().expect("Failed to lock repository");
+        let mut repo = self.repository.lock().await;
 
         let mut activity = Activity::new(date, start_time, accounting_category_id, task);
         activity.set_end_time(end_time);
@@ -72,8 +70,8 @@ impl ActivitiesList {
     }
 
     /// Returns the list of activities.
-    pub fn activities(&self) -> Vec<Activity> {
-        let repo = self.repository.lock().expect("Failed to lock repository");
+    pub async fn activities(&self) -> Vec<Activity> {
+        let repo = self.repository.lock().await;
         repo.get_all()
     }
 
@@ -87,8 +85,8 @@ impl ActivitiesList {
     ///
     /// - `Some(Activity)`: If the activity was found.
     /// - `None`: If the activity with the specified ID does not exist.
-    pub fn get_by_id(&self, activity_id: &ActivityId) -> Option<Activity> {
-        let repo = self.repository.lock().expect("Failed to lock repository");
+    pub async fn get_by_id(&self, activity_id: &ActivityId) -> Option<Activity> {
+        let repo = self.repository.lock().await;
 
         repo.get_all()
             .iter()
@@ -106,8 +104,8 @@ impl ActivitiesList {
     ///
     /// - `Ok(())`: If the activity was successfully updated.
     /// - `Err(ActivitiesListError)`: If the activity with the specified ID does not exist.
-    pub fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListError> {
-        let mut repo = self.repository.lock().unwrap();
+    pub async fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListError> {
+        let mut repo = self.repository.lock().await;
 
         let activity_id = activity.id().clone();
         repo.update(activity)
@@ -124,8 +122,8 @@ impl ActivitiesList {
     ///
     /// - `Ok(())`: If the activity was successfully deleted.
     /// - `Err(ActivitiesListError)`: If the activity with the specified ID does
-    pub fn delete(&mut self, activity_id: ActivityId) -> Result<(), ActivitiesListError> {
-        let mut repo = self.repository.lock().unwrap();
+    pub async fn delete(&mut self, activity_id: ActivityId) -> Result<(), ActivitiesListError> {
+        let mut repo = self.repository.lock().await;
 
         repo.delete(activity_id.clone())
             .map_err(|_| ActivitiesListError::NotFound(activity_id))
@@ -143,15 +141,15 @@ impl ActivitiesList {
     ///
     /// - `Ok(())`: If the import was successful.
     /// - `Err(ActivitiesImporterError)`: If an error occurred during the import process.
-    pub fn import<I: ActivitiesImporter, R: Read>(
+    pub async fn import<I: ActivitiesImporter, R: Read + Send>(
         &mut self,
         importer: &mut I,
         reader: R,
         year: u16,
     ) -> Result<(), ActivitiesImporterError> {
-        let mut repo = self.repository.lock().unwrap();
+        let mut repo = self.repository.lock().await;
 
-        let activities = importer.import(reader, year)?;
+        let activities = importer.import(reader, year).await?;
 
         for activity in activities {
             repo.add(activity);
@@ -168,125 +166,140 @@ mod tests {
         entities::accounting::AccountingCategoryId,
         infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository,
     };
+    use async_trait::async_trait;
     use chrono::{NaiveDate, NaiveTime};
 
-    #[test]
-    fn record_should_add_activity_with_end_time() {
+    #[tokio::test]
+    async fn record_should_add_activity_with_end_time() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository);
 
-        let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Test Task".to_string(),
-        );
+        let activity = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Test Task".to_string(),
+            )
+            .await;
 
-        assert_eq!(activities_list.activities().len(), 1);
-        assert_eq!(activities_list.activities()[0], activity);
+        let activities = activities_list.activities().await;
+        assert_eq!(activities.len(), 1);
+        assert_eq!(activities[0], activity);
     }
 
-    #[test]
-    fn record_should_add_activity_without_end_time() {
+    #[tokio::test]
+    async fn record_should_add_activity_without_end_time() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository);
 
-        let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
-            None,
-            AccountingCategoryId::new(),
-            "Test Task".to_string(),
-        );
+        let activity = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                None,
+                AccountingCategoryId::new(),
+                "Test Task".to_string(),
+            )
+            .await;
 
-        assert_eq!(activities_list.activities().len(), 1);
-        assert_eq!(activities_list.activities()[0], activity);
+        let activities = activities_list.activities().await;
+        assert_eq!(activities.len(), 1);
+        assert_eq!(activities[0], activity);
     }
 
-    #[test]
-    fn activities_should_return_empty_when_no_activities() {
+    #[tokio::test]
+    async fn activities_should_return_empty_when_no_activities() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let activities_list = ActivitiesList::new(repository);
 
-        assert!(activities_list.activities().is_empty());
+        assert!(activities_list.activities().await.is_empty());
     }
 
-    #[test]
-    fn activities_should_return_all_activities() {
+    #[tokio::test]
+    async fn activities_should_return_all_activities() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository);
 
-        activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Task 1".to_string(),
-        );
+        activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Task 1".to_string(),
+            )
+            .await;
 
-        activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid activity date"),
-            NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
-            None,
-            AccountingCategoryId::new(),
-            "Task 2".to_string(),
-        );
+        activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
+                None,
+                AccountingCategoryId::new(),
+                "Task 2".to_string(),
+            )
+            .await;
 
-        let activities = activities_list.activities();
+        let activities = activities_list.activities().await;
         assert_eq!(activities.len(), 2);
     }
 
-    #[test]
-    fn activities_list_get_by_id_should_return_activity() {
+    #[tokio::test]
+    async fn activities_list_get_by_id_should_return_activity() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository);
 
-        let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Test Task".to_string(),
-        );
+        let activity = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Test Task".to_string(),
+            )
+            .await;
 
-        let retrieved_activity = activities_list.get_by_id(activity.id()).unwrap();
+        let retrieved_activity = activities_list.get_by_id(activity.id()).await.unwrap();
         assert_eq!(retrieved_activity, activity);
     }
 
-    #[test]
-    fn activities_list_get_by_id_should_return_none_when_activity_not_found() {
+    #[tokio::test]
+    async fn activities_list_get_by_id_should_return_none_when_activity_not_found() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let activities_list = ActivitiesList::new(repository);
 
         let non_existent_id = ActivityId::new();
-        let result = activities_list.get_by_id(&non_existent_id);
+        let result = activities_list.get_by_id(&non_existent_id).await;
 
         assert!(result.is_none());
     }
 
-    #[test]
-    fn activities_list_update_should_modify_existing_activity() {
+    #[tokio::test]
+    async fn activities_list_update_should_modify_existing_activity() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository);
 
-        let mut activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Test Task".to_string(),
-        );
+        let mut activity = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Test Task".to_string(),
+            )
+            .await;
 
         activity.set_task("Updated Task".to_string());
-        activities_list.update(activity.clone()).unwrap();
+        activities_list.update(activity.clone()).await.unwrap();
 
-        let updated_activity = activities_list.get_by_id(activity.id()).unwrap();
+        let updated_activity = activities_list.get_by_id(activity.id()).await.unwrap();
         assert_eq!(updated_activity.task(), "Updated Task");
     }
 
-    #[test]
-    fn activities_list_update_should_fail_when_activity_not_found() {
+    #[tokio::test]
+    async fn activities_list_update_should_fail_when_activity_not_found() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository);
 
@@ -298,7 +311,7 @@ mod tests {
             "Non-existent Task".to_string(),
         );
 
-        let result = activities_list.update(activity.clone());
+        let result = activities_list.update(activity.clone()).await;
 
         assert!(result.is_err());
         assert_eq!(
@@ -307,31 +320,33 @@ mod tests {
         );
     }
 
-    #[test]
-    fn activities_list_delete_should_remove_activity() {
+    #[tokio::test]
+    async fn activities_list_delete_should_remove_activity() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository);
 
-        let activity = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Test Task".to_string(),
-        );
+        let activity = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Test Task".to_string(),
+            )
+            .await;
 
-        activities_list.delete(activity.id().clone()).unwrap();
+        activities_list.delete(activity.id().clone()).await.unwrap();
 
-        assert!(activities_list.activities().is_empty());
+        assert!(activities_list.activities().await.is_empty());
     }
 
-    #[test]
-    fn activities_list_delete_should_fail_when_activity_not_found() {
+    #[tokio::test]
+    async fn activities_list_delete_should_fail_when_activity_not_found() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository);
 
         let non_existent_id = ActivityId::new();
-        let result = activities_list.delete(non_existent_id.clone());
+        let result = activities_list.delete(non_existent_id.clone()).await;
 
         assert!(result.is_err());
         assert_eq!(
@@ -340,12 +355,13 @@ mod tests {
         );
     }
 
-    #[test]
-    fn activities_list_import_should_add_activities() {
+    #[tokio::test]
+    async fn activities_list_import_should_add_activities() {
         struct MockImporter;
 
+        #[async_trait]
         impl ActivitiesImporter for MockImporter {
-            fn import<R: Read>(
+            async fn import<R: Read + Send>(
                 &mut self,
                 _reader: R,
                 year: u16,
@@ -377,9 +393,10 @@ mod tests {
         let data = b"mock data";
         activities_list
             .import(&mut importer, &data[..], 2023)
+            .await
             .unwrap();
 
-        let activities = activities_list.activities();
+        let activities = activities_list.activities().await;
         assert_eq!(activities.len(), 2);
         assert_eq!(activities[0].task(), "Imported Task 1");
         assert_eq!(activities[1].task(), "Imported Task 2");

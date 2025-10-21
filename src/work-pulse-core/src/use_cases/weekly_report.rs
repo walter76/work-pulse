@@ -133,9 +133,10 @@ impl WeeklyReport {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
 
     use chrono::NaiveTime;
+    use tokio::sync::Mutex;
 
     use crate::{
         entities::accounting::AccountingCategoryId,
@@ -145,38 +146,44 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn weekly_report_should_aggregate_activities_and_calculate_total_duration() {
+    #[tokio::test]
+    async fn weekly_report_should_aggregate_activities_and_calculate_total_duration() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository.clone());
 
-        let _activity1 = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid activity date"), // Monday
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Activity 1".to_string(),
-        );
+        let _activity1 = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid activity date"), // Monday
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Activity 1".to_string(),
+            )
+            .await;
 
-        let _activity2 = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 4).expect("Valid activity date"), // Wednesday
-            NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Activity 2".to_string(),
-        );
+        let _activity2 = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 4).expect("Valid activity date"), // Wednesday
+                NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Activity 2".to_string(),
+            )
+            .await;
 
-        let _activity3 = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 6).expect("Valid activity date"), // Friday
-            NaiveTime::from_hms_opt(14, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(15, 15, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Activity 3".to_string(),
-        );
+        let _activity3 = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 6).expect("Valid activity date"), // Friday
+                NaiveTime::from_hms_opt(14, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(15, 15, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Activity 3".to_string(),
+            )
+            .await;
 
         let report = WeeklyReport::new(
             NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(), // Start of the week (Monday)
-            &*repository.lock().unwrap(),
+            &*repository.lock().await,
         );
 
         assert_eq!(
@@ -194,13 +201,13 @@ mod tests {
         );
     }
 
-    #[test]
-    fn weekly_report_with_no_activities_should_have_zero_duration() {
+    #[tokio::test]
+    async fn weekly_report_with_no_activities_should_have_zero_duration() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
 
         let report = WeeklyReport::new(
             NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(), // Start of the week (Monday)
-            &*repository.lock().unwrap(),
+            &*repository.lock().await,
         );
 
         assert_eq!(
@@ -215,41 +222,47 @@ mod tests {
         assert_eq!(report.total_duration(), Duration::zero());
     }
 
-    #[test]
-    fn weekly_report_should_calculate_duration_per_category() {
+    #[tokio::test]
+    async fn weekly_report_should_calculate_duration_per_category() {
         let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
         let mut activities_list = ActivitiesList::new(repository.clone());
 
         let category1 = AccountingCategoryId::new();
         let category2 = AccountingCategoryId::new();
 
-        let _activity1 = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid activity date"), // Monday
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
-            category1.clone(),
-            "Activity 1".to_string(),
-        );
+        let _activity1 = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 2).expect("Valid activity date"), // Monday
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+                category1.clone(),
+                "Activity 1".to_string(),
+            )
+            .await;
 
-        let _activity2 = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 4).expect("Valid activity date"), // Wednesday
-            NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
-            category2.clone(),
-            "Activity 2".to_string(),
-        );
+        let _activity2 = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 4).expect("Valid activity date"), // Wednesday
+                NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
+                category2.clone(),
+                "Activity 2".to_string(),
+            )
+            .await;
 
-        let _activity3 = activities_list.record(
-            NaiveDate::from_ymd_opt(2023, 10, 6).expect("Valid activity date"), // Friday
-            NaiveTime::from_hms_opt(14, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(15, 15, 0).expect("Valid activity end time")),
-            category2.clone(),
-            "Activity 3".to_string(),
-        );
+        let _activity3 = activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 6).expect("Valid activity date"), // Friday
+                NaiveTime::from_hms_opt(14, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(15, 15, 0).expect("Valid activity end time")),
+                category2.clone(),
+                "Activity 3".to_string(),
+            )
+            .await;
 
         let report = WeeklyReport::new(
             NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(), // Start of the week (Monday)
-            &*repository.lock().unwrap(),
+            &*repository.lock().await,
         );
 
         let mut duration_map = std::collections::HashMap::new();
