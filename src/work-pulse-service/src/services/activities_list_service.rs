@@ -15,9 +15,9 @@ use work_pulse_core::{
     entities::{accounting::AccountingCategoryId, activity::ActivityId},
     infra::{
         importers::csv_activities_importer::CsvActivitiesImporter,
-        repositories::{
-            in_memory::activities_list::InMemoryActivitiesListRepository,
-            postgres::accounting_categories_list::PsqlAccountingCategoriesListRepository,
+        repositories::postgres::{
+            accounting_categories_list::PsqlAccountingCategoriesListRepository,
+            activities_list::PsqlActivitiesListRepository,
         },
     },
     use_cases::activities_list::ActivitiesList,
@@ -28,7 +28,7 @@ use crate::prelude::ACTIVITIES_LIST_SERVICE_TAG;
 /// Shared state for the activities service.
 struct ActivitiesServiceState {
     /// The activities list repository.
-    activities_list_repository: Arc<Mutex<InMemoryActivitiesListRepository>>,
+    activities_list_repository: Arc<Mutex<PsqlActivitiesListRepository>>,
 
     /// The accounting categories repository.
     accounting_categories_repository: Arc<Mutex<PsqlAccountingCategoriesListRepository>>,
@@ -115,14 +115,14 @@ impl Activity {
 ///
 /// # Arguments
 ///
-/// - `activities_list_repository`: An `Arc<Mutex<InMemoryActivitiesListRepository>>` instance for accessing the activities repository.
+/// - `activities_list_repository`: An `Arc<Mutex<PsqlActivitiesListRepository>>` instance for accessing the activities repository.
 /// - `accounting_categories_repository`: An `Arc<Mutex<PsqlAccountingCategoriesListRepository>>` instance for accessing the accounting categories repository.
 ///
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for managing activities.
 pub fn router(
-    activities_list_repository: Arc<Mutex<InMemoryActivitiesListRepository>>,
+    activities_list_repository: Arc<Mutex<PsqlActivitiesListRepository>>,
     accounting_categories_repository: Arc<Mutex<PsqlAccountingCategoriesListRepository>>,
 ) -> OpenApiRouter {
     let store = Arc::new(Mutex::new(ActivitiesServiceState {

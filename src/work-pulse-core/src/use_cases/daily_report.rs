@@ -22,8 +22,8 @@ impl DailyReport {
     ///
     /// - `date`: The date for which the report is generated.
     /// - `repository`: The repository used to fetch activities for the specified date.
-    pub fn new(date: NaiveDate, repository: &dyn ActivitiesListRepository) -> Self {
-        let activities = repository.get_by_date(date);
+    pub async fn new(date: NaiveDate, repository: &dyn ActivitiesListRepository) -> Self {
+        let activities = repository.get_by_date(date).await;
 
         let total_duration = activities.iter().map(|activity| activity.duration()).sum();
 
@@ -72,23 +72,27 @@ mod tests {
 
         let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date");
 
-        let activity1 = activities_list.record(
-            date,
-            NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Task 1".to_string(),
-        ).await;
+        let activity1 = activities_list
+            .record(
+                date,
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Task 1".to_string(),
+            )
+            .await;
 
-        let activity2 = activities_list.record(
-            date,
-            NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
-            Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
-            AccountingCategoryId::new(),
-            "Task 2".to_string(),
-        ).await;
+        let activity2 = activities_list
+            .record(
+                date,
+                NaiveTime::from_hms_opt(11, 0, 0).expect("Valid activity start time"),
+                Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
+                AccountingCategoryId::new(),
+                "Task 2".to_string(),
+            )
+            .await;
 
-        let daily_report = DailyReport::new(date, &*repository.lock().await);
+        let daily_report = DailyReport::new(date, &*repository.lock().await).await;
 
         assert_eq!(daily_report.date(), date);
         assert_eq!(

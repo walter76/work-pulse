@@ -64,7 +64,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
         let mut activity = Activity::new(date, start_time, accounting_category_id, task);
         activity.set_end_time(end_time);
 
-        repo.add(activity.clone());
+        repo.add(activity.clone()).await;
 
         activity
     }
@@ -72,7 +72,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
     /// Returns the list of activities.
     pub async fn activities(&self) -> Vec<Activity> {
         let repo = self.repository.lock().await;
-        repo.get_all()
+        repo.get_all().await
     }
 
     /// Retrieves an activity by its ID.
@@ -89,6 +89,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
         let repo = self.repository.lock().await;
 
         repo.get_all()
+            .await
             .iter()
             .find(|activity| activity.id() == activity_id)
             .cloned()
@@ -109,6 +110,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
 
         let activity_id = activity.id().clone();
         repo.update(activity)
+            .await
             .map_err(|_| ActivitiesListError::NotFound(activity_id))
     }
 
@@ -126,6 +128,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
         let mut repo = self.repository.lock().await;
 
         repo.delete(activity_id.clone())
+            .await
             .map_err(|_| ActivitiesListError::NotFound(activity_id))
     }
 
@@ -152,7 +155,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
         let activities = importer.import(reader, year).await?;
 
         for activity in activities {
-            repo.add(activity);
+            repo.add(activity).await;
         }
 
         Ok(())

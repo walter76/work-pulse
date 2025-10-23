@@ -98,44 +98,49 @@ pub enum ActivitiesListRepositoryError {
     /// An error indicating that the activity with the specified ID was not found.
     #[error("Activity with ID {0} not found")]
     NotFound(ActivityId),
+
+    /// Error indicating a database-related issue.
+    #[error("Database error: {0}")]
+    DatabaseError(String),
 }
 
 /// Repository trait for managing a list of activities.
+#[async_trait]
 pub trait ActivitiesListRepository: Send + Sync {
     /// Retrieves a list of all activities.
     ///
     /// # Returns
     ///
     /// A vector of `Activity` instances representing all activities in the repository.
-    fn get_all(&self) -> Vec<Activity>;
+    async fn get_all(&self) -> Vec<Activity>;
 
     /// Retrieves a list of activities for a specific date.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `date`: The date for which to retrieve activities.
-    /// 
+    ///
     /// # Returns
     /// A vector of `Activity` instances representing all activities for the specified date.
-    fn get_by_date(&self, date: NaiveDate) -> Vec<Activity>;
+    async fn get_by_date(&self, date: NaiveDate) -> Vec<Activity>;
 
     /// Retrieves a list of activities within a specified date range.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `start`: The start date of the range (inclusive).
     /// - `end`: The end date of the range (inclusive).
-    /// 
+    ///
     /// # Returns
     /// A vector of `Activity` instances representing all activities within the specified date range.
-    fn get_by_date_range(&self, start: NaiveDate, end: NaiveDate) -> Vec<Activity>;
+    async fn get_by_date_range(&self, start: NaiveDate, end: NaiveDate) -> Vec<Activity>;
 
     /// Adds a new activity to the list.
     ///
     /// # Arguments
     ///
     /// - `activity`: The `Activity` instance to be added to the list.
-    fn add(&mut self, activity: Activity);
+    async fn add(&mut self, activity: Activity);
 
     /// Updates an existing activity in the repository.
     ///
@@ -146,7 +151,7 @@ pub trait ActivitiesListRepository: Send + Sync {
     /// # Returns
     ///
     /// `Result<(), ActivitiesListRepositoryError>` indicating success or failure of the update operation.
-    fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListRepositoryError>;
+    async fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListRepositoryError>;
 
     /// Deletes an activity from the repository.
     ///
@@ -157,7 +162,7 @@ pub trait ActivitiesListRepository: Send + Sync {
     /// # Returns
     ///
     /// `Result<(), ActivitiesListRepositoryError>` indicating success or failure of the delete operation.
-    fn delete(&mut self, id: ActivityId) -> Result<(), ActivitiesListRepositoryError>;
+    async fn delete(&mut self, id: ActivityId) -> Result<(), ActivitiesListRepositoryError>;
 }
 
 /// Error type for the activities importer.

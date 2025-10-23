@@ -11,7 +11,7 @@ use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
-    infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository, use_cases,
+    infra::repositories::postgres::activities_list::PsqlActivitiesListRepository, use_cases,
 };
 
 use crate::prelude::WEEKLY_REPORT_SERVICE_TAG;
@@ -47,12 +47,12 @@ struct WeeklyReport {
 ///
 /// # Arguments
 ///
-/// - `repository`: An `Arc<Mutex<InMemoryActivitiesListRepository>>` instance for accessing the activities repository.
+/// - `repository`: An `Arc<Mutex<PsqlActivitiesListRepository>>` instance for accessing the activities repository.
 ///
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes and state for the weekly report service.
-pub fn router(repository: Arc<Mutex<InMemoryActivitiesListRepository>>) -> OpenApiRouter {
+pub fn router(repository: Arc<Mutex<PsqlActivitiesListRepository>>) -> OpenApiRouter {
     OpenApiRouter::new()
         .routes(routes!(generate_weekly_report))
         .with_state(repository)
@@ -79,14 +79,14 @@ struct GenerateWeeklyReportQuery {
     )
 )]
 async fn generate_weekly_report(
-    State(store): State<Arc<Mutex<InMemoryActivitiesListRepository>>>,
+    State(store): State<Arc<Mutex<PsqlActivitiesListRepository>>>,
     query: Query<GenerateWeeklyReportQuery>,
 ) -> impl IntoResponse {
     let week_start_date = query.week_start_date.parse().unwrap();
     let store = store.lock().await;
     let activities_repository = store.clone();
     let weekly_report =
-        use_cases::weekly_report::WeeklyReport::new(week_start_date, &activities_repository);
+        use_cases::weekly_report::WeeklyReport::new(week_start_date, &activities_repository).await;
 
     let daily_durations_per_category = weekly_report
         .daily_durations_per_category()

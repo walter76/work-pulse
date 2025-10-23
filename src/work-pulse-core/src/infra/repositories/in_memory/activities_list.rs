@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use chrono::{NaiveDate, NaiveTime};
 use uuid::Uuid;
 
@@ -79,15 +80,16 @@ impl InMemoryActivitiesListRepository {
     }
 }
 
+#[async_trait]
 impl ActivitiesListRepository for InMemoryActivitiesListRepository {
-    fn get_all(&self) -> Vec<Activity> {
+    async fn get_all(&self) -> Vec<Activity> {
         self.activities
             .iter()
             .map(|record| record.to_entity())
             .collect()
     }
 
-    fn get_by_date(&self, date: NaiveDate) -> Vec<Activity> {
+    async fn get_by_date(&self, date: NaiveDate) -> Vec<Activity> {
         self.activities
             .iter()
             .filter(|record| record.date == date)
@@ -95,7 +97,7 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
             .collect()
     }
 
-    fn get_by_date_range(&self, start: NaiveDate, end: NaiveDate) -> Vec<Activity> {
+    async fn get_by_date_range(&self, start: NaiveDate, end: NaiveDate) -> Vec<Activity> {
         self.activities
             .iter()
             .filter(|record| record.date >= start && record.date <= end)
@@ -103,12 +105,12 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
             .collect()
     }
 
-    fn add(&mut self, activity: Activity) {
+    async fn add(&mut self, activity: Activity) {
         let record = ActivityRecord::from_entity(activity);
         self.activities.push(record);
     }
 
-    fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListRepositoryError> {
+    async fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListRepositoryError> {
         if let Some(record) = self.activities.iter_mut().find(|r| r.id == activity.id().0) {
             *record = ActivityRecord::from_entity(activity);
 
@@ -120,7 +122,7 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
         }
     }
 
-    fn delete(&mut self, id: ActivityId) -> Result<(), ActivitiesListRepositoryError> {
+    async fn delete(&mut self, id: ActivityId) -> Result<(), ActivitiesListRepositoryError> {
         if let Some(index) = self.activities.iter().position(|record| record.id == id.0) {
             self.activities.remove(index);
             Ok(())

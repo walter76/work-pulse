@@ -13,9 +13,9 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
 
 use services::accounting_categories_service;
-use work_pulse_core::infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository;
 use work_pulse_core::infra::repositories::postgres::PsqlConnection;
 use work_pulse_core::infra::repositories::postgres::accounting_categories_list::PsqlAccountingCategoriesListRepository;
+use work_pulse_core::infra::repositories::postgres::activities_list::PsqlActivitiesListRepository;
 
 use crate::services::activities_list_service;
 
@@ -54,8 +54,9 @@ async fn main() -> Result<(), Error> {
     let psql_accounting_categories_repository = Arc::new(Mutex::new(
         PsqlAccountingCategoriesListRepository::new(psql_connection.clone()),
     ));
-    let in_memory_activities_list_repository =
-        Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+    let psql_activities_list_repository = Arc::new(Mutex::new(PsqlActivitiesListRepository::new(
+        psql_connection.clone(),
+    )));
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest(
@@ -65,17 +66,17 @@ async fn main() -> Result<(), Error> {
         .nest(
             "/api/v1/activities",
             activities_list_service::router(
-                in_memory_activities_list_repository.clone(),
+                psql_activities_list_repository.clone(),
                 psql_accounting_categories_repository.clone(),
             ),
         )
         .nest(
             "/api/v1/daily-report",
-            services::daily_report_service::router(in_memory_activities_list_repository.clone()),
+            services::daily_report_service::router(psql_activities_list_repository.clone()),
         )
         .nest(
             "/api/v1/weekly-report",
-            services::weekly_report_service::router(in_memory_activities_list_repository.clone()),
+            services::weekly_report_service::router(psql_activities_list_repository.clone()),
         )
         .split_for_parts();
 

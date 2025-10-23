@@ -34,9 +34,9 @@ impl WeeklyReport {
     ///
     /// * `week_start` - The starting date of the week (should be a Monday).
     /// * `repository` - A reference to an implementation of `ActivitiesListRepository` to fetch activities.
-    pub fn new(week_start: NaiveDate, repository: &dyn ActivitiesListRepository) -> Self {
+    pub async fn new(week_start: NaiveDate, repository: &dyn ActivitiesListRepository) -> Self {
         let week_end = week_start + Duration::days(7);
-        let activities = repository.get_by_date_range(week_start, week_end);
+        let activities = repository.get_by_date_range(week_start, week_end).await;
 
         let total_duration = activities.iter().map(|activity| activity.duration()).sum();
 
@@ -182,7 +182,8 @@ mod tests {
         let report = WeeklyReport::new(
             NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(), // Start of the week (Monday)
             &*repository.lock().await,
-        );
+        )
+        .await;
 
         assert_eq!(
             report.week_start(),
@@ -206,7 +207,8 @@ mod tests {
         let report = WeeklyReport::new(
             NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(), // Start of the week (Monday)
             &*repository.lock().await,
-        );
+        )
+        .await;
 
         assert_eq!(
             report.week_start(),
@@ -261,7 +263,8 @@ mod tests {
         let report = WeeklyReport::new(
             NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(), // Start of the week (Monday)
             &*repository.lock().await,
-        );
+        )
+        .await;
 
         let mut duration_map = std::collections::HashMap::new();
         for (category_id, duration) in report.duration_per_category() {
