@@ -14,6 +14,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use services::accounting_categories_service;
 use work_pulse_core::infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository;
+use work_pulse_core::infra::repositories::postgres::PsqlConnection;
 use work_pulse_core::infra::repositories::postgres::accounting_categories_list::PsqlAccountingCategoriesListRepository;
 
 use crate::services::activities_list_service;
@@ -49,8 +50,9 @@ async fn main() -> Result<(), Error> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    let psql_connection = PsqlConnection::with_database_url(CONNECTION_STRING).await;
     let psql_accounting_categories_repository = Arc::new(Mutex::new(
-        PsqlAccountingCategoriesListRepository::with_database_url(CONNECTION_STRING).await,
+        PsqlAccountingCategoriesListRepository::new(psql_connection.clone()),
     ));
     let in_memory_activities_list_repository =
         Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));

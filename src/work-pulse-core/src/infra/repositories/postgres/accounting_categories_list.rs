@@ -1,25 +1,21 @@
 use async_trait::async_trait;
-use sqlx::{PgPool, Row};
+use sqlx::Row;
 use uuid::Uuid;
 
 use crate::{
     adapters::{AccountingCategoriesListRepository, AccountingCategoriesListRepositoryError},
     entities::accounting::{AccountingCategory, AccountingCategoryId},
+    infra::repositories::postgres::PsqlConnection,
 };
 
 #[derive(Clone)]
 pub struct PsqlAccountingCategoriesListRepository {
-    connection_pool: PgPool,
+    psql_connection: PsqlConnection,
 }
 
 impl PsqlAccountingCategoriesListRepository {
-    pub fn new(connection_pool: PgPool) -> Self {
-        Self { connection_pool }
-    }
-
-    pub async fn with_database_url(database_url: &str) -> Self {
-        let pool = PgPool::connect(database_url).await.unwrap();
-        Self::new(pool)
+    pub fn new(psql_connection: PsqlConnection) -> Self {
+        Self { psql_connection }
     }
 }
 
@@ -27,7 +23,7 @@ impl PsqlAccountingCategoriesListRepository {
 impl AccountingCategoriesListRepository for PsqlAccountingCategoriesListRepository {
     async fn get_all(&self) -> Vec<AccountingCategory> {
         let rows = sqlx::query("SELECT id, name FROM accounting_categories")
-            .fetch_all(&self.connection_pool)
+            .fetch_all(self.psql_connection.pool())
             .await
             .unwrap();
 
@@ -43,7 +39,7 @@ impl AccountingCategoriesListRepository for PsqlAccountingCategoriesListReposito
     async fn get_by_id(&self, id: AccountingCategoryId) -> Option<AccountingCategory> {
         let row = sqlx::query("SELECT id, name FROM accounting_categories WHERE id = $1")
             .bind(id.0)
-            .fetch_optional(&self.connection_pool)
+            .fetch_optional(self.psql_connection.pool())
             .await
             .unwrap();
 
@@ -58,7 +54,7 @@ impl AccountingCategoriesListRepository for PsqlAccountingCategoriesListReposito
         sqlx::query("INSERT INTO accounting_categories (id, name) VALUES ($1, $2)")
             .bind(category.id().0)
             .bind(category.name())
-            .execute(&self.connection_pool)
+            .execute(self.psql_connection.pool())
             .await
             .unwrap();
     }
@@ -70,7 +66,7 @@ impl AccountingCategoriesListRepository for PsqlAccountingCategoriesListReposito
         sqlx::query("UPDATE accounting_categories SET name = $1 WHERE id = $2")
             .bind(category.name())
             .bind(category.id().0)
-            .execute(&self.connection_pool)
+            .execute(self.psql_connection.pool())
             .await
             .map_err(|e| AccountingCategoriesListRepositoryError::DatabaseError(e.to_string()))?;
 
@@ -83,7 +79,7 @@ impl AccountingCategoriesListRepository for PsqlAccountingCategoriesListReposito
     ) -> Result<(), AccountingCategoriesListRepositoryError> {
         sqlx::query("DELETE FROM accounting_categories WHERE id = $1")
             .bind(id.0)
-            .execute(&self.connection_pool)
+            .execute(self.psql_connection.pool())
             .await
             .map_err(|e| AccountingCategoriesListRepositoryError::DatabaseError(e.to_string()))?;
 
@@ -96,7 +92,7 @@ impl AccountingCategoriesListRepository for PsqlAccountingCategoriesListReposito
     ) -> Result<AccountingCategory, AccountingCategoriesListRepositoryError> {
         let row = sqlx::query("SELECT id, name FROM accounting_categories WHERE name = $1")
             .bind(name)
-            .fetch_optional(&self.connection_pool)
+            .fetch_optional(self.psql_connection.pool())
             .await
             .map_err(|e| AccountingCategoriesListRepositoryError::DatabaseError(e.to_string()))?;
 
