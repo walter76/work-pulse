@@ -11,8 +11,7 @@ use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
-    adapters::ActivitiesListRepository, infra::repositories::in_memory::RepositoryFactory,
-    use_cases,
+    infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository, use_cases,
 };
 
 use crate::prelude::WEEKLY_REPORT_SERVICE_TAG;
@@ -44,32 +43,19 @@ struct WeeklyReport {
     pub daily_durations_per_category: HashMap<String, HashMap<String, String>>,
 }
 
-/// State for the Weekly Report Service.
-struct WeeklyReportServiceState {
-    /// The repository for accessing activities.
-    pub activities_repository: Arc<std::sync::Mutex<dyn ActivitiesListRepository>>,
-}
-
-/// Type alias for a thread-safe, asynchronous mutex wrapping the service state.
-type WeeklyReportStore = Mutex<WeeklyReportServiceState>;
-
 /// Creates an OpenAPI router for the weekly report service.
 ///
 /// # Arguments
 ///
-/// - `repository_factory`: A reference to the `RepositoryFactory` used to create repositories.
+/// - `repository`: An `Arc<Mutex<InMemoryActivitiesListRepository>>` instance for accessing the activities repository.
 ///
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes and state for the weekly report service.
-pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    let store = Arc::new(Mutex::new(WeeklyReportServiceState {
-        activities_repository: repository_factory.activities_list_repository.clone(),
-    }));
-
+pub fn router(repository: Arc<Mutex<InMemoryActivitiesListRepository>>) -> OpenApiRouter {
     OpenApiRouter::new()
         .routes(routes!(generate_weekly_report))
-        .with_state(store)
+        .with_state(repository)
 }
 
 // Query parameters for generating weekly reports.
@@ -93,14 +79,14 @@ struct GenerateWeeklyReportQuery {
     )
 )]
 async fn generate_weekly_report(
-    State(store): State<Arc<WeeklyReportStore>>,
+    State(store): State<Arc<Mutex<InMemoryActivitiesListRepository>>>,
     query: Query<GenerateWeeklyReportQuery>,
 ) -> impl IntoResponse {
     let week_start_date = query.week_start_date.parse().unwrap();
     let store = store.lock().await;
-    let activities_repository = store.activities_repository.lock().unwrap();
+    let activities_repository = store.clone();
     let weekly_report =
-        use_cases::weekly_report::WeeklyReport::new(week_start_date, &*activities_repository);
+        use_cases::weekly_report::WeeklyReport::new(week_start_date, &activities_repository);
 
     let daily_durations_per_category = weekly_report
         .daily_durations_per_category()

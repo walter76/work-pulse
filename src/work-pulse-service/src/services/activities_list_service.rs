@@ -115,18 +115,19 @@ impl Activity {
 ///
 /// # Arguments
 ///
-/// - `repository_factory`: A reference to the `RepositoryFactory` used to create repositories.
+/// - `activities_list_repository`: An `Arc<Mutex<InMemoryActivitiesListRepository>>` instance for accessing the activities repository.
+/// - `accounting_categories_repository`: An `Arc<Mutex<PsqlAccountingCategoriesListRepository>>` instance for accessing the accounting categories repository.
 ///
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for managing activities.
 pub fn router(
-    activities_list_repository: InMemoryActivitiesListRepository,
-    accounting_categories_repository: PsqlAccountingCategoriesListRepository,
+    activities_list_repository: Arc<Mutex<InMemoryActivitiesListRepository>>,
+    accounting_categories_repository: Arc<Mutex<PsqlAccountingCategoriesListRepository>>,
 ) -> OpenApiRouter {
     let store = Arc::new(Mutex::new(ActivitiesServiceState {
-        activities_list_repository: Arc::new(Mutex::new(activities_list_repository)),
-        accounting_categories_repository: Arc::new(Mutex::new(accounting_categories_repository)),
+        activities_list_repository,
+        accounting_categories_repository,
     }));
 
     OpenApiRouter::new()

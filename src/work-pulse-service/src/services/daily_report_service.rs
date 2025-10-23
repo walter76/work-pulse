@@ -11,8 +11,7 @@ use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
-    adapters::ActivitiesListRepository, infra::repositories::in_memory::RepositoryFactory,
-    use_cases,
+    infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository, use_cases,
 };
 
 use crate::prelude::DAILY_REPORT_SERVICE_TAG;
@@ -60,32 +59,19 @@ struct DailyReport {
     activities: Vec<DailyReportActivity>,
 }
 
-/// State for the Daily Report Service.
-struct DailyReportServiceState {
-    /// The repository for accessing activities.
-    activities_repository: Arc<std::sync::Mutex<dyn ActivitiesListRepository>>,
-}
-
-/// Type alias for a thread-safe, asynchronous mutex wrapping the DailyReportServiceState.
-type DailyReportStore = Mutex<DailyReportServiceState>;
-
 /// Creates an OpenAPI router for the Daily Report Service.
 ///
 /// # Arguments
 ///
-/// - `repository_factory`: A reference to the `RepositoryFactory` used to create repositories.
+/// - `repository`: An `Arc<Mutex<InMemoryActivitiesListRepository>>` instance for accessing the activities repository.
 ///
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for generating daily reports.
-pub fn router(repository_factory: &RepositoryFactory) -> OpenApiRouter {
-    let store = Arc::new(Mutex::new(DailyReportServiceState {
-        activities_repository: repository_factory.activities_list_repository.clone(),
-    }));
-
+pub fn router(repository: Arc<Mutex<InMemoryActivitiesListRepository>>) -> OpenApiRouter {
     OpenApiRouter::new()
         .routes(routes!(generate_daily_report))
-        .with_state(store)
+        .with_state(repository)
 }
 
 /// Query parameters for generating daily reports.
@@ -109,14 +95,14 @@ struct GenerateDailyReportQuery {
     )
 )]
 async fn generate_daily_report(
-    State(store): State<Arc<DailyReportStore>>,
+    State(repository): State<Arc<Mutex<InMemoryActivitiesListRepository>>>,
     query: Query<GenerateDailyReportQuery>,
 ) -> impl IntoResponse {
     let report_date = query.report_date.parse().unwrap();
-    let store = store.lock().await;
-    let activities_repository = store.activities_repository.lock().unwrap();
+    let repository = repository.lock().await;
+    let activities_repository = repository.clone();
     let daily_report =
-        use_cases::daily_report::DailyReport::new(report_date, &*activities_repository);
+        use_cases::daily_report::DailyReport::new(report_date, &activities_repository);
 
     let activities: Vec<DailyReportActivity> = daily_report
         .activities()

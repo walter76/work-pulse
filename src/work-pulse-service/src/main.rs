@@ -2,7 +2,9 @@ mod services;
 
 use std::io::Error;
 use std::net::{Ipv4Addr, SocketAddr};
+use std::sync::Arc;
 use tokio::net::TcpListener;
+use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -11,7 +13,6 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
 
 use services::accounting_categories_service;
-use work_pulse_core::infra::repositories::in_memory::RepositoryFactory;
 use work_pulse_core::infra::repositories::in_memory::activities_list::InMemoryActivitiesListRepository;
 use work_pulse_core::infra::repositories::postgres::accounting_categories_list::PsqlAccountingCategoriesListRepository;
 
@@ -48,11 +49,11 @@ async fn main() -> Result<(), Error> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let repository_factory = RepositoryFactory::new();
-    let psql_accounting_categories_repository =
-        PsqlAccountingCategoriesListRepository::with_database_url(CONNECTION_STRING).await;
-    // let accounting_categories_repository = InMemoryAccountingCategoriesListRepository::new();
-    let in_memory_activities_list_repository = InMemoryActivitiesListRepository::new();
+    let psql_accounting_categories_repository = Arc::new(Mutex::new(
+        PsqlAccountingCategoriesListRepository::with_database_url(CONNECTION_STRING).await,
+    ));
+    let in_memory_activities_list_repository =
+        Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest(
@@ -62,17 +63,17 @@ async fn main() -> Result<(), Error> {
         .nest(
             "/api/v1/activities",
             activities_list_service::router(
-                in_memory_activities_list_repository,
-                psql_accounting_categories_repository,
+                in_memory_activities_list_repository.clone(),
+                psql_accounting_categories_repository.clone(),
             ),
         )
         .nest(
             "/api/v1/daily-report",
-            services::daily_report_service::router(&repository_factory),
+            services::daily_report_service::router(in_memory_activities_list_repository.clone()),
         )
         .nest(
             "/api/v1/weekly-report",
-            services::weekly_report_service::router(&repository_factory),
+            services::weekly_report_service::router(in_memory_activities_list_repository.clone()),
         )
         .split_for_parts();
 

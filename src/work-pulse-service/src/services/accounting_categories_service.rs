@@ -52,14 +52,12 @@ impl AccountingCategory {
 ///
 /// # Arguments
 ///
-/// - `repository_factory`: A reference to the `RepositoryFactory` used to create repositories.
+/// - `repository`: An `Arc<Mutex<PsqlAccountingCategoriesListRepository>>` instance for accessing the repository.
 ///
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for managing accounting categories.
-pub fn router(repository: PsqlAccountingCategoriesListRepository) -> OpenApiRouter {
-    let store = Arc::new(Mutex::new(repository));
-
+pub fn router(repository: Arc<Mutex<PsqlAccountingCategoriesListRepository>>) -> OpenApiRouter {
     OpenApiRouter::new()
         .routes(routes!(
             list_accounting_categories,
@@ -67,7 +65,7 @@ pub fn router(repository: PsqlAccountingCategoriesListRepository) -> OpenApiRout
         ))
         .routes(routes!(update_accounting_category))
         .routes(routes!(delete_accounting_category))
-        .with_state(store)
+        .with_state(repository)
 }
 
 /// Lists all accounting categories.

@@ -27,8 +27,6 @@ pub struct WeeklyReport {
     daily_durations_per_category: Vec<(NaiveDate, Vec<(AccountingCategoryId, Duration)>)>,
 }
 
-// TODO: Implement the sum of durations for every day of the week.
-
 impl WeeklyReport {
     /// Creates a new `WeeklyReport` for the week starting on `week_start`.
     ///
