@@ -50,33 +50,28 @@ async fn main() -> Result<(), Error> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let psql_connection = PsqlConnection::with_database_url(CONNECTION_STRING).await;
-    let psql_accounting_categories_repository = Arc::new(Mutex::new(
-        PsqlAccountingCategoriesListRepository::new(psql_connection.clone()),
-    ));
-    let psql_activities_list_repository = Arc::new(Mutex::new(PsqlActivitiesListRepository::new(
-        psql_connection.clone(),
-    )));
+    let (accounting_categories_repository, activities_list_repository) =
+        create_psql_repositories().await;
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest(
             "/api/v1/accounting-categories",
-            accounting_categories_service::router(psql_accounting_categories_repository.clone()),
+            accounting_categories_service::router(accounting_categories_repository.clone()),
         )
         .nest(
             "/api/v1/activities",
             activities_list_service::router(
-                psql_activities_list_repository.clone(),
-                psql_accounting_categories_repository.clone(),
+                activities_list_repository.clone(),
+                accounting_categories_repository.clone(),
             ),
         )
         .nest(
             "/api/v1/daily-report",
-            services::daily_report_service::router(psql_activities_list_repository.clone()),
+            services::daily_report_service::router(activities_list_repository.clone()),
         )
         .nest(
             "/api/v1/weekly-report",
-            services::weekly_report_service::router(psql_activities_list_repository.clone()),
+            services::weekly_report_service::router(activities_list_repository.clone()),
         )
         .split_for_parts();
 
@@ -100,4 +95,22 @@ async fn main() -> Result<(), Error> {
 
     let listener = TcpListener::bind(&address).await?;
     axum::serve(listener, router.into_make_service()).await
+}
+
+async fn create_psql_repositories() -> (
+    Arc<Mutex<PsqlAccountingCategoriesListRepository>>,
+    Arc<Mutex<PsqlActivitiesListRepository>>,
+) {
+    let psql_connection = PsqlConnection::with_database_url(CONNECTION_STRING).await;
+    let psql_accounting_categories_repository = Arc::new(Mutex::new(
+        PsqlAccountingCategoriesListRepository::new(psql_connection.clone()),
+    ));
+    let psql_activities_list_repository = Arc::new(Mutex::new(PsqlActivitiesListRepository::new(
+        psql_connection.clone(),
+    )));
+
+    (
+        psql_accounting_categories_repository,
+        psql_activities_list_repository,
+    )
 }

@@ -11,8 +11,7 @@ use tokio::sync::Mutex;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
-    entities::accounting::AccountingCategoryId,
-    infra::repositories::postgres::{accounting_categories_list::PsqlAccountingCategoriesListRepository},
+    adapters::AccountingCategoriesListRepository, entities::accounting::AccountingCategoryId,
     use_cases::accounting_categories_list::AccountingCategoriesList,
 };
 
@@ -52,12 +51,15 @@ impl AccountingCategory {
 ///
 /// # Arguments
 ///
-/// - `repository`: An `Arc<Mutex<PsqlAccountingCategoriesListRepository>>` instance for accessing the repository.
+/// - `repository`: An `Arc<Mutex<AccountingCategoriesListRepository>>` instance for accessing the repository.
 ///
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for managing accounting categories.
-pub fn router(repository: Arc<Mutex<PsqlAccountingCategoriesListRepository>>) -> OpenApiRouter {
+pub fn router<R>(repository: Arc<Mutex<R>>) -> OpenApiRouter
+where
+    R: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     OpenApiRouter::new()
         .routes(routes!(
             list_accounting_categories,
@@ -77,9 +79,10 @@ pub fn router(repository: Arc<Mutex<PsqlAccountingCategoriesListRepository>>) ->
         (status = 200, description = "List all accounting categories successfully", body = [AccountingCategory])
     )
 )]
-async fn list_accounting_categories(
-    State(store): State<Arc<Mutex<PsqlAccountingCategoriesListRepository>>>,
-) -> impl IntoResponse {
+async fn list_accounting_categories<R>(State(store): State<Arc<Mutex<R>>>) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let accounting_categories_list = AccountingCategoriesList::new(store.clone());
 
     let categories_vec = accounting_categories_list.categories().await;
@@ -103,10 +106,13 @@ async fn list_accounting_categories(
         (status = 500, description = "Internal server error", body = String)
     ),
 )]
-async fn create_accounting_category(
-    State(store): State<Arc<Mutex<PsqlAccountingCategoriesListRepository>>>,
+async fn create_accounting_category<R>(
+    State(store): State<Arc<Mutex<R>>>,
     Json(new_category): Json<AccountingCategory>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let mut accounting_categories_list = AccountingCategoriesList::new(store.clone());
 
     match accounting_categories_list
@@ -135,10 +141,13 @@ async fn create_accounting_category(
         (status = 500, description = "Internal server error", body = String)
     ),
 )]
-async fn update_accounting_category(
-    State(store): State<Arc<Mutex<PsqlAccountingCategoriesListRepository>>>,
+async fn update_accounting_category<R>(
+    State(store): State<Arc<Mutex<R>>>,
     Json(updated_category): Json<AccountingCategory>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let mut accounting_categories_list = AccountingCategoriesList::new(store.clone());
 
     if updated_category.id.is_none() {
@@ -192,10 +201,13 @@ async fn update_accounting_category(
         (status = 500, description = "Internal server error", body = String)
     ),
 )]
-async fn delete_accounting_category(
+async fn delete_accounting_category<R>(
     Path(id): Path<String>,
-    State(store): State<Arc<Mutex<PsqlAccountingCategoriesListRepository>>>,
-) -> impl IntoResponse {
+    State(store): State<Arc<Mutex<R>>>,
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let mut accounting_categories_list = AccountingCategoriesList::new(store.clone());
 
     match AccountingCategoryId::parse_str(&id) {

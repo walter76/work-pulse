@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
-use work_pulse_core::{
-    infra::repositories::postgres::activities_list::PsqlActivitiesListRepository, use_cases,
-};
+use work_pulse_core::{adapters::ActivitiesListRepository, use_cases};
 
 use crate::prelude::WEEKLY_REPORT_SERVICE_TAG;
 
@@ -52,7 +50,10 @@ struct WeeklyReport {
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes and state for the weekly report service.
-pub fn router(repository: Arc<Mutex<PsqlActivitiesListRepository>>) -> OpenApiRouter {
+pub fn router<R>(repository: Arc<Mutex<R>>) -> OpenApiRouter
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+{
     OpenApiRouter::new()
         .routes(routes!(generate_weekly_report))
         .with_state(repository)
@@ -78,15 +79,16 @@ struct GenerateWeeklyReportQuery {
         (status = 201, description = "Weekly report created successfully", body = WeeklyReport)
     )
 )]
-async fn generate_weekly_report(
-    State(store): State<Arc<Mutex<PsqlActivitiesListRepository>>>,
+async fn generate_weekly_report<R>(
+    State(store): State<Arc<Mutex<R>>>,
     query: Query<GenerateWeeklyReportQuery>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+{
     let week_start_date = query.week_start_date.parse().unwrap();
     let store = store.lock().await;
-    let activities_repository = store.clone();
-    let weekly_report =
-        use_cases::weekly_report::WeeklyReport::new(week_start_date, &activities_repository).await;
+    let weekly_report = use_cases::weekly_report::WeeklyReport::new(week_start_date, &*store).await;
 
     let daily_durations_per_category = weekly_report
         .daily_durations_per_category()

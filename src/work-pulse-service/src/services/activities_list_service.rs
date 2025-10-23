@@ -12,26 +12,25 @@ use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::{
+    adapters::{AccountingCategoriesListRepository, ActivitiesListRepository},
     entities::{accounting::AccountingCategoryId, activity::ActivityId},
-    infra::{
-        importers::csv_activities_importer::CsvActivitiesImporter,
-        repositories::postgres::{
-            accounting_categories_list::PsqlAccountingCategoriesListRepository,
-            activities_list::PsqlActivitiesListRepository,
-        },
-    },
+    infra::importers::csv_activities_importer::CsvActivitiesImporter,
     use_cases::activities_list::ActivitiesList,
 };
 
 use crate::prelude::ACTIVITIES_LIST_SERVICE_TAG;
 
 /// Shared state for the activities service.
-struct ActivitiesServiceState {
+struct ActivitiesServiceState<R, T>
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+    T: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     /// The activities list repository.
-    activities_list_repository: Arc<Mutex<PsqlActivitiesListRepository>>,
+    activities_list_repository: Arc<Mutex<R>>,
 
     /// The accounting categories repository.
-    accounting_categories_repository: Arc<Mutex<PsqlAccountingCategoriesListRepository>>,
+    accounting_categories_repository: Arc<Mutex<T>>,
 }
 
 /// The Activity.
@@ -121,10 +120,14 @@ impl Activity {
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for managing activities.
-pub fn router(
-    activities_list_repository: Arc<Mutex<PsqlActivitiesListRepository>>,
-    accounting_categories_repository: Arc<Mutex<PsqlAccountingCategoriesListRepository>>,
-) -> OpenApiRouter {
+pub fn router<R, T>(
+    activities_list_repository: Arc<Mutex<R>>,
+    accounting_categories_repository: Arc<Mutex<T>>,
+) -> OpenApiRouter
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+    T: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let store = Arc::new(Mutex::new(ActivitiesServiceState {
         activities_list_repository,
         accounting_categories_repository,
@@ -167,10 +170,14 @@ struct ListActivitiesQuery {
         (status = 400, description = "Invalid request - both start_date and end_date are required", body = String)
     )
 )]
-async fn list_activities(
-    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
+async fn list_activities<R, T>(
+    State(store): State<Arc<Mutex<ActivitiesServiceState<R, T>>>>,
     query: Query<ListActivitiesQuery>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+    T: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let service_state = store.lock().await;
     let activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
@@ -215,10 +222,14 @@ async fn list_activities(
         (status = 500, description = "Internal server error", body = String)
     ),
 )]
-async fn get_activity_by_id(
+async fn get_activity_by_id<R, T>(
     Path(id): Path<String>,
-    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
-) -> impl IntoResponse {
+    State(store): State<Arc<Mutex<ActivitiesServiceState<R, T>>>>,
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+    T: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let service_state = store.lock().await;
     let activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
@@ -252,10 +263,14 @@ async fn get_activity_by_id(
         (status = 500, description = "Internal server error", body = String)
     ),
 )]
-async fn create_activity(
-    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
+async fn create_activity<R, T>(
+    State(store): State<Arc<Mutex<ActivitiesServiceState<R, T>>>>,
     Json(new_activity): Json<Activity>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+    T: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let service_state = store.lock().await;
     let mut activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
@@ -298,10 +313,14 @@ async fn create_activity(
         (status = 500, description = "Internal server error", body = String)
     ),
 )]
-async fn update_activity(
-    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
+async fn update_activity<R, T>(
+    State(store): State<Arc<Mutex<ActivitiesServiceState<R, T>>>>,
     Json(updated_activity): Json<Activity>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+    T: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let service_state = store.lock().await;
     let mut activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
@@ -339,10 +358,14 @@ async fn update_activity(
         (status = 500, description = "Internal server error", body = String)
     ),
 )]
-async fn delete_activity(
+async fn delete_activity<R, T>(
     Path(id): Path<String>,
-    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
-) -> impl IntoResponse {
+    State(store): State<Arc<Mutex<ActivitiesServiceState<R, T>>>>,
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+    T: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let service_state = store.lock().await;
     let mut activities_list = ActivitiesList::new(service_state.activities_list_repository.clone());
 
@@ -381,11 +404,15 @@ struct UploadActivitiesQuery {
         (status = 400, description = "Invalid CSV format", body = String)
     )
 )]
-async fn upload_activities_csv_raw(
-    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
+async fn upload_activities_csv_raw<R, T>(
+    State(store): State<Arc<Mutex<ActivitiesServiceState<R, T>>>>,
     query: Query<UploadActivitiesQuery>,
     body: String,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+    T: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     if body.is_empty() {
         (
             StatusCode::BAD_REQUEST,
@@ -429,11 +456,15 @@ async fn upload_activities_csv_raw(
         (status = 400, description = "Invalid CSV format", body = String)
     )
 )]
-async fn upload_activities_csv_multipart(
-    State(store): State<Arc<Mutex<ActivitiesServiceState>>>,
+async fn upload_activities_csv_multipart<R, T>(
+    State(store): State<Arc<Mutex<ActivitiesServiceState<R, T>>>>,
     query: Query<UploadActivitiesQuery>,
     mut multipart: Multipart,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+    T: 'static + Send + Sync + AccountingCategoriesListRepository,
+{
     let mut csv_content: Option<String> = None;
 
     while let Some(field) = multipart.next_field().await.unwrap_or(None) {

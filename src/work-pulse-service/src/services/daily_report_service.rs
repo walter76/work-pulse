@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
-use work_pulse_core::{
-    infra::repositories::postgres::activities_list::PsqlActivitiesListRepository, use_cases,
-};
+use work_pulse_core::{adapters::ActivitiesListRepository, use_cases};
 
 use crate::prelude::DAILY_REPORT_SERVICE_TAG;
 
@@ -68,7 +66,10 @@ struct DailyReport {
 /// # Returns
 ///
 /// - An `OpenApiRouter` configured with routes for generating daily reports.
-pub fn router(repository: Arc<Mutex<PsqlActivitiesListRepository>>) -> OpenApiRouter {
+pub fn router<R>(repository: Arc<Mutex<R>>) -> OpenApiRouter
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+{
     OpenApiRouter::new()
         .routes(routes!(generate_daily_report))
         .with_state(repository)
@@ -94,15 +95,16 @@ struct GenerateDailyReportQuery {
         (status = 201, description = "Daily report created successfully", body = DailyReport)
     )
 )]
-async fn generate_daily_report(
-    State(repository): State<Arc<Mutex<PsqlActivitiesListRepository>>>,
+async fn generate_daily_report<R>(
+    State(repository): State<Arc<Mutex<R>>>,
     query: Query<GenerateDailyReportQuery>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+where
+    R: 'static + Send + Sync + ActivitiesListRepository,
+{
     let report_date = query.report_date.parse().unwrap();
     let repository = repository.lock().await;
-    let activities_repository = repository.clone();
-    let daily_report =
-        use_cases::daily_report::DailyReport::new(report_date, &activities_repository).await;
+    let daily_report = use_cases::daily_report::DailyReport::new(report_date, &*repository).await;
 
     let activities: Vec<DailyReportActivity> = daily_report
         .activities()
