@@ -12,6 +12,8 @@ use crate::{
     infra::repositories::postgres::PsqlConnection,
 };
 
+// TODO: Improve error handling for repository access (add Result)
+
 #[derive(Clone)]
 pub struct PsqlActivitiesListRepository {
     psql_connection: PsqlConnection,
@@ -20,6 +22,50 @@ pub struct PsqlActivitiesListRepository {
 impl PsqlActivitiesListRepository {
     pub fn new(psql_connection: PsqlConnection) -> Self {
         Self { psql_connection }
+    }
+
+    async fn add_range(
+        &mut self,
+        activities: Vec<Activity>,
+    ) -> Result<(), ActivitiesListRepositoryError> {
+        if activities.is_empty() {
+            return Ok(());
+        }
+
+        const CHUNK_SIZE: usize = 100;
+
+        for chunk in activities.chunks(CHUNK_SIZE) {
+            self.add_batch(chunk.to_vec()).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn add_batch(
+        &mut self,
+        activities: Vec<Activity>,
+    ) -> Result<(), ActivitiesListRepositoryError> {
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "INSERT INTO activities (id, date, start_time, end_time, category_id, task) ",
+        );
+
+        query_builder.push_values(activities.iter(), |mut b, activity| {
+            b.push_bind(activity.id().0)
+                .push_bind(activity.date())
+                .push_bind(activity.start_time())
+                .push_bind(activity.end_time())
+                .push_bind(activity.accounting_category_id().0)
+                .push_bind(activity.task());
+        });
+
+        let query = query_builder.build();
+
+        query
+            .execute(self.psql_connection.pool())
+            .await
+            .map_err(|e| ActivitiesListRepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
     }
 }
 
