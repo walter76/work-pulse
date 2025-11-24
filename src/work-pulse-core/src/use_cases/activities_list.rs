@@ -1,4 +1,4 @@
-use std::{io::Read, sync::Arc};
+use std::{io::Read, sync::Arc, time::Instant};
 
 use chrono::{NaiveDate, NaiveTime};
 use thiserror::Error;
@@ -152,11 +152,26 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
     ) -> Result<(), ActivitiesImporterError> {
         let mut repo = self.repository.lock().await;
 
+        let import_start = Instant::now();
         let activities = importer.import(reader, year).await?;
+        let import_duration = import_start.elapsed();
 
+        tracing::info!(
+            duration_ms = import_duration.as_millis(),
+            count = activities.len(),
+            "Activities imported from source"
+        );
+
+        let db_start = Instant::now();
         for activity in activities {
             repo.add(activity).await;
         }
+        let db_duration = db_start.elapsed();
+
+        tracing::info!(
+            duration_ms = db_duration.as_millis(),
+            "Activities saved to database"
+        );
 
         Ok(())
     }
