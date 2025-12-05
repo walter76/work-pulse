@@ -170,6 +170,9 @@ pub trait ActivitiesListRepository: Send + Sync {
 pub enum ActivitiesImporterError {
     #[error("Could not parse the activities from the source")]
     ParseError,
+
+    #[error("Error while accessing the repository: {0}")]
+    RepositoryError(String),
 }
 
 #[async_trait]

@@ -65,16 +65,31 @@ impl ActivitiesImporter for CsvActivitiesImporter {
         let mut activities = Vec::new();
         let mut accounting_categories_list_repository =
             self.accounting_categories_list_repository.lock().await;
+        let mut accounting_categories_cache = accounting_categories_list_repository
+            .get_all()
+            .await;
 
         for activity_record in records {
             let date =
                 ActivityTableRecord::convert_date_format(&activity_record.date, &year.to_string())?;
 
-            // FIXME We could optimize this by caching existing categories to avoid multiple DB calls.
-            let accounting_category = accounting_categories_list_repository
-                .get_or_create_by_name(&activity_record.pam_category)
-                .await
-                .map_err(|_| ActivitiesImporterError::ParseError)?;
+            // Caching existing categories to avoid multiple DB calls.
+            let accounting_category = match accounting_categories_cache
+                .iter()
+                .find(|cat| cat.name() == activity_record.pam_category)
+            {
+                Some(cat) => cat.clone(),
+                None => {
+                    let cat = accounting_categories_list_repository
+                        .get_or_create_by_name(&activity_record.pam_category)
+                        .await
+                        .map_err(|_| ActivitiesImporterError::RepositoryError("Failed to get or create accounting category".to_string()))?;
+
+                    accounting_categories_cache.push(cat.clone());
+
+                    cat
+                }            
+            };
 
             let mut activity = Activity::new(
                 date.parse()
