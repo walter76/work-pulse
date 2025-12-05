@@ -388,6 +388,11 @@ struct UploadActivitiesQuery {
     /// The year of the activities being uploaded.
     #[param(example = "2025")]
     activities_year: u16,
+
+    /// Whether to delete all existing activities before uploading new ones.
+    /// Defaults to false.
+    #[param(example = "true")]
+    delete_all: Option<bool>,
 }
 
 /// Uploads activities from a CSV file provided as raw text in the request body.
@@ -428,8 +433,10 @@ where
             CsvActivitiesImporter::new(service_state.accounting_categories_repository.clone());
         let reader = body.as_bytes();
 
+        let delete_all = query.delete_all.unwrap_or(false);
+
         match activities_list
-            .import(&mut csv_importer, reader, query.activities_year)
+            .import(&mut csv_importer, reader, query.activities_year, delete_all)
             .await
         {
             Ok(_) => (
@@ -484,8 +491,10 @@ where
             CsvActivitiesImporter::new(service_state.accounting_categories_repository.clone());
         let reader = csv_content.as_bytes();
 
+        let delete_all = query.delete_all.unwrap_or(false);
+
         match activities_list
-            .import(&mut csv_importer, reader, query.activities_year)
+            .import(&mut csv_importer, reader, query.activities_year, delete_all)
             .await
         {
             Ok(_) => (
