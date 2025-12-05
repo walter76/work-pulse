@@ -163,6 +163,13 @@ pub trait ActivitiesListRepository: Send + Sync {
     ///
     /// `Result<(), ActivitiesListRepositoryError>` indicating success or failure of the delete operation.
     async fn delete(&mut self, id: ActivityId) -> Result<(), ActivitiesListRepositoryError>;
+
+    /// Deletes all activities from the repository.
+    /// 
+    /// # Returns
+    /// 
+    /// `Result<(), ActivitiesListRepositoryError>` indicating success or failure of the delete operation.
+    async fn delete_all(&mut self) -> Result<(), ActivitiesListRepositoryError>;
 }
 
 /// Error type for the activities importer.

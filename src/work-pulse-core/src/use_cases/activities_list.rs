@@ -139,6 +139,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
     /// - `importer`: The `ActivitiesImporter` implementation to use for importing activities.
     /// - `reader`: The reader from which to import activities.
     /// - `year`: The year to associate with the imported activities.
+    /// - `delete_all`: Whether to delete all existing activities before importing new ones.
     ///
     /// # Returns
     ///
@@ -149,6 +150,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
         importer: &mut I,
         reader: D,
         year: u16,
+        delete_all: bool,
     ) -> Result<(), ActivitiesImporterError> {
         let mut repo = self.repository.lock().await;
 
@@ -163,6 +165,11 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
         );
 
         let db_start = Instant::now();
+
+        if delete_all {
+            repo.delete_all().await.map_err(|e| ActivitiesImporterError::RepositoryError(e.to_string()))?;
+        }
+
         for activity in activities {
             repo.add(activity).await;
         }
@@ -410,7 +417,7 @@ mod tests {
         let mut importer = MockImporter;
         let data = b"mock data";
         activities_list
-            .import(&mut importer, &data[..], 2023)
+            .import(&mut importer, &data[..], 2023, true)
             .await
             .unwrap();
 
@@ -418,5 +425,54 @@ mod tests {
         assert_eq!(activities.len(), 2);
         assert_eq!(activities[0].task(), "Imported Task 1");
         assert_eq!(activities[1].task(), "Imported Task 2");
+    }
+
+    #[tokio::test]
+    async fn activities_list_import_should_delete_activities_before_import() {
+        struct MockImporter;
+
+        #[async_trait]
+        impl ActivitiesImporter for MockImporter {
+            async fn import<R: Read + Send>(
+                &mut self,
+                _reader: R,
+                year: u16,
+            ) -> Result<Vec<Activity>, ActivitiesImporterError> {
+                let activity = Activity::with_id(
+                    ActivityId::new(),
+                    NaiveDate::from_ymd_opt(year as i32, 10, 1).expect("Valid activity date"),
+                    NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                    AccountingCategoryId::new(),
+                    "Imported Task".to_string(),
+                );
+
+                Ok(vec![activity])
+            }
+        }
+
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let mut activities_list = ActivitiesList::new(repository);
+
+        // Record an initial activity
+        activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 9, 30).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(8, 0, 0).expect("Valid activity start time"),
+                None,
+                AccountingCategoryId::new(),
+                "Initial Task".to_string(),
+            )
+            .await;
+
+        let mut importer = MockImporter;
+        let data = b"mock data";
+        activities_list
+            .import(&mut importer, &data[..], 2023, true)
+            .await
+            .unwrap();
+
+        let activities = activities_list.activities().await;
+        assert_eq!(activities.len(), 1);
+        assert_eq!(activities[0].task(), "Imported Task");
     }
 }

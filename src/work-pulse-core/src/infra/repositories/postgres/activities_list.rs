@@ -210,4 +210,13 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
 
         Ok(())
     }
+
+    async fn delete_all(&mut self) -> Result<(), ActivitiesListRepositoryError> {
+        sqlx::query("DELETE FROM activities")
+            .execute(self.psql_connection.pool())
+            .await
+            .map_err(|e| ActivitiesListRepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
 }

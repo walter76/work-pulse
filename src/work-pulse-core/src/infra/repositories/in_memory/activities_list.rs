@@ -130,4 +130,9 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
             Err(ActivitiesListRepositoryError::NotFound(id))
         }
     }
+
+    async fn delete_all(&mut self) -> Result<(), ActivitiesListRepositoryError> {
+        self.activities.clear();
+        Ok(())
+    }
 }
