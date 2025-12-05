@@ -70,6 +70,7 @@ impl ActivitiesImporter for CsvActivitiesImporter {
             let date =
                 ActivityTableRecord::convert_date_format(&activity_record.date, &year.to_string())?;
 
+            // FIXME We could optimize this by caching existing categories to avoid multiple DB calls.
             let accounting_category = accounting_categories_list_repository
                 .get_or_create_by_name(&activity_record.pam_category)
                 .await
