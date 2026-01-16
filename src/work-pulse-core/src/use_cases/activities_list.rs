@@ -1,4 +1,4 @@
-use std::{io::Read, sync::Arc, time::Instant};
+use std::{io::Read, sync::Arc, time::Instant, usize};
 
 use chrono::{NaiveDate, NaiveTime};
 use thiserror::Error;
@@ -11,6 +11,19 @@ use crate::{
         activity::{Activity, ActivityId},
     },
 };
+
+/// Specifies how existing activities should be handled during an import operation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReplaceMode {
+    /// Do not delete any existing activities.
+    None,
+
+    /// Delete all existing activities before importing new ones.
+    All,
+
+    /// Delete existing activities that fall within the date range of the imported activities.
+    ImportDateRange,
+}
 
 /// Represents an error that can occur while managing the list of activities.
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
@@ -166,7 +179,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
     /// - `importer`: The `ActivitiesImporter` implementation to use for importing activities.
     /// - `reader`: The reader from which to import activities.
     /// - `year`: The year to associate with the imported activities.
-    /// - `delete_all`: Whether to delete all existing activities before importing new ones.
+    /// - `replace_existing`: The mode specifying how to handle existing activities during the import.
     ///
     /// # Returns
     ///
@@ -177,7 +190,7 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
         importer: &mut I,
         reader: D,
         year: u16,
-        delete_all: bool,
+        replace_existing: ReplaceMode,
     ) -> Result<(), ActivitiesImporterError> {
         let mut repo = self.repository.lock().await;
 
@@ -193,15 +206,47 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
 
         let db_start = Instant::now();
 
-        if delete_all {
-            repo.delete_all().await.map_err(|e| ActivitiesImporterError::RepositoryError(e.to_string()))?;
-        }
+        let _deleted_count = match replace_existing {
+            ReplaceMode::None => 0,
+            ReplaceMode::All => {
+                repo.delete_all().await.map_err(|e| ActivitiesImporterError::RepositoryError(e.to_string()))?;
+
+                tracing::info!("All existing activities have been deleted before the import!");
+
+                usize::MAX // Indicate all were deleted
+            }
+            ReplaceMode::ImportDateRange => {
+                let min_date = activities
+                    .iter()
+                    .map(|activity| activity.date())
+                    .min()
+                    .ok_or_else(|| ActivitiesImporterError::NoActivitiesToImport)?;
+
+                let max_date = activities
+                    .iter()
+                    .map(|activity| activity.date())
+                    .max()
+                    .ok_or_else(|| ActivitiesImporterError::NoActivitiesToImport)?;
+
+                let deleted = repo
+                    .delete_by_date_range(*min_date, *max_date)
+                    .await
+                    .map_err(|e| ActivitiesImporterError::RepositoryError(e.to_string()))?;
+
+                tracing::info!(
+                    count = deleted,
+                    "Existing activities in the import date range have been deleted before the import!"
+                );
+
+                deleted
+            }
+        };
 
         for activity in activities {
             repo.add(activity).await;
         }
-        let db_duration = db_start.elapsed();
 
+        let db_duration = db_start.elapsed();
         tracing::info!(
             duration_ms = db_duration.as_millis(),
             "Activities saved to database"
@@ -507,7 +552,7 @@ mod tests {
         let mut importer = MockImporter;
         let data = b"mock data";
         activities_list
-            .import(&mut importer, &data[..], 2023, true)
+            .import(&mut importer, &data[..], 2023, ReplaceMode::All)
             .await
             .unwrap();
 
@@ -557,7 +602,7 @@ mod tests {
         let mut importer = MockImporter;
         let data = b"mock data";
         activities_list
-            .import(&mut importer, &data[..], 2023, true)
+            .import(&mut importer, &data[..], 2023, ReplaceMode::All)
             .await
             .unwrap();
 
@@ -565,4 +610,86 @@ mod tests {
         assert_eq!(activities.len(), 1);
         assert_eq!(activities[0].task(), "Imported Task");
     }
+
+    #[tokio::test]
+    async fn activities_list_import_should_delete_only_date_range_before_import() {
+        struct MockImporter;
+
+        #[async_trait]
+        impl ActivitiesImporter for MockImporter {
+            async fn import<R: Read + Send>(
+                &mut self,
+                _reader: R,
+                year: u16,
+            ) -> Result<Vec<Activity>, ActivitiesImporterError> {
+                let activity1 = Activity::with_id(
+                    ActivityId::new(),
+                    NaiveDate::from_ymd_opt(year as i32, 10, 1).expect("Valid activity date"),
+                    NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                    AccountingCategoryId::new(),
+                    "October Import 1".to_string(),
+                );
+
+                let activity2 = Activity::with_id(
+                    ActivityId::new(),
+                    NaiveDate::from_ymd_opt(year as i32, 10, 15).expect("Valid activity date"),
+                    NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity start time"),
+                    AccountingCategoryId::new(),
+                    "October Import 2".to_string(),
+                );
+
+                Ok(vec![activity1, activity2])
+            }
+        }
+
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let mut activities_list = ActivitiesList::new(repository);
+
+        // Record activities before and during October
+        activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 9, 30).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(8, 0, 0).expect("Valid activity start time"),
+                None,
+                AccountingCategoryId::new(),
+                "September Task".to_string(),
+            )
+            .await;
+
+        activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 10).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(8, 0, 0).expect("Valid activity start time"),
+                None,
+                AccountingCategoryId::new(),
+                "Old October Task".to_string(),
+            )
+            .await;
+
+        // Import with date range replacement (delete only October activities)
+        let mut importer = MockImporter;
+        let data = b"mock data";
+        activities_list
+            .import(
+                &mut importer,
+                &data[..],
+                2023,
+                ReplaceMode::ImportDateRange,
+            )
+            .await
+            .unwrap();
+
+        let activities = activities_list.activities().await;
+        assert_eq!(activities.len(), 3); // September + 2 new October imports
+        
+        // Check that September task is still there
+        assert!(activities.iter().any(|a| a.task() == "September Task"));
+        
+        // Check that new October tasks are imported
+        assert!(activities.iter().any(|a| a.task() == "October Import 1"));
+        assert!(activities.iter().any(|a| a.task() == "October Import 2"));
+        
+        // Check that old October task is gone
+        assert!(!activities.iter().any(|a| a.task() == "Old October Task"));
+    }    
 }

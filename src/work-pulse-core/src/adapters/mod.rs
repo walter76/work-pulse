@@ -192,6 +192,9 @@ pub enum ActivitiesImporterError {
 
     #[error("Error while accessing the repository: {0}")]
     RepositoryError(String),
+
+    #[error("No activities to import")]
+    NoActivitiesToImport,
 }
 
 #[async_trait]
