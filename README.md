@@ -1,11 +1,16 @@
 # work-pulse
 Track my working hours and create reports.
 
-## Database Setup with DbMate
+## Initial Setup
 
 This project uses [DbMate](https://github.com/amacneil/dbmate) for database migrations.
 
-### Prerequisites
+Run initial database migrations either with local DbMate installation or using Docker as described below. This will
+create the `accounting_categories` and `activities` tables with some default data.
+
+### Using Local DbMate Installation:
+
+__Prerequisites for Local DbMate Installation:__
 
 1. Install DbMate:
    - **Windows (Chocolatey)**: `choco install dbmate`
@@ -17,9 +22,8 @@ This project uses [DbMate](https://github.com/amacneil/dbmate) for database migr
    .\work-pulse-db.cmd
    ```
 
-### Database Migration Commands
+__Migration Commands:__
 
-#### Using Local DbMate Installation:
 ```cmd
 # Run pending migrations
 .\db-migrate.cmd up
@@ -37,7 +41,10 @@ This project uses [DbMate](https://github.com/amacneil/dbmate) for database migr
 .\db-migrate.cmd reset
 ```
 
-#### Using Docker:
+### Using Docker:
+
+__Migration Commands:__
+
 ```cmd
 # Run pending migrations
 .\db-migrate-docker.cmd up
@@ -55,25 +62,21 @@ This project uses [DbMate](https://github.com/amacneil/dbmate) for database migr
 .\db-migrate-docker.cmd reset
 ```
 
-### Initial Setup
+## Building Instructions
 
-1. Start the database:
-   ```cmd
-   .\work-pulse-db.cmd
-   ```
+### Building
 
-2. Run initial migrations:
-   ```cmd
-   .\db-migrate.cmd up
-   ```
+The command to build all containers for the backend and frontend is:
 
-This will create the `accounting_categories` and `activities` tables with some default data.
+```cmd
+.\build.cmd
+```
 
-## How to Build the Container for the Services
+### How to Build the Container for the Services
 
 The command to build the container for the services with Docker is:
 
-```sh
+```cmd
 docker build -t work-pulse-service --build-arg INCLUDE_CA=true .
 ```
 
@@ -86,7 +89,9 @@ If you omit the build argument `INCLUDE_CA=true` no certificates will be copied 
 have the empty directory `certificates` because building based on the condition whether a directory exists or not is not
 so easy with Docker.
 
-## Docker Compose Setup
+## Developer Instructions
+
+### Docker Compose Setup
 
 Run the entire stack with:
 ```cmd
@@ -97,3 +102,34 @@ To run migrations in Docker environment:
 ```cmd
 .\db-migrate-docker.cmd up
 ```
+
+### Without Docker and Docker Compose
+
+Without defining a network communication between the containers is prohibited by the system. Therefore, you can only run
+the system like that for testing purpose:
+
+Run the database as a container:
+```cmd
+.\work-pulse-db.cmd
+```
+
+Run the backend services:
+```cmd
+cd src\work-pulse-service
+cargo run
+```
+
+Run the frontend services:
+```cmd
+cd src\work-pulse-app
+npm run dev
+```
+
+### Reset / Delete the whole database
+
+Delete the complete database with:
+```cmd
+.\clean-data-folder.cmd
+```
+
+Run the initial database migrations as described above (either with a local installation or using Docker).
