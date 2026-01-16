@@ -135,4 +135,18 @@ impl ActivitiesListRepository for InMemoryActivitiesListRepository {
         self.activities.clear();
         Ok(())
     }
+
+    async fn delete_by_date_range(
+        &mut self,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<usize, ActivitiesListRepositoryError> {
+        let initial_len = self.activities.len();
+
+        self.activities
+            .retain(|record| record.date < start || record.date > end);
+
+        let deleted_count = initial_len - self.activities.len();
+        Ok(deleted_count)
+    }
 }

@@ -170,6 +170,18 @@ pub trait ActivitiesListRepository: Send + Sync {
     /// 
     /// `Result<(), ActivitiesListRepositoryError>` indicating success or failure of the delete operation.
     async fn delete_all(&mut self) -> Result<(), ActivitiesListRepositoryError>;
+
+    /// Deletes all activities within a specified date range.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `start`: The start date of the range (inclusive).
+    /// - `end`: The end date of the range (inclusive).
+    /// 
+    /// # Returns
+    /// 
+    /// `Result<usize, ActivitiesListRepositoryError>` indicating the number of deleted activities or failure of the delete operation.
+    async fn delete_by_date_range(&mut self, start: NaiveDate, end: NaiveDate) -> Result<usize, ActivitiesListRepositoryError>;
 }
 
 /// Error type for the activities importer.

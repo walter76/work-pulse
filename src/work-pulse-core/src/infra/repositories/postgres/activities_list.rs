@@ -219,4 +219,19 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
 
         Ok(())
     }
+
+    async fn delete_by_date_range(
+        &mut self,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<usize, ActivitiesListRepositoryError> {
+        let result = sqlx::query("DELETE FROM activities WHERE date BETWEEN $1 AND $2")
+            .bind(start)
+            .bind(end)
+            .execute(self.psql_connection.pool())
+            .await
+            .map_err(|e| ActivitiesListRepositoryError::DatabaseError(e.to_string()))?;
+
+        Ok(result.rows_affected() as usize)
+    }
 }
