@@ -18,6 +18,10 @@ pub enum ActivitiesListError {
     /// An activity with the ID does not exists.
     #[error("Activity with the ID `{0}` does not exists.")]
     NotFound(ActivityId),
+
+    /// A technical error occurred.
+    #[error("A technical error occurred: {0}")]
+    TechnicalError(String),
 }
 
 /// Represents a list of activities.
@@ -130,6 +134,29 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
         repo.delete(activity_id.clone())
             .await
             .map_err(|_| ActivitiesListError::NotFound(activity_id))
+    }
+
+    /// Deletes all activities within a specified date range.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `start_date`: The start date of the range.
+    /// - `end_date`: The end date of the range.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(usize)`: The number of activities deleted.
+    /// - `Err(ActivitiesListError)`: If a technical error occurred during deletion.
+    pub async fn delete_by_date_range(
+        &mut self,
+        start_date: NaiveDate,
+        end_date: NaiveDate,
+    ) -> Result<usize, ActivitiesListError> {
+        let mut repo = self.repository.lock().await;
+
+        repo.delete_by_date_range(start_date, end_date)
+            .await
+            .map_err(|e| ActivitiesListError::TechnicalError(e.to_string()))
     }
 
     /// Imports activities from an external source using the provided importer.
@@ -380,6 +407,69 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn activities_list_delete_by_date_range_should_delete_only_in_range() {
+        let repository = Arc::new(Mutex::new(InMemoryActivitiesListRepository::new()));
+        let mut activities_list = ActivitiesList::new(repository);
+
+        // Add activities in different date ranges
+        activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 9, 15).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                None,
+                AccountingCategoryId::new(),
+                "Before Range".to_string(),
+            )
+            .await;
+
+        activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                None,
+                AccountingCategoryId::new(),
+                "In Range 1".to_string(),
+            )
+            .await;
+
+        activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 10, 15).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                None,
+                AccountingCategoryId::new(),
+                "In Range 2".to_string(),
+            )
+            .await;
+
+        activities_list
+            .record(
+                NaiveDate::from_ymd_opt(2023, 11, 1).expect("Valid activity date"),
+                NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time"),
+                None,
+                AccountingCategoryId::new(),
+                "After Range".to_string(),
+            )
+            .await;
+
+        // Delete activities in October 2023
+        let deleted_count = activities_list
+            .delete_by_date_range(
+                NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid start date"),
+                NaiveDate::from_ymd_opt(2023, 10, 31).expect("Valid end date"),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(deleted_count, 2);
+
+        let remaining_activities = activities_list.activities().await;
+        assert_eq!(remaining_activities.len(), 2);
+        assert_eq!(remaining_activities[0].task(), "Before Range");
+        assert_eq!(remaining_activities[1].task(), "After Range");
+    }
+        
     #[tokio::test]
     async fn activities_list_import_should_add_activities() {
         struct MockImporter;
