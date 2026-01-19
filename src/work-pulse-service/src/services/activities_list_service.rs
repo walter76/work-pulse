@@ -15,7 +15,7 @@ use work_pulse_core::{
     adapters::{AccountingCategoriesListRepository, ActivitiesListRepository},
     entities::{accounting::AccountingCategoryId, activity::ActivityId},
     infra::importers::csv_activities_importer::CsvActivitiesImporter,
-    use_cases::activities_list::ActivitiesList,
+    use_cases::activities_list::{ActivitiesList, ReplaceMode},
 };
 
 use crate::prelude::ACTIVITIES_LIST_SERVICE_TAG;
@@ -389,10 +389,27 @@ struct UploadActivitiesQuery {
     #[param(example = "2025")]
     activities_year: u16,
 
-    /// Whether to delete all existing activities before uploading new ones.
-    /// Defaults to false.
-    #[param(example = "true")]
-    delete_all: Option<bool>,
+    /// How to handle existing activities when importing. Options are:
+    ///
+    /// - "none" (default): Do not delete any existing activities.
+    /// - "all": Delete all existing activities before import.
+    /// - "import_date_range": Delete existing activities within the date range of the imported activities.
+    #[param(example = "all")]
+    replace_mode: Option<String>,
+}
+
+impl UploadActivitiesQuery {
+    fn parse_replace_mode(&self) -> Result<ReplaceMode, String> {
+        match self.replace_mode.as_deref() {
+            None | Some("none") => Ok(ReplaceMode::None),
+            Some("all") => Ok(ReplaceMode::All),
+            Some("import_date_range") => Ok(ReplaceMode::ImportDateRange),
+            Some(other) => Err(format!(
+                "Invalid replace_mode: '{}'. Valid options are 'none', 'all', 'import_date_range'",
+                other
+            )),
+        }
+    }
 }
 
 /// Uploads activities from a CSV file provided as raw text in the request body.
@@ -433,10 +450,20 @@ where
             CsvActivitiesImporter::new(service_state.accounting_categories_repository.clone());
         let reader = body.as_bytes();
 
-        let delete_all = query.delete_all.unwrap_or(false);
+        let replace_mode = match query.parse_replace_mode() {
+            Ok(mode) => mode,
+            Err(err) => {
+                return (StatusCode::BAD_REQUEST, Json(err)).into_response();
+            }
+        };
 
         match activities_list
-            .import(&mut csv_importer, reader, query.activities_year, delete_all)
+            .import(
+                &mut csv_importer,
+                reader,
+                query.activities_year,
+                replace_mode,
+            )
             .await
         {
             Ok(_) => (
@@ -491,10 +518,20 @@ where
             CsvActivitiesImporter::new(service_state.accounting_categories_repository.clone());
         let reader = csv_content.as_bytes();
 
-        let delete_all = query.delete_all.unwrap_or(false);
+        let replace_mode = match query.parse_replace_mode() {
+            Ok(mode) => mode,
+            Err(err) => {
+                return (StatusCode::BAD_REQUEST, Json(err)).into_response();
+            }
+        };
 
         match activities_list
-            .import(&mut csv_importer, reader, query.activities_year, delete_all)
+            .import(
+                &mut csv_importer,
+                reader,
+                query.activities_year,
+                replace_mode,
+            )
             .await
         {
             Ok(_) => (
