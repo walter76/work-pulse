@@ -130,7 +130,3 @@ docker compose up -d               # full stack
 - Workflow: `.github/workflows/ci.yml`. Triggers: push/PR to `main` only.
 - Steps: `cargo build --workspace --verbose` then `cargo test --workspace --verbose` (from `./src`).
 - **Frontend is not tested in CI** — no lint, test, or build step for the React app.
-
-## Cargo Workspace Quirk
-
-The workspace uses `resolver = "1"` (legacy feature unification), despite all crates being on `edition = "2024"`. Be aware that features from all workspace crates are unified during resolution.

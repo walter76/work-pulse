@@ -1,5 +1,5 @@
 [workspace]
-resolver = "1"
+resolver = "2"
 members = [ 
     "work-pulse-core",
     "work-pulse-service"
