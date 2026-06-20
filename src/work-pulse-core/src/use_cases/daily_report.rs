@@ -79,6 +79,7 @@ mod tests {
                 Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
                 AccountingCategoryId::new(),
                 "Task 1".to_string(),
+                None,
             )
             .await;
 
@@ -89,6 +90,7 @@ mod tests {
                 Some(NaiveTime::from_hms_opt(12, 30, 0).expect("Valid activity end time")),
                 AccountingCategoryId::new(),
                 "Task 2".to_string(),
+                None,
             )
             .await;
 

@@ -30,6 +30,9 @@ struct ActivityRecord {
 
     /// The task itself.
     task: String,
+
+    /// An optional comment for the activity.
+    comment: Option<String>,
 }
 
 impl ActivityRecord {
@@ -46,6 +49,7 @@ impl ActivityRecord {
             end_time: activity.end_time().cloned(),
             accounting_category_id: activity.accounting_category_id().clone(),
             task: activity.task().to_string(),
+            comment: activity.comment().map(str::to_owned),
         }
     }
 
@@ -59,6 +63,7 @@ impl ActivityRecord {
             self.task.clone(),
         );
         activity.set_end_time(self.end_time);
+        activity.set_comment(self.comment.clone());
 
         activity
     }

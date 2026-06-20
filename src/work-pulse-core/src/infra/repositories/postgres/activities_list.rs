@@ -46,7 +46,7 @@ impl PsqlActivitiesListRepository {
         activities: Vec<Activity>,
     ) -> Result<(), ActivitiesListRepositoryError> {
         let mut query_builder = sqlx::QueryBuilder::new(
-            "INSERT INTO activities (id, date, start_time, end_time, category_id, task) ",
+            "INSERT INTO activities (id, date, start_time, end_time, category_id, task, comment) ",
         );
 
         query_builder.push_values(activities.iter(), |mut b, activity| {
@@ -55,7 +55,8 @@ impl PsqlActivitiesListRepository {
                 .push_bind(activity.start_time())
                 .push_bind(activity.end_time())
                 .push_bind(activity.accounting_category_id().0)
-                .push_bind(activity.task());
+                .push_bind(activity.task())
+                .push_bind(activity.comment());
         });
 
         let query = query_builder.build();
@@ -73,7 +74,7 @@ impl PsqlActivitiesListRepository {
 impl ActivitiesListRepository for PsqlActivitiesListRepository {
     async fn get_all(&self) -> Vec<Activity> {
         let rows =
-            sqlx::query("SELECT id, date, start_time, end_time, category_id, task FROM activities")
+            sqlx::query("SELECT id, date, start_time, end_time, category_id, task, comment FROM activities")
                 .fetch_all(self.psql_connection.pool())
                 .await
                 .unwrap();
@@ -86,6 +87,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
                 let end_time: Option<NaiveTime> = row.get("end_time");
                 let category_id: Uuid = row.get("category_id");
                 let task: String = row.get("task");
+                let comment: Option<String> = row.get("comment");
 
                 let mut activity = Activity::with_id(
                     ActivityId(id),
@@ -96,6 +98,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
                 );
 
                 activity.set_end_time(end_time);
+                activity.set_comment(comment);
 
                 activity
             })
@@ -104,7 +107,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
 
     async fn get_by_date(&self, date: NaiveDate) -> Vec<Activity> {
         let rows = sqlx::query(
-                "SELECT id, date, start_time, end_time, category_id, task FROM activities WHERE date = $1",
+                "SELECT id, date, start_time, end_time, category_id, task, comment FROM activities WHERE date = $1",
             )
             .bind(date)
             .fetch_all(self.psql_connection.pool())
@@ -119,6 +122,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
                 let end_time: Option<NaiveTime> = row.get("end_time");
                 let category_id: Uuid = row.get("category_id");
                 let task: String = row.get("task");
+                let comment: Option<String> = row.get("comment");
 
                 let mut activity = Activity::with_id(
                     ActivityId(id),
@@ -129,6 +133,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
                 );
 
                 activity.set_end_time(end_time);
+                activity.set_comment(comment);
 
                 activity
             })
@@ -137,7 +142,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
 
     async fn get_by_date_range(&self, start: NaiveDate, end: NaiveDate) -> Vec<Activity> {
         let rows = sqlx::query(
-                "SELECT id, date, start_time, end_time, category_id, task FROM activities WHERE date BETWEEN $1 AND $2",
+                "SELECT id, date, start_time, end_time, category_id, task, comment FROM activities WHERE date BETWEEN $1 AND $2",
             )
             .bind(start)
             .bind(end)
@@ -153,6 +158,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
                 let end_time: Option<NaiveTime> = row.get("end_time");
                 let category_id: Uuid = row.get("category_id");
                 let task: String = row.get("task");
+                let comment: Option<String> = row.get("comment");
 
                 let mut activity = Activity::with_id(
                     ActivityId(id),
@@ -163,6 +169,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
                 );
 
                 activity.set_end_time(end_time);
+                activity.set_comment(comment);
 
                 activity
             })
@@ -171,7 +178,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
 
     async fn add(&mut self, activity: Activity) {
         sqlx::query(
-                "INSERT INTO activities (id, date, start_time, end_time, category_id, task) VALUES ($1, $2, $3, $4, $5, $6)",
+                "INSERT INTO activities (id, date, start_time, end_time, category_id, task, comment) VALUES ($1, $2, $3, $4, $5, $6, $7)",
             )
             .bind(activity.id().0)
             .bind(activity.date())
@@ -179,6 +186,7 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
             .bind(activity.end_time())
             .bind(activity.accounting_category_id().0)
             .bind(activity.task())
+            .bind(activity.comment())
             .execute(self.psql_connection.pool())
             .await
             .unwrap();
@@ -186,13 +194,14 @@ impl ActivitiesListRepository for PsqlActivitiesListRepository {
 
     async fn update(&mut self, activity: Activity) -> Result<(), ActivitiesListRepositoryError> {
         sqlx::query(
-                "UPDATE activities SET date = $1, start_time = $2, end_time = $3, category_id = $4, task = $5 WHERE id = $6",
+                "UPDATE activities SET date = $1, start_time = $2, end_time = $3, category_id = $4, task = $5, comment = $6 WHERE id = $7",
             )
             .bind(activity.date())
             .bind(activity.start_time())
             .bind(activity.end_time())
             .bind(activity.accounting_category_id().0)
             .bind(activity.task())
+            .bind(activity.comment())
             .bind(activity.id().0)
             .execute(self.psql_connection.pool())
             .await

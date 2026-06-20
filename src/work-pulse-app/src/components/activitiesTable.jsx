@@ -27,6 +27,7 @@ const ActivitiesTable = ({ activities, categories, onEditActivity, onDeleteActiv
           <th>Check-Out</th>
           <th>Category</th>
           <th>Task</th>
+          <th>Comment</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -42,6 +43,7 @@ const ActivitiesTable = ({ activities, categories, onEditActivity, onDeleteActiv
               <td>{activity.end_time}</td>
               <td>{categoryName}</td>
               <td>{activity.task}</td>
+              <td>{activity.comment}</td>
               <td>
                 <IconButton
                   aria-label="Edit Activity"

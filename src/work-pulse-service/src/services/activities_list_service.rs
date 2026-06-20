@@ -59,6 +59,10 @@ struct Activity {
     /// The task itself.
     #[schema(example = "Code Review")]
     task: String,
+
+    /// An optional comment for the activity.
+    #[schema(example = "some comment")]
+    comment: Option<String>,
 }
 
 impl Activity {
@@ -79,6 +83,7 @@ impl Activity {
             end_time: entity.end_time().map(|t| t.to_string()),
             accounting_category_id: entity.accounting_category_id().to_string(),
             task: entity.task().to_string(),
+            comment: entity.comment().map(str::to_owned),
         }
     }
 
@@ -105,6 +110,8 @@ impl Activity {
                 end_time.parse().expect("Invalid activitiy end time format"),
             ));
         }
+
+        activity.set_comment(self.comment.clone());
 
         activity
     }
@@ -294,6 +301,7 @@ where
             end_time,
             accounting_category_id,
             new_activity.task.clone(),
+            new_activity.comment.clone(),
         )
         .await;
 
@@ -567,6 +575,7 @@ mod tests {
             "Test Task".to_string(),
         );
         entity.set_end_time(Some(NaiveTime::from_hms_opt(15, 30, 0).unwrap()));
+        entity.set_comment(Some("test comment".to_string()));
 
         let activity = Activity::from_entity(&entity);
 
@@ -579,6 +588,7 @@ mod tests {
             entity.accounting_category_id().to_string()
         );
         assert_eq!(activity.task, "Test Task");
+        assert_eq!(activity.comment, Some("test comment".to_string()));
     }
 
     #[test]
@@ -590,6 +600,7 @@ mod tests {
             end_time: Some("15:30:00".to_string()),
             accounting_category_id: AccountingCategoryId::new().to_string(),
             task: "Test Task".to_string(),
+            comment: Some("test comment".to_string()),
         };
 
         let entity = activity.to_entity();
@@ -606,5 +617,6 @@ mod tests {
             activity.accounting_category_id
         );
         assert_eq!(entity.task(), "Test Task");
+        assert_eq!(entity.comment(), Some("test comment"));
     }
 }

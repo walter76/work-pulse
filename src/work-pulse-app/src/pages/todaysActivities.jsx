@@ -30,6 +30,7 @@ const TodaysActivities = () => {
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [task, setTask] = useState('')
+  const [comment, setComment] = useState('')
 
   const startTimeRef = useRef(null)
 
@@ -70,6 +71,7 @@ const TodaysActivities = () => {
       end_time: endTime,
       accounting_category_id: categoryId,
       task: task,
+      comment: comment || null,
     })
   }
 
@@ -155,6 +157,13 @@ const TodaysActivities = () => {
           }}
           size="sm"
           sx={{ minWidth: 400 }}
+        />
+        <Input
+          id="comment"
+          placeholder="Comment"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          size="sm"
         />
         <Button startDecorator={<Add />} onClick={handleCreateActivity} size="sm">
           Add Activity

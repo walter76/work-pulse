@@ -20,6 +20,7 @@ const EditActivity = () => {
   const [endTime, setEndTime] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [task, setTask] = useState('')
+  const [comment, setComment] = useState('')
 
   const { error, setError, updateActivity } = useActivities()
 
@@ -43,6 +44,7 @@ const EditActivity = () => {
       setEndTime(activityData.end_time)
       setCategoryId(activityData.accounting_category_id)
       setTask(activityData.task)
+      setComment(activityData.comment ?? '')
 
       console.log('Activity fetched successfully!')
     } catch (error) {
@@ -86,6 +88,7 @@ const EditActivity = () => {
       end_time: endTime,
       accounting_category_id: categoryId,
       task: task,
+      comment: comment || null,
     })
 
     // Reset the input field after updating the activity
@@ -94,6 +97,7 @@ const EditActivity = () => {
     setStartTime('')
     setEndTime('')
     setTask('')
+    setComment('')
 
     navigate('/activities')
   }
@@ -156,6 +160,13 @@ const EditActivity = () => {
           }}
           size="sm"
           sx={{ minWidth: 400 }}
+        />
+        <Input
+          id="comment"
+          placeholder="Comment"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          size="sm"
         />
         <Button startDecorator={<Save />} onClick={handleUpdateActivity} size="sm">
           Save

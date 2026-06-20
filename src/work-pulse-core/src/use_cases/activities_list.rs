@@ -75,11 +75,13 @@ impl<R: ActivitiesListRepository> ActivitiesList<R> {
         end_time: Option<NaiveTime>,
         accounting_category_id: AccountingCategoryId,
         task: String,
+        comment: Option<String>,
     ) -> Activity {
         let mut repo = self.repository.lock().await;
 
         let mut activity = Activity::new(date, start_time, accounting_category_id, task);
         activity.set_end_time(end_time);
+        activity.set_comment(comment);
 
         repo.add(activity.clone()).await;
 
@@ -278,6 +280,7 @@ mod tests {
                 Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
                 AccountingCategoryId::new(),
                 "Test Task".to_string(),
+                None,
             )
             .await;
 
@@ -298,6 +301,7 @@ mod tests {
                 None,
                 AccountingCategoryId::new(),
                 "Test Task".to_string(),
+                None,
             )
             .await;
 
@@ -326,6 +330,7 @@ mod tests {
                 Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
                 AccountingCategoryId::new(),
                 "Task 1".to_string(),
+                None,
             )
             .await;
 
@@ -336,6 +341,7 @@ mod tests {
                 None,
                 AccountingCategoryId::new(),
                 "Task 2".to_string(),
+                None,
             )
             .await;
 
@@ -355,6 +361,7 @@ mod tests {
                 Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
                 AccountingCategoryId::new(),
                 "Test Task".to_string(),
+                None,
             )
             .await;
 
@@ -385,6 +392,7 @@ mod tests {
                 Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
                 AccountingCategoryId::new(),
                 "Test Task".to_string(),
+                None,
             )
             .await;
 
@@ -429,6 +437,7 @@ mod tests {
                 Some(NaiveTime::from_hms_opt(10, 0, 0).expect("Valid activity end time")),
                 AccountingCategoryId::new(),
                 "Test Task".to_string(),
+                None,
             )
             .await;
 
@@ -465,6 +474,7 @@ mod tests {
                 None,
                 AccountingCategoryId::new(),
                 "Before Range".to_string(),
+                None,
             )
             .await;
 
@@ -475,6 +485,7 @@ mod tests {
                 None,
                 AccountingCategoryId::new(),
                 "In Range 1".to_string(),
+                None,
             )
             .await;
 
@@ -485,6 +496,7 @@ mod tests {
                 None,
                 AccountingCategoryId::new(),
                 "In Range 2".to_string(),
+                None,
             )
             .await;
 
@@ -495,6 +507,7 @@ mod tests {
                 None,
                 AccountingCategoryId::new(),
                 "After Range".to_string(),
+                None,
             )
             .await;
 
@@ -596,6 +609,7 @@ mod tests {
                 None,
                 AccountingCategoryId::new(),
                 "Initial Task".to_string(),
+                None,
             )
             .await;
 
@@ -653,6 +667,7 @@ mod tests {
                 None,
                 AccountingCategoryId::new(),
                 "September Task".to_string(),
+                None,
             )
             .await;
 
@@ -663,6 +678,7 @@ mod tests {
                 None,
                 AccountingCategoryId::new(),
                 "Old October Task".to_string(),
+                None,
             )
             .await;
 

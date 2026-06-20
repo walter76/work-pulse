@@ -107,6 +107,7 @@ impl ActivitiesImporter for CsvActivitiesImporter {
                 .parse::<NaiveTime>()
                 .map_err(|_| ActivitiesImporterError::ParseError)?;
             activity.set_end_time(Some(end_time));
+            activity.set_comment(Some(activity_record.comment).filter(|s| !s.is_empty()));
 
             activities.push(activity);
         }
@@ -212,11 +213,13 @@ CW,Date,Check In,Check Out,PAM Category,Topic,Comment
         assert_eq!(activities[0].start_time().to_string(), "09:00:00");
         assert_eq!(activities[0].end_time().unwrap().to_string(), "17:00:00");
         assert_eq!(activities[0].task(), "Coding");
+        assert_eq!(activities[0].comment(), Some("Worked on project X"));
 
         assert_eq!(activities[1].date().to_string(), "2023-03-16");
         assert_eq!(activities[1].start_time().to_string(), "10:00:00");
         assert_eq!(activities[1].end_time().unwrap().to_string(), "18:00:00");
         assert_eq!(activities[1].task(), "Team Meeting");
+        assert_eq!(activities[1].comment(), Some("Discussed project Y"));
     }
 
     #[tokio::test]

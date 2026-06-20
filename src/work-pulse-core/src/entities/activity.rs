@@ -71,6 +71,9 @@ pub struct Activity {
 
     /// The task itself.
     task: String,
+
+    /// An optional comment for the activity.
+    comment: Option<String>,
 }
 
 impl Activity {
@@ -95,6 +98,7 @@ impl Activity {
             end_time: None,
             accounting_category_id,
             task,
+            comment: None,
         }
     }
 
@@ -121,6 +125,7 @@ impl Activity {
             end_time: None,
             accounting_category_id,
             task,
+            comment: None,
         }
     }
 
@@ -179,6 +184,20 @@ impl Activity {
     /// - `task`: An optional string representing the task associated with the activity.
     pub fn set_task(&mut self, task: String) {
         self.task = task;
+    }
+
+    /// Returns the comment associated with the activity, if any.
+    pub fn comment(&self) -> Option<&str> {
+        self.comment.as_deref()
+    }
+
+    /// Sets the comment associated with the activity.
+    ///
+    /// # Arguments
+    ///
+    /// - `comment`: An optional string representing the comment.
+    pub fn set_comment(&mut self, comment: Option<String>) {
+        self.comment = comment;
     }
 
     /// Calculates the duration of the activity.
@@ -286,6 +305,23 @@ mod tests {
         // Set the end_time and check the duration
         activity.set_end_time(Some(end_time));
         assert_eq!(activity.duration(), Duration::minutes(90));
+    }
+
+    #[test]
+    fn set_comment_should_store_and_retrieve_comment() {
+        let date = NaiveDate::from_ymd_opt(2023, 10, 1).expect("Valid activity date");
+        let start_time = NaiveTime::from_hms_opt(9, 0, 0).expect("Valid activity start time");
+        let accounting_category_id = AccountingCategoryId::new();
+        let task = "Test Task".to_string();
+
+        let mut activity = Activity::new(date, start_time, accounting_category_id, task);
+        assert_eq!(activity.comment(), None);
+
+        activity.set_comment(Some("my comment".to_string()));
+        assert_eq!(activity.comment(), Some("my comment"));
+
+        activity.set_comment(None);
+        assert_eq!(activity.comment(), None);
     }
 
     #[test]
