@@ -1,10 +1,10 @@
 ---
-started: 
-updated: 
+started: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
 status: in-progress          # in-progress | completed | blocked
-task: 
-adr: n.a.
-agent: 
+task: <short version of the task that is currently done/has been done>
+adr: <link to adr or n.a. if no adr present>
+agent: <which agent has been used for the session>
 ---
 
 ## Goal
