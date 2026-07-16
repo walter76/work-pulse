@@ -1,10 +1,10 @@
 ---
-started: <YYYY-MM-DD>
-updated: <YYYY-MM-DD>
+started: {{DATE}}
+updated: {{DATE}}
 status: in-progress          # in-progress | completed | blocked
-task: <short version of the task that is currently done/has been done>
-adr: <link to adr or n.a. if no adr present>
-agent: <which agent has been used for the session>
+task: {{TASK}}
+adr: n.a.
+agent: {{AGENT}}
 ---
 
 ## Goal
@@ -24,5 +24,5 @@ agent: <which agent has been used for the session>
 <can be empty if no open questions / risks>
 
 ## Log
-### <date>
+### {{DATE}}
 <what happened, session tracking>

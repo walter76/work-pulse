@@ -200,6 +200,18 @@ When you learn something that updates/contradicts an earlier finding, explicitly
 - If a todo is finished, mark it with `[x]`, e.g. `- [x] Some done task`
 - Don't delete finished todos
 
+### Session Logs
+
+- Initialize a new session log at the start of each unit of work:
+  ```
+  python scripts/new-session.py -t "<short task description>" -a "<agent-name>"
+  ```
+  This creates `sessions/<YYYY-MM-DD>-<slug>.md` from the template and adds an entry to `sessions/INDEX.md`.
+- Update the session log's `## Log` section as work progresses — record what was done, decisions made, and issues encountered.
+- When marking `status: completed`, fill in the `## Outcome` section and remove the `## Current state` section.
+- When `status: blocked`, fill in `## Current state` with open questions and next steps.
+- See `sessions/template.md` for the log structure.
+
 ## Subtask Workflow
 
 **Default: Synchronous.** Spawn Task, wait for completion, get results directly.
