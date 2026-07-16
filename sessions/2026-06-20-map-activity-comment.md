@@ -1,114 +1,53 @@
-﻿# Map `activities.comment` End-to-End
-
-## Background
-
-The `activities` table has a `comment TEXT` column (nullable, no constraints) introduced in
-migration `20241016000002`. It has never been mapped in the Rust domain layer or exposed through
-the API or UI. The column exists in the DB but is invisible to the entire application stack.
-
-See investigation findings for full details on the current state of each layer.
+﻿---
+started: 2026-06-20
+updated: 2026-06-20
+status: completed
+task: Map `activities.comment` End-to-End
+adr: n.a.
+agent: claude-code
+---
 
 ## Goal
+Add `comment: Option<String>` to the `Activity` entity and wire it through every layer so it is stored, retrieved,
+exposed in the API, and editable in the UI.
 
-Add `comment: Option<String>` to the `Activity` entity and wire it through every layer so it is
-stored, retrieved, exposed in the API, and editable in the UI.
+## Context
+- Migration `20241016000002` — introduced `comment TEXT` column (nullable, no constraints)
+- `TODO.md` — CLI noted as out of scope
 
-## Steps
+## Outcome
+`comment` field mapped end-to-end across all layers. The `activities.comment` column (previously invisible to the
+application stack) is now fully wired through the entity, repositories, CSV importer, use case, API DTO, and frontend
+(create form, edit form, table). Backwards-compatible API change — `comment` is nullable JSON; existing clients that
+omit it continue to work.
 
-### 1. Entity — `src/work-pulse-core/src/entities/activity.rs`
+**Risks addressed:**
+- UPDATE now correctly overwrites `comment` (including NULL) instead of silently preserving it
+- CSV empty strings treated as `None` to avoid storing blank values
+- `record()` signature change (internal breaking) coordinated with all call sites
 
-- Add `comment: Option<String>` field to the `Activity` struct.
-- Add `comment()` getter returning `Option<&str>`.
-- Add `set_comment()` setter accepting `Option<String>`.
-- `Activity::new()` and `Activity::with_id()` do **not** gain a `comment` parameter — both
-  initialise `comment: None`. Comment is set after construction via `set_comment()`, consistent
-  with how `end_time` is handled.
-- Update unit tests: existing test signatures are unchanged (constructors are unchanged); add
-  targeted tests for `set_comment` / `comment` getter.
+**Left over:** CLI support for `comment` is out of scope (tracked in `TODO.md`).
 
-### 2. In-memory repository — `src/work-pulse-core/src/infra/repositories/in_memory/activities_list.rs`
+## Current state
 
-- Add `comment: Option<String>` to `ActivityRecord`.
-- Update `from_entity()` to copy `activity.comment().map(str::to_owned)`.
-- Update `to_entity()` to call `activity.set_comment(self.comment.clone())` after constructing
-  the entity.
-
-### 3. Postgres repository — `src/work-pulse-core/src/infra/repositories/postgres/activities_list.rs`
-
-- **All three `SELECT` queries** (`get_all`, `get_by_date`, `get_by_date_range`): add `comment`
-  to the column list; call `row.get::<_, Option<String>>("comment")`; call
-  `activity.set_comment(comment)`.
-- **Single `add()`**: add `comment` to the `INSERT` column list and `.bind(activity.comment())`.
-- **Bulk `add_batch()`** (`add_range` helper): add `comment` to the `QueryBuilder` column list
-  and `.push_bind(activity.comment())`.
-- **`update()`**: add `comment = $N` to the `SET` clause (becomes `$6`, shifting `id` to `$7`)
-  and bind `activity.comment()`.
-- Delete operations need no changes.
-
-### 4. CSV importer — `src/work-pulse-core/src/infra/importers/csv_activities_importer.rs`
-
-- After constructing the activity, call
-  `activity.set_comment(Some(activity_record.comment).filter(|s| !s.is_empty()))` — treating an
-  empty string from the CSV as `None`, since the column is often blank.
-- Update the importer test: assert `activities[0].comment()` equals the expected value from the
-  test CSV fixture.
-
-### 5. Use case — `src/work-pulse-core/src/use_cases/activities_list.rs`
-
-- `record()` gains a `comment: Option<String>` parameter. After creating the activity it calls
-  `activity.set_comment(comment)`.
-- No other use-case methods need changes (`update()` and `import()` pass through the full
-  `Activity` entity unchanged).
-- Update all `record(...)` call sites in the test module to pass the new argument (all existing
-  calls pass `None`).
-
-### 6. API DTO — `src/work-pulse-service/src/services/activities_list_service.rs`
-
-- Add `comment: Option<String>` to the `Activity` DTO struct (with `#[schema(example = "...")]`).
-- Update `from_entity()` to set `comment: entity.comment().map(str::to_owned)`.
-- Update `to_entity()` to call `activity.set_comment(self.comment.clone())`.
-- Update `create_activity` handler: pass `new_activity.comment.clone()` into
-  `activities_list.record(...)`.
-- Update the two unit tests (`activity_from_entity_should_convert_correctly`,
-  `activity_to_entity_should_convert_correctly`) to include `comment`.
-
-### 7. Frontend hook — `src/work-pulse-app/src/hooks/useActivities.jsx`
-
-No changes needed. `createActivity` and `updateActivity` forward the entire payload object as-is
-to the API. Adding `comment` to the payload objects in the page components is sufficient.
-
-### 8. Frontend create form — `src/work-pulse-app/src/pages/todaysActivities.jsx`
-
-- Add `const [comment, setComment] = useState('')`.
-- Add an `<Input>` for comment (optional field, no `required`).
-- Include `comment: comment || null` in the `createActivity({...})` call.
-- Reset `comment` to `''` after successful creation.
-
-### 9. Frontend edit form — `src/work-pulse-app/src/pages/editActivity.jsx`
-
-- Add `const [comment, setComment] = useState('')`.
-- In `fetchActivity()`, set `setComment(activityData.comment ?? '')`.
-- Add an `<Input>` for comment (optional, no `required`).
-- Include `comment: comment || null` in the `updateActivity(activityId, {...})` call.
-
-### 10. Frontend table — `src/work-pulse-app/src/components/activitiesTable.jsx`
-
-- Add `<th>Comment</th>` to the header row.
-- Add `<td>{activity.comment}</td>` to each data row.
-
-## Risks and Notes
-
-- **No migration needed.** The `comment` column already exists and is nullable.
-- **Backwards-compatible API change.** `comment` is `Option` / nullable JSON; existing clients
-  that omit it continue to work (serde treats missing JSON fields as `None` for `Option` types).
-- **UPDATE behaviour change.** Today `UPDATE` silently preserves any existing `comment` value
-  because the column is absent from the `SET` clause. After step 3, `UPDATE` correctly overwrites
-  it — including setting it to `NULL` when the client sends `null`. Any rows with non-NULL
-  `comment` from an external source will become visible for the first time.
-- **CSV empty-string handling** (step 4): the CSV `Comment` header is required by serde for
-  deserialization to succeed, but the value is often blank. Treating `""` as `None` avoids
-  storing empty strings.
-- **`record()` signature change** (step 5) is an internal breaking change. The only callers are
-  in `activities_list_service.rs` (step 6) and the test module within `activities_list.rs` — both
-  are updated in their respective steps.
-- **CLI is out of scope for this plan.** See `TODO.md`.
+## Log
+### 2026-06-20
+- Analyzed existing state: `comment` column exists in DB since migration `20241016000002` but unmapped in all
+  application layers
+- Updated entity (`activity.rs`): added `comment: Option<String>` field, `comment()` getter, `set_comment()` setter;
+  constructors unchanged (init `comment: None`)
+- Updated in-memory repository (`in_memory/activities_list.rs`): added `comment` to `ActivityRecord`, updated
+  `from_entity()`/`to_entity()` conversions
+- Updated Postgres repository (`postgres/activities_list.rs`): added `comment` to all three SELECT queries, INSERT, bulk
+  INSERT, and UPDATE statements; parameter binding adjusted (`$6` for comment, `$7` for id)
+- Updated CSV importer (`csv_activities_importer.rs`): maps comment after construction, treats empty strings as `None`
+- Updated use case (`activities_list.rs`): `record()` gains `comment: Option<String>` parameter; all test call sites
+  updated to pass `None`
+- Updated API DTO (`activities_list_service.rs`): added `comment` to DTO struct, updated `from_entity()`/`to_entity()`,
+  updated `create_activity` handler and unit tests
+- Frontend hook (`useActivities.jsx`): no changes needed (forwards entire payload as-is)
+- Frontend create form (`todaysActivities.jsx`): added comment state, optional Input field, included in `createActivity`
+  call
+- Frontend edit form (`editActivity.jsx`): added comment state, populated from `fetchActivity()`, optional Input field,
+  included in `updateActivity` call
+- Frontend table (`activitiesTable.jsx`): added Comment column header and data cells
