@@ -192,13 +192,18 @@ When you learn something that updates/contradicts an earlier finding, explicitly
 
 ## Documentation Workflow
 
-### ToDos
+### Tasks and ToDos
 
-- Capture todos in the repository root in `TODO.md`
-- Format for each todo: `- [ ] <todo short description>`
-- Each todo on one line
-- If a todo is finished, mark it with `[x]`, e.g. `- [x] Some done task`
-- Don't delete finished todos
+- Capture tasks and todos in `tasks`
+- Use the `tasks/template.md` to initialize a new task
+- Use the format from the template defined in `tasks/template.md`
+- Update `tasks/BOARD.md`:
+  - New tasks should be added to the **Backlog** section
+  - Tasks that are in-progress should be removed from the **Backlog** section added to the **In-Progress** section
+  - Done tasks should be removed from the **In-Progress** section and added to the **Done** section
+- While a task is in-progress update the task file (`tasks/task.md`)
+- When a task is finished update the task file (`tasks/task.md`)
+- Don't delete completed task files
 
 ### Session Logs
 
