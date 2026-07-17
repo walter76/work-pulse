@@ -19,26 +19,26 @@ __Prerequisites for Local DbMate Installation:__
 
 2. Start PostgreSQL database:
    ```cmd
-   .\work-pulse-db.cmd
+   .\scripts\work-pulse-db.cmd
    ```
 
 __Migration Commands:__
 
 ```cmd
 # Run pending migrations
-.\db-migrate.cmd up
+.\scripts\db-migrate.cmd up
 
 # Check migration status
-.\db-migrate.cmd status
+.\scripts\db-migrate.cmd status
 
 # Create new migration
-.\db-migrate.cmd new migration_name
+.\scripts\db-migrate.cmd new migration_name
 
 # Rollback last migration
-.\db-migrate.cmd down
+.\scripts\db-migrate.cmd down
 
 # Reset database completely
-.\db-migrate.cmd reset
+.\scripts\db-migrate.cmd reset
 ```
 
 ### Using Docker:
@@ -47,19 +47,19 @@ __Migration Commands:__
 
 ```cmd
 # Run pending migrations
-.\db-migrate-docker.cmd up
+.\scripts\db-migrate-docker.cmd up
 
 # Check migration status  
-.\db-migrate-docker.cmd status
+.\scripts\db-migrate-docker.cmd status
 
 # Create new migration
-.\db-migrate-docker.cmd new migration_name
+.\scripts\db-migrate-docker.cmd new migration_name
 
 # Rollback last migration
-.\db-migrate-docker.cmd down
+.\scripts\db-migrate-docker.cmd down
 
 # Reset database completely
-.\db-migrate-docker.cmd reset
+.\scripts\db-migrate-docker.cmd reset
 ```
 
 ## Building Instructions
@@ -69,7 +69,7 @@ __Migration Commands:__
 The command to build all containers for the backend and frontend is:
 
 ```cmd
-.\build.cmd
+.\scripts\build.cmd
 ```
 
 ### How to Build the Container for the Services
@@ -100,7 +100,7 @@ docker compose up -d
 
 To run migrations in Docker environment:
 ```cmd
-.\db-migrate-docker.cmd up
+.\scripts\db-migrate-docker.cmd up
 ```
 
 ### Without Docker and Docker Compose
@@ -110,7 +110,7 @@ the system like that for testing purpose:
 
 Run the database as a container:
 ```cmd
-.\work-pulse-db.cmd
+.\scripts\work-pulse-db.cmd
 ```
 
 Run the backend services:
@@ -129,7 +129,7 @@ npm run dev
 
 Delete the complete database with:
 ```cmd
-.\clean-data-folder.cmd
+.\scripts\clean-data-folder.cmd
 ```
 
 Run the initial database migrations as described above (either with a local installation or using Docker).

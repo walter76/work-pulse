@@ -116,13 +116,16 @@ work-pulse/                       ← git root
 │   └── workflows/
 │       └── ci.yml                ← GitHub Actions CI (Rust only)
 │
-├── build.cmd                     ← Build both Docker images
-├── clean-data-folder.cmd         ← Delete ./data/ (wipe DB volume)
-├── db-migrate.cmd                ← DbMate wrapper (local install)
-├── db-migrate-docker.cmd         ← DbMate wrapper (Docker-based)
+├── scripts/
+│   ├── build.cmd                 ← Build both Docker images
+│   ├── clean-data-folder.cmd     ← Delete ./data/ (wipe DB volume)
+│   ├── db-migrate.cmd            ← DbMate wrapper (local install)
+│   ├── db-migrate-docker.cmd     ← DbMate wrapper (Docker-based)
+│   ├── new-session.py            ← Create session log from template
+│   ├── work-pulse-db.cmd         ← Start postgres:16 container standalone
+│   └── work-pulse-service.cmd    ← Run pre-built service container
+│
 ├── docker-compose.yml            ← Full stack: db + backend + frontend + migrate
-├── work-pulse-db.cmd             ← Start postgres:16 container standalone
-├── work-pulse-service.cmd        ← Run pre-built service container
 │
 ├── db/
 │   ├── migrations/               ← DbMate SQL migrations (up/down)

@@ -110,17 +110,17 @@ npm run test:coverage
 
 Start PostgreSQL database:
 ```cmd
-.\work-pulse-db.cmd
+.\scripts\work-pulse-db.cmd
 ```
 
 Run migrations (local DbMate):
 ```cmd
-.\db-migrate.cmd up
+.\scripts\db-migrate.cmd up
 ```
 
 Run migrations (Docker):
 ```cmd
-.\db-migrate-docker.cmd up
+.\scripts\db-migrate-docker.cmd up
 ```
 
 Create new migration:
@@ -232,7 +232,8 @@ work-pulse/           ← git root (NOT the Cargo workspace root)
 │   ├── work-pulse-service/     ← Axum REST API binary
 │   ├── work-pulse-cli/         ← CLI binary (HTTP client only; excluded from Docker)
 │   └── work-pulse-app/         ← React frontend (standalone npm package)
-└── *.cmd             ← all task automation is Windows .cmd scripts at repo root
+├── scripts/          ← all task automation scripts (.cmd, .py)
+└── *.cmd             ← moved to scripts/
 ```
 
 ## Critical: Workspace Roots
@@ -269,12 +270,12 @@ No `typecheck` script — the project is plain JavaScript, not TypeScript.
 ### Database (from repo root)
 
 ```cmd
-.\work-pulse-db.cmd          # start postgres:16 container on :5432
-.\db-migrate.cmd up          # apply pending migrations (local dbmate)
-.\db-migrate.cmd down        # rollback one migration
-.\db-migrate.cmd status
-.\db-migrate.cmd new <name>  # create new migration file
-.\db-migrate.cmd reset       # wipe and re-apply all migrations
+.\scripts\work-pulse-db.cmd          # start postgres:16 container on :5432
+.\scripts\db-migrate.cmd up          # apply pending migrations (local dbmate)
+.\scripts\db-migrate.cmd down        # rollback one migration
+.\scripts\db-migrate.cmd status
+.\scripts\db-migrate.cmd new <name>  # create new migration file
+.\scripts\db-migrate.cmd reset       # wipe and re-apply all migrations
 ```
 
 ## Architecture Notes
@@ -333,14 +334,14 @@ Prettier config (`.prettierrc`): single quotes, no semicolons, trailing commas, 
 ## Docker
 
 ```cmd
-.\build.cmd                        # build both container images
+.\scripts\build.cmd                        # build both container images
 docker compose up -d               # full stack
-.\db-migrate-docker.cmd up         # run migrations against the Docker stack
+.\scripts\db-migrate-docker.cmd up         # run migrations against the Docker stack
 ```
 
 - `src/certificates/` **must exist** (even if empty) — the service Dockerfile has an unconditional `COPY` of it.
 - Docker build uses `Cargo.docker.toml` (renamed to `Cargo.toml` inside the image) to exclude the CLI crate.
-- `./data/` is the PostgreSQL data volume on the host; delete it with `.\clean-data-folder.cmd` to wipe the DB.
+- `./data/` is the PostgreSQL data volume on the host; delete it with `.\scripts\clean-data-folder.cmd` to wipe the DB.
 
 ## CI
 
