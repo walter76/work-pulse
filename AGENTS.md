@@ -197,12 +197,15 @@ When you learn something that updates/contradicts an earlier finding, explicitly
 - Capture tasks and todos in `tasks`
 - Use the `tasks/template.md` to initialize a new task
 - Use the format from the template defined in `tasks/template.md`
+- Task files live in status-based subfolders:
+  - `tasks/backlog/` — tasks not yet started
+  - `tasks/in-progress/` — tasks currently being worked on
+  - `tasks/done/` — completed tasks
 - Update `tasks/BOARD.md`:
-  - New tasks should be added to the **Backlog** section
-  - Tasks that are in-progress should be removed from the **Backlog** section added to the **In-Progress** section
-  - Done tasks should be removed from the **In-Progress** section and added to the **Done** section
-- While a task is in-progress update the task file (`tasks/task.md`)
-- When a task is finished update the task file (`tasks/task.md`)
+  - New tasks should be added to the **Backlog** section with link to `backlog/<task-id>.md`
+  - Tasks that are in-progress should be moved from **Backlog** to **In-Progress** with link to `in-progress/<task-id>.md`
+  - Done tasks should be moved from **In-Progress** to **Done** with link to `done/<task-id>.md`
+- When moving a task between statuses, move the corresponding `.md` file to the matching subfolder
 - Don't delete completed task files
 
 ### Session Logs
