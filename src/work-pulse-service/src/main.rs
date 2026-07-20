@@ -29,12 +29,11 @@ mod prelude {
     pub const ACTIVITIES_LIST_SERVICE_TAG: &str = "activities-list-service";
     pub const ACCOUNTING_CATEGORIES_SERVICE_TAG: &str = "accounting-categories-service";
     pub const DAILY_REPORT_SERVICE_TAG: &str = "daily-report-service";
+    pub const HEALTH_CHECK_SERVICE_TAG: &str = "health-check-service";
     pub const WEEKLY_REPORT_SERVICE_TAG: &str = "weekly-report-service";
 }
 
 const CONNECTION_STRING: &str = "postgres://workpulse:supersecret@localhost:5432/workpulse";
-
-// TODO Implement health check service
 
 #[derive(clap::Parser)]
 #[command(
@@ -57,6 +56,7 @@ async fn main() -> Result<(), Error> {
             (name = prelude::ACTIVITIES_LIST_SERVICE_TAG, description = "Activities List Service"),
             (name = prelude::ACCOUNTING_CATEGORIES_SERVICE_TAG, description = "Accounting Categories Service"),
             (name = prelude::DAILY_REPORT_SERVICE_TAG, description = "Daily Report Service"),
+            (name = prelude::HEALTH_CHECK_SERVICE_TAG, description = "Health Check Service"),
             (name = prelude::WEEKLY_REPORT_SERVICE_TAG, description = "Weekly Report Service"),
         )
     )]
@@ -74,14 +74,24 @@ async fn main() -> Result<(), Error> {
         let (accounting_categories_repository, activities_list_repository) =
             create_in_memory_repositories().await;
 
-        create_open_api_router(accounting_categories_repository, activities_list_repository)
-            .split_for_parts()
+        let mut api_router =
+            create_open_api_router(accounting_categories_repository, activities_list_repository);
+        api_router = api_router.nest(
+            "/api/v1/health",
+            services::health_check_service::router(None),
+        );
+        api_router.split_for_parts()
     } else {
-        let (accounting_categories_repository, activities_list_repository) =
+        let (accounting_categories_repository, activities_list_repository, psql_connection) =
             create_psql_repositories().await;
 
-        create_open_api_router(accounting_categories_repository, activities_list_repository)
-            .split_for_parts()
+        let mut api_router =
+            create_open_api_router(accounting_categories_repository, activities_list_repository);
+        api_router = api_router.nest(
+            "/api/v1/health",
+            services::health_check_service::router(Some(psql_connection)),
+        );
+        api_router.split_for_parts()
     };
 
     let router =
@@ -114,6 +124,7 @@ async fn main() -> Result<(), Error> {
 async fn create_psql_repositories() -> (
     Arc<Mutex<PsqlAccountingCategoriesListRepository>>,
     Arc<Mutex<PsqlActivitiesListRepository>>,
+    Arc<PsqlConnection>,
 ) {
     let psql_connection = PsqlConnection::with_database_url(CONNECTION_STRING).await;
     let psql_accounting_categories_repository = Arc::new(Mutex::new(
@@ -122,10 +133,12 @@ async fn create_psql_repositories() -> (
     let psql_activities_list_repository = Arc::new(Mutex::new(PsqlActivitiesListRepository::new(
         psql_connection.clone(),
     )));
+    let psql_connection = Arc::new(psql_connection);
 
     (
         psql_accounting_categories_repository,
         psql_activities_list_repository,
+        psql_connection,
     )
 }
 
