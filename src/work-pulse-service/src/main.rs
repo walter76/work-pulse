@@ -12,6 +12,9 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
+
+use work_pulse_service::prelude;
+
 use work_pulse_core::adapters::{AccountingCategoriesListRepository, ActivitiesListRepository};
 
 use work_pulse_core::infra::repositories::{
@@ -24,14 +27,6 @@ use work_pulse_core::infra::repositories::{
         activities_list::PsqlActivitiesListRepository,
     },
 };
-
-mod prelude {
-    pub const ACTIVITIES_LIST_SERVICE_TAG: &str = "activities-list-service";
-    pub const ACCOUNTING_CATEGORIES_SERVICE_TAG: &str = "accounting-categories-service";
-    pub const DAILY_REPORT_SERVICE_TAG: &str = "daily-report-service";
-    pub const HEALTH_CHECK_SERVICE_TAG: &str = "health-check-service";
-    pub const WEEKLY_REPORT_SERVICE_TAG: &str = "weekly-report-service";
-}
 
 const CONNECTION_STRING: &str = "postgres://workpulse:supersecret@localhost:5432/workpulse";
 

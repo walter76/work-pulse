@@ -10,9 +10,9 @@ use work_pulse_core::infra::repositories::postgres::PsqlConnection;
 pub const HEALTH_CHECK_SERVICE_TAG: &str = "health-check-service";
 
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
-struct HealthStatus {
-    status: String,
-    database: String,
+pub struct HealthStatus {
+    pub status: String,
+    pub database: String,
 }
 
 pub fn router(connection: Option<Arc<PsqlConnection>>) -> OpenApiRouter {
