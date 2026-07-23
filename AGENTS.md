@@ -130,6 +130,20 @@ The commit contains the following structural elements, to communicate intent:
 - Always use idiomatic rust
 - Unit tests co-located with source in `#[cfg(test)]`
 
+### Acceptance Testing (Rust backend only: work-pulse-service)
+
+- Scope: applies only to backend Rust acceptance tests in `src/work-pulse-service/tests/`
+- Framework: `cucumber` crate with async step definitions in `src/work-pulse-service/tests/services.rs`
+- Feature files: Gherkin `.feature` files under `src/work-pulse-service/tests/features/`
+- Execution model: `ServiceWorld::run("tests/features/<name>.feature")` in the Rust test entrypoint
+- Step pattern: `#[given]`, `#[when]`, `#[then]` mutate/read a `World` state object
+- HTTP verification style: build Axum router in-world, send request with `oneshot`, assert status/body fields
+
+### Acceptance Test Authoring Rule
+
+- When user asks to write a backend acceptance test, write only scenarios in a `.feature` file.
+- Do not implement or modify Rust step definitions, world structs, hooks, runners, or other glue code unless explicitly requested.
+
 ### Code Comments
 
 Minimize comments. Self-documenting code preferred.
