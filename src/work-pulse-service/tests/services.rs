@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use axum::Router;
 use cucumber::{World, given, then, when};
 use tower::util::ServiceExt;
+use work_pulse_core::infra::repositories::postgres::PsqlConnection;
 use work_pulse_service::services::health_check_service;
 use work_pulse_service::services::health_check_service::HealthStatus;
 
@@ -38,6 +41,23 @@ async fn health_check_service_is_running(world: &mut ServiceWorld) {
     world.health_check_service = Some(Router::new().nest("/api/v1/health", router.into()));
 }
 
+#[given("the health check service is running with a connected database")]
+async fn health_check_service_is_running_with_connected_database(world: &mut ServiceWorld) {
+    let connection =
+        PsqlConnection::with_database_url("postgres://workpulse:supersecret@localhost:5432/workpulse")
+            .await;
+    let router = health_check_service::router(Some(Arc::new(connection)));
+    world.health_check_service = Some(Router::new().nest("/api/v1/health", router.into()));
+}
+
+#[given("the health check service is running with a disconnected database")]
+async fn health_check_service_is_running_with_disconnected_database(world: &mut ServiceWorld) {
+    let connection =
+        PsqlConnection::connect_lazy("postgresql://invalid:5432/unreachable");
+    let router = health_check_service::router(Some(Arc::new(connection)));
+    world.health_check_service = Some(Router::new().nest("/api/v1/health", router.into()));
+}
+
 #[when(expr = "I send a GET request to {string}")]
 async fn send_get_request(world: &mut ServiceWorld, path: String) {
     if let Some(router) = &world.health_check_service {
@@ -57,8 +77,7 @@ async fn send_get_request(world: &mut ServiceWorld, path: String) {
         let body = axum::body::to_bytes(response.into_body(), 1024)
             .await
             .unwrap();
-        let health_status: HealthStatus = serde_json::from_slice(&body).unwrap();
-        world.health_status = Some(health_status);
+        world.health_status = serde_json::from_slice::<HealthStatus>(&body).ok();
     } else {
         panic!("Health check service is not running");
     }
@@ -90,6 +109,19 @@ async fn check_service_health(world: &mut ServiceWorld) {
     }
 }
 
+#[then(expr = "the service should be unhealthy")]
+async fn check_service_unhealthy(world: &mut ServiceWorld) {
+    if let Some(health_status) = &world.health_status {
+        assert!(
+            health_status.status == "error",
+            "Expected service status to be 'error', but got '{}'",
+            health_status.status
+        );
+    } else {
+        panic!("No health status response received");
+    }
+}
+
 #[then(expr = "the database should be disabled")]
 async fn check_database_disabled(world: &mut ServiceWorld) {
     if let Some(health_status) = &world.health_status {
@@ -100,6 +132,32 @@ async fn check_database_disabled(world: &mut ServiceWorld) {
         );
     } else {
         panic!("No response received");
+    }
+}
+
+#[then(expr = "the database should be connected")]
+async fn check_database_connected(world: &mut ServiceWorld) {
+    if let Some(health_status) = &world.health_status {
+        assert!(
+            health_status.database == "connected",
+            "Expected database status to be 'connected', but got '{}'",
+            health_status.database
+        );
+    } else {
+        panic!("No health status response received");
+    }
+}
+
+#[then(expr = "the database should be disconnected")]
+async fn check_database_disconnected(world: &mut ServiceWorld) {
+    if let Some(health_status) = &world.health_status {
+        assert!(
+            health_status.database == "disconnected",
+            "Expected database status to be 'disconnected', but got '{}'",
+            health_status.database
+        );
+    } else {
+        panic!("No health status response received");
     }
 }
 
