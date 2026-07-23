@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use work_pulse_core::infra::repositories::postgres::PsqlConnection;
 
-pub const HEALTH_CHECK_SERVICE_TAG: &str = "health-check-service";
+use crate::prelude::HEALTH_CHECK_SERVICE_TAG;
 
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
 pub struct HealthStatus {
