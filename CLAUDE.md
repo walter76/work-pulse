@@ -200,7 +200,8 @@ postgres://workpulse:supersecret@localhost:5432/workpulse
 
 ## Environment Variables
 - `RUST_LOG`: Controls Rust logging level (default: "debug")
-- `DATABASE_URL`: PostgreSQL connection string (docker-compose only)
+- `DATABASE_URL`: PostgreSQL connection string. Optional override for `work-pulse-service` (falls back to a
+  hardcoded `localhost` connection string if unset); required by dbmate and set by docker-compose.
 - `VITE_API_BASE_URL`: API endpoint for frontend (docker-compose only)
 
 ## Certificate Handling
@@ -291,9 +292,10 @@ Both sets of repos implement the same traits — swap via `--use-in-memory-repos
 - Swagger UI: `/swagger-ui`; OpenAPI JSON: `/api-docs/openapi.json`.
 - All REST routes are under `/api/v1/`.
 - CORS is fully open (`Any` origin/method/headers).
-- The connection string is **hardcoded** in `src/work-pulse-service/src/main.rs` (`const CONNECTION_STRING`). The
-  service does **not** read `DATABASE_URL` from the environment in non-Docker mode. Only dbmate and docker-compose
-  consume `DATABASE_URL`.
+- The service reads `DATABASE_URL` from the environment if set; otherwise falls back to the hardcoded
+  `CONNECTION_STRING` constant (`postgres://workpulse:supersecret@localhost:5432/workpulse`) in
+  `src/work-pulse-service/src/main.rs`. docker-compose sets `DATABASE_URL` to point at the `work-pulse-db` container
+  hostname — required because `localhost` inside the backend container does not resolve to the separate DB container.
 
 ### Non-Standard API Behavior
 - `PUT /api/v1/activities` — update an activity. The activity ID goes in the **request body**, not the URL path.

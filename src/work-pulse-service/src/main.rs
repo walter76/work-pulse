@@ -77,8 +77,10 @@ async fn main() -> Result<(), Error> {
         );
         api_router.split_for_parts()
     } else {
+        let connection_string =
+            std::env::var("DATABASE_URL").unwrap_or_else(|_| CONNECTION_STRING.to_string());
         let (accounting_categories_repository, activities_list_repository, psql_connection) =
-            create_psql_repositories().await;
+            create_psql_repositories(&connection_string).await;
 
         let mut api_router =
             create_open_api_router(accounting_categories_repository, activities_list_repository);
@@ -116,12 +118,14 @@ async fn main() -> Result<(), Error> {
 /// Returns a tuple containing:
 /// - An `Arc<Mutex<PsqlAccountingCategoriesListRepository>>`
 /// - An `Arc<Mutex<PsqlActivitiesListRepository>>`
-async fn create_psql_repositories() -> (
+async fn create_psql_repositories(
+    connection_string: &str,
+) -> (
     Arc<Mutex<PsqlAccountingCategoriesListRepository>>,
     Arc<Mutex<PsqlActivitiesListRepository>>,
     Arc<PsqlConnection>,
 ) {
-    let psql_connection = PsqlConnection::with_database_url(CONNECTION_STRING).await;
+    let psql_connection = PsqlConnection::with_database_url(connection_string).await;
     let psql_accounting_categories_repository = Arc::new(Mutex::new(
         PsqlAccountingCategoriesListRepository::new(psql_connection.clone()),
     ));
