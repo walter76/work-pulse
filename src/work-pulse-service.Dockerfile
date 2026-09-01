@@ -2,7 +2,7 @@
 ARG INCLUDE_CA=false
 
 # Use the official Rust image as the base image
-FROM rust:1.86 AS builder
+FROM rust:1.98 AS builder
 
 # Pass the ARG value to an environment variable
 ARG INCLUDE_CA
