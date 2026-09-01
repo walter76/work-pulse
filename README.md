@@ -1,15 +1,13 @@
 # work-pulse
-Track my working hours and create reports.
+Track working hours and create different reports.
 
-## Initial Setup
-
+## Database Initial Setup
 This project uses [DbMate](https://github.com/amacneil/dbmate) for database migrations.
 
 Run initial database migrations either with local DbMate installation or using Docker as described below. This will
 create the `accounting_categories` and `activities` tables with some default data.
 
 ### Using Local DbMate Installation:
-
 __Prerequisites for Local DbMate Installation:__
 
 1. Install DbMate:
@@ -42,7 +40,6 @@ __Migration Commands:__
 ```
 
 ### Using Docker:
-
 __Migration Commands:__
 
 ```cmd
@@ -62,19 +59,25 @@ __Migration Commands:__
 .\scripts\db-migrate-docker.cmd reset
 ```
 
-## Building Instructions
+### Reset / Delete the whole database
 
-### Building
+Delete the complete database with:
+```cmd
+.\scripts\clean-data-folder.cmd
+```
 
+Run the initial database migrations as described above (either with a local installation or using Docker).
+
+## Container Building Instructions
 The command to build all containers for the backend and frontend is:
 
 ```cmd
 .\scripts\build.cmd
 ```
 
-### How to Build the Container for the Services
+### How to Build the Container for the work-pulse Backend Service
 
-The command to build the container for the services with Docker is:
+The command to build the container for the work-pulse backend service with Docker is:
 
 ```cmd
 docker build -t work-pulse-service --build-arg INCLUDE_CA=true .
@@ -92,7 +95,6 @@ so easy with Docker.
 ## Developer Instructions
 
 ### Docker Compose Setup
-
 Run the entire stack with:
 ```cmd
 docker compose up -d
@@ -104,7 +106,6 @@ To run migrations in Docker environment:
 ```
 
 ### Without Docker and Docker Compose
-
 Without defining a network communication between the containers is prohibited by the system. Therefore, you can only run
 the system like that for testing purpose:
 
@@ -124,12 +125,3 @@ Run the frontend services:
 cd src\work-pulse-app
 npm run dev
 ```
-
-### Reset / Delete the whole database
-
-Delete the complete database with:
-```cmd
-.\scripts\clean-data-folder.cmd
-```
-
-Run the initial database migrations as described above (either with a local installation or using Docker).
