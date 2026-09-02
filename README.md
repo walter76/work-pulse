@@ -125,3 +125,56 @@ Run the frontend services:
 cd src\work-pulse-app
 npm run dev
 ```
+
+## Production Deployment
+
+To deploy the application stack to a production host without the full source code repository, set up a deployment directory with the required configuration and schema files.
+
+### 1. Required Files and Folder Structure
+
+Copy the following files and directories from the repository into your deployment folder:
+
+```text
+deployment-folder/
+├── docker-compose.yml
+├── db/
+│   ├── schema.sql
+│   └── migrations/
+│       ├── 20241016000001_create_accounting_categories.sql
+│       ├── 20241016000002_create_activities.sql
+│       └── 20241016000003_insert_default_categories.sql
+└── scripts/
+    └── db-migrate-docker.cmd
+```
+
+### 2. Initial Setup and Database Migrations
+
+Before running the main application stack for the first time, you **must** apply the database migrations to create the database schema and seed default accounting categories.
+
+Run the migration container:
+
+**Windows (using script):**
+```cmd
+.\scripts\db-migrate-docker.cmd up
+```
+
+**Linux / macOS (or directly with Docker Compose):**
+```bash
+docker compose --profile migration run --rm work-pulse-migrate up
+```
+
+> **Note on Initial Database Creation:**
+> On a fresh deployment with an empty database directory, PostgreSQL initializes its engine files (`initdb`) and briefly restarts its daemon. If the migration container attempts to connect during this short restart window, it may return a `connection refused` error. If this occurs, simply rerun the migration command above.
+
+### 3. Starting the Application Stack
+
+Once migrations complete successfully, start the full application stack in detached mode:
+
+```bash
+docker compose up -d
+```
+
+The services will be accessible at:
+- **Frontend App**: `http://<host>:3000`
+- **Backend API**: `http://<host>:8080`
+- **OpenAPI / Swagger UI**: `http://<host>:8080/swagger-ui`

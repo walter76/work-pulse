@@ -47,6 +47,7 @@ services:
   work-pulse-migrate:
     image: amacneil/dbmate
     container_name: work-pulse-migrate
+    command: ["wait", "-t", "30", "postgres://workpulse:supersecret@work-pulse-db:5432/workpulse?sslmode=disable"]
     environment:
       - DATABASE_URL=postgres://workpulse:supersecret@work-pulse-db:5432/workpulse?sslmode=disable
     volumes:
