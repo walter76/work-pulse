@@ -35,29 +35,8 @@ The repository contains three main Rust crates and a React app:
 ## Development Commands
 
 ### Backend (Rust)
-Build all workspace crates:
-```cmd
-cd src
-cargo build --workspace
-```
-
-Run tests:
-```cmd
-cd src
-cargo test --workspace
-```
-
-Run service with PostgreSQL (default):
-```cmd
-cd src/work-pulse-service
-cargo run
-```
-
-Run service with in-memory repositories (for development):
-```cmd
-cd src/work-pulse-service
-cargo run -- --use-in-memory-repositories
-```
+See [doc/guidelines/rust-coding-guidelines.md](doc/guidelines/rust-coding-guidelines.md) for commands, architecture
+rules, and testing.
 
 ### Frontend (React)
 Install dependencies:
@@ -146,35 +125,9 @@ Run migrations in docker environment:
 
 ## Architecture Patterns
 
-### Clean Architecture (Rust Backend)
-The `work-pulse-core` crate follows Clean Architecture principles:
-
-1. **Entities** (`entities/`): Pure domain models (Activity, AccountingCategory) with no external dependencies
-2. **Adapters** (`adapters/mod.rs`): Repository traits defining contracts for data access
-3. **Use Cases** (`use_cases/`): Business logic that orchestrates entities and repositories
-4. **Infrastructure** (`infra/`): Concrete implementations of adapters (PostgreSQL, in-memory)
-
-When adding new features:
-- Define domain entities in `entities/`
-- Add repository traits in `adapters/mod.rs`
-- Implement business logic in `use_cases/`
-- Create infrastructure implementations in `infra/`
-- Create infrastructure implementations for repositories in `infra/repositories`
-- Wire up in `work-pulse-service` as Axum routes
-
-### Repository Pattern
-Two repository implementations are available:
-- **PostgreSQL** (`infra/repositories/postgres/`): Production implementation using sqlx
-- **In-Memory** (`infra/repositories/in_memory/`): For testing and development without database
-
-Both implement the same traits from `adapters/mod.rs`, allowing easy swapping via dependency injection in `work-pulse-service/src/main.rs`.
-
-### API Structure
-The service uses utoipa for OpenAPI generation:
-- Each service module defines routes with OpenAPI annotations
-- Tags are defined in `main.rs` prelude
-- Router composition happens in `create_open_api_router()`
-- All routes are nested under `/api/v1/`
+### Backend Architecture (Rust)
+Clean Architecture, repository pattern, and REST API rules: see
+[doc/guidelines/rust-coding-guidelines.md](doc/guidelines/rust-coding-guidelines.md).
 
 ### Frontend Architecture
 React app uses:
@@ -195,7 +148,7 @@ postgres://workpulse:supersecret@localhost:5432/workpulse
 
 ## Testing
 - **React**: Jest with Testing Library, run with `npm test` in `work-pulse-app/`
-- Integration tests can use `--use-in-memory-repositories` flag to avoid database setup
+- **Rust**: see [doc/guidelines/rust-coding-guidelines.md](doc/guidelines/rust-coding-guidelines.md)
 
 ## Environment Variables
 - `RUST_LOG`: Controls Rust logging level (default: "debug")
@@ -221,7 +174,7 @@ work-pulse/           ← git root (NOT the Cargo workspace root)
 │   └── YYYY-MM-dd-*.md         ← documentation of a single coding session
 ├── skills/           ← Agent skills to be used in this repository
 ├── src/              ← Cargo workspace root (run all `cargo` commands here)
-│   ├── Cargo.toml              ← workspace (resolver = "1")
+│   ├── Cargo.toml              ← workspace (resolver = "2")
 │   ├── Cargo.docker.toml       ← Docker-only workspace (excludes CLI crate)
 │   ├── work-pulse-core/        ← domain library (entities, adapters, use cases, infra)
 │   ├── work-pulse-service/     ← Axum REST API binary
@@ -239,12 +192,6 @@ work-pulse/           ← git root (NOT the Cargo workspace root)
 - **Frontend**: `src/work-pulse-app/` is a standalone npm package — no pnpm/yarn workspaces.
 
 ## Dev Commands
-
-### Rust (from `src/`)
-```cmd
-cd src\work-pulse-service && cargo run -- --use-in-memory-repositories  # no DB needed
-cd src\work-pulse-service && cargo run    # requires PostgreSQL on :5432
-```
 
 ### Frontend (from `src/work-pulse-app/`)
 ```cmd
@@ -269,20 +216,9 @@ No `typecheck` script — the project is plain JavaScript, not TypeScript.
 .\scripts\db-migrate.cmd reset       # wipe and re-apply all migrations
 ```
 
-### Clean Architecture in `work-pulse-core`
-```
-entities/      → pure domain models (Activity, AccountingCategory, UUID newtypes)
-adapters/      → async_trait repository traits (the contracts)
-use_cases/     → business logic; orchestrates repos
-infra/         → two implementations per trait: postgres/ and in_memory/
-```
-
-Both sets of repos implement the same traits — swap via `--use-in-memory-repositories` at service startup.
-
 ### Service Wiring
 - Port: always `0.0.0.0:8080`.
 - Swagger UI: `/swagger-ui`; OpenAPI JSON: `/api-docs/openapi.json`.
-- All REST routes are under `/api/v1/`.
 - CORS is fully open (`Any` origin/method/headers).
 - The service reads `DATABASE_URL` from the environment if set; otherwise falls back to the hardcoded
   `CONNECTION_STRING` constant (`postgres://workpulse:supersecret@localhost:5432/workpulse`) in
@@ -299,10 +235,6 @@ Both sets of repos implement the same traits — swap via `--use-in-memory-repos
   the API when using `--use-in-memory-repositories`.
 
 ## Testing
-
-### Rust
-- CI (`cargo test --workspace`) runs without a database — safe to run anywhere.
-- No mock infrastructure is set up; tests use the in-memory repository implementations.
 
 ### Frontend
 - Test runner is **Jest** (not Vitest), even though Vite is the build tool. There is no `vitest.config.*`.
@@ -324,7 +256,6 @@ docker compose up -d                       # run the full stack
 ```
 
 - `src/certificates/` **must exist** (even if empty) — the service Dockerfile has an unconditional `COPY` of it.
-- Docker build uses `Cargo.docker.toml` (renamed to `Cargo.toml` inside the image) to exclude the CLI crate.
 - `./data/` is the PostgreSQL data volume on the host; delete it with `.\scripts\clean-data-folder.cmd` to wipe the DB.
 
 ## CI
