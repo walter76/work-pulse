@@ -17,6 +17,17 @@ Standard behaviors that Coding Agents should always follow.
 - **Primary Stack:** Rust, React, MUI Joy, JavaScript
 - **Secondary Programming Languages:** .NET C#, C/C++
 
+## Project Documentation
+
+All documentation can be found in the repository root under the folder `doc`. Whenever you don't know anything, try to
+look it up in this folder. If any information is missing, stop what you are doing and inform the user.
+
+<git root>/    ← git root (NOT the Cargo workspace root)
+├── doc/              ← documentation
+├── doc/architecture/ ← architecture documentation
+├── doc/features/     ← feature documentation
+└── doc/guidelines/   ← guidelines (developers)
+
 ## Response Style
 
 ### Conciseness
@@ -124,11 +135,6 @@ The commit contains the following structural elements, to communicate intent:
 - **Prefer JavaScript** - prefer JavaScript over TypeScript, e.g. for React
 - Code style follows Prettier config (`.prettierrc`): single quotes, no semicolons, trailing commas,
   100-char line width, 2-space indent.
-
-### Rust
-
-- Always use idiomatic rust
-- Unit tests co-located with source in `#[cfg(test)]`
 
 ### Code Comments
 

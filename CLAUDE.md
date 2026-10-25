@@ -194,7 +194,6 @@ postgres://workpulse:supersecret@localhost:5432/workpulse
 ```
 
 ## Testing
-- **Rust**: Unit tests live alongside source files, run with `cargo test --workspace`
 - **React**: Jest with Testing Library, run with `npm test` in `work-pulse-app/`
 - Integration tests can use `--use-in-memory-repositories` flag to avoid database setup
 
@@ -237,16 +236,12 @@ work-pulse/           ← git root (NOT the Cargo workspace root)
 ```
 
 ## Critical: Workspace Roots
-- **Rust**: workspace root is `src/`, not the repo root. Always run `cargo` from `src/`.
 - **Frontend**: `src/work-pulse-app/` is a standalone npm package — no pnpm/yarn workspaces.
 
 ## Dev Commands
 
 ### Rust (from `src/`)
 ```cmd
-cargo build --workspace
-cargo test --workspace
-cargo test --workspace <test_name>        # run a single test by name substring
 cd src\work-pulse-service && cargo run -- --use-in-memory-repositories  # no DB needed
 cd src\work-pulse-service && cargo run    # requires PostgreSQL on :5432
 ```
@@ -273,9 +268,6 @@ No `typecheck` script — the project is plain JavaScript, not TypeScript.
 .\scripts\db-migrate.cmd new <name>  # create new migration file
 .\scripts\db-migrate.cmd reset       # wipe and re-apply all migrations
 ```
-
-## Architecture Notes
-Additional architecture documentation can be found in `doc/architecture`.
 
 ### Clean Architecture in `work-pulse-core`
 ```
@@ -309,7 +301,6 @@ Both sets of repos implement the same traits — swap via `--use-in-memory-repos
 ## Testing
 
 ### Rust
-- All tests are unit tests co-located with source in `#[cfg(test)]`. No integration test files.
 - CI (`cargo test --workspace`) runs without a database — safe to run anywhere.
 - No mock infrastructure is set up; tests use the in-memory repository implementations.
 
