@@ -15,22 +15,25 @@ For test commands see [Running tests](#running-tests-from-src).
 
 ## Tooling
 - All crates use **edition 2024**.
-- **MUST** run `cargo fmt --all` before committing. Default rustfmt settings (no `rustfmt.toml`).
 - **MUST** keep `cargo clippy --workspace --all-targets -- -D warnings` clean.
 - **MUST** keep `cargo build --workspace` and `cargo test --workspace` green (CI runs both).
+- Use default rustfmt settings unless a repository rustfmt configuration is added.
 
 ## Style
-- **SHOULD** prefer small functions, early returns, and iterator chains over manual index loops.
-- **SHOULD** prefer borrowing (`&str`, `&[T]`) in parameters; take ownership only when storing the value.
-- **SHOULD** derive `Debug`, `Clone`, `PartialEq` on entities and DTOs where it makes sense.
-- **SHOULD** document public items in `work-pulse-core` with `///` doc comments.
-- Comments follow the global rule: no comments that restate the code.
+- **SHOULD** prefer small functions, early returns, and iterator chains over manual index loops when they improve clarity.
+- **SHOULD** prefer borrowing (`&str`, `&[T]`) in parameters; take ownership when storing or transforming values.
+- **SHOULD** derive `Debug`, `Clone`, and `PartialEq` on data types where appropriate; derive serde traits for values
+  that cross the frontend/backend boundary or are read from or written to JSON.
+- **SHOULD** document public Rust items when their purpose or constraints are not clear from their signatures.
+- Comments must not merely restate what the code does.
 
 ## Naming
+- Modules and files use `snake_case`; types and traits use `UpperCamelCase`.
+- Use descriptive names for modules.
+- Use newtypes for identifiers when they have domain meaning or need type-level distinction; do not pass unrelated IDs as interchangeable primitive values.
 - Modules/files: `snake_case`. Repositories and use cases: `<entity>_list.rs` (e.g. `activities_list.rs`).
 - Service modules: `<feature>_service.rs` in `work-pulse-service/src/services/`.
-- IDs are newtypes over `Uuid` (`ActivityId(pub Uuid)`, `AccountingCategoryId(pub Uuid)`). **MUST** use the
-  newtype in signatures, never a bare `Uuid`.
+- IDs are newtypes over `Uuid` (`ActivityId(pub Uuid)`, `AccountingCategoryId(pub Uuid)`). **MUST** use the newtype in signatures, never a bare `Uuid`.
 
 ## Architecture (`work-pulse-core`)
 Dependency direction is strictly inward:
@@ -56,6 +59,7 @@ entities  ←  adapters  ←  use_cases  ←  infra / work-pulse-service
 5. Axum routes → `work-pulse-service/src/services/`
 
 ## Error Handling
+- **MUST** use `thiserror` enums for fallible backend operations. Keep errors typed within backend modules, with variants that describe meaningful I/O, JSON parsing, mapping, or bundle-scan failures.
 - **MUST**: library code (`work-pulse-core`) uses `thiserror` enums, one per adapter/use case
   (e.g. `ActivitiesListRepositoryError`).
 - **SHOULD**: binaries (`work-pulse-cli`) use `anyhow` with `.context(...)` for readable failures.
