@@ -27,8 +27,9 @@ The frontend calls the Rust API at `http://localhost:8080` by default. Set `VITE
 
 ## Style
 - Single quotes, no semicolons, trailing commas in multi-line literals, 2-space indent, 100-character lines.
-- Function components declared with `function Name(props) {}` and exported with `export default Name` at the end of
-  the file. One component per file, file name equals component name.
+- Components are declared as `const Name = (...) => ...` and exported with `export default Name` at the end of the
+  file. Keep one component per file. Component names use UpperCamelCase; component filenames use lower camel case
+  (for example, `ActivitiesTable` in `activitiesTable.jsx`).
 - **MUST** add a JSDoc header to each component describing its purpose, input props with `@param` tags, and rendered
   return value with an `@returns` tag.
 - Destructure props in the parameter list and give optional arrays a default (`availableBundles = []`).
@@ -68,9 +69,13 @@ index.html -> main.jsx
   when their UI needs navigation.
 - Keep state local to the page or hook that owns the workflow, and pass it through props. Do not add a global state
   library or context unless a concrete cross-route sharing need justifies it.
-- Follow the existing separate `loading` and `error` state pattern in the data hooks. Guard results from overlapping
-  requests when an older response could overwrite newer state.
-- Show useful errors in the UI and retain diagnostic details in logs or operation results where appropriate.
+- Keep API data separate from request flags. Use a boolean `loading` state where the UI needs a progress indicator
+  and a string `error` state (`''` when clear); do not introduce a combined `{ status, data, error }` state shape.
+  Clear prior errors before a request, and reset `loading` in `finally` when the operation sets it.
+- Catch API errors, log the underlying exception with operation context, and put a user-facing message in `error`;
+  do not display a raw Axios error object. Return an explicit success/failure result when the caller needs to react
+  to the outcome. For overlapping requests, prevent an older response from overwriting newer data, using cancellation
+  or a request token as appropriate.
 
 ### Adding a feature
 1. Agree on the REST endpoint and request/response payload with the backend service under
