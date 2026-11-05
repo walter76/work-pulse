@@ -39,35 +39,44 @@ See `README.md` for prerequisites and packaging.
 - Keep the JSON contract names from the backend unchanged in frontend data (`isExternalDelivery`, `repository_bundles`,
   `mapping_error`). Do not rename fields when passing backend payloads through the UI.
 
-## Architecture (`src`)
+## Architecture (`src/work-pulse-app/src`)
 ```text
-main.jsx -> App.jsx -> components/*.jsx
-                 \-> @tauri-apps/api/core invoke -> Rust commands
+index.html -> main.jsx
+               -> React providers + BrowserRouter
+               -> app/App.jsx (shell + routes)
+                    -> pages/*.jsx (route workflows)
+                         -> hooks/*.jsx (shared activity/category API state)
+                         -> config/api.js + Axios -> Rust REST API (/api/v1)
+                    -> components/*.jsx (shared UI)
+                    -> lib/*.js (utilities)
 ```
 
-- `main.jsx` mounts `App` inside `React.StrictMode` and the MUI Joy `CssVarsProvider`. Keep global providers here.
-- `App.jsx` is the only module that imports `invoke`. It owns all application state (mapping, scan, repository,
-  editing device), performs backend calls, and passes data and callbacks down.
-- `components/` contains presentational components. They receive data and callbacks through props and hold only local
-  UI state (for example the edit draft in `DeviceEditForm`).
-- **MUST NOT** call `invoke` from a component in `components/`. Lift the call into `App.jsx` and pass a callback.
-- **MUST NOT** introduce a global state library or context for the current scope; prop passing from `App.jsx` is
-  sufficient.
-- Async state follows the shape `{ status: 'idle' | 'loading' | 'loaded' | 'error', data, error }`. Reuse this shape
-  for new backend-backed state instead of separate boolean flags.
-- **MUST** guard async results that can be superseded with the request-ID pattern in `App.jsx`
-  (`mappingRequestIdRef`): capture the ID before awaiting, discard the result if the ID has moved on.
-- Backend errors arrive as strings. Store them with `String(error)` and display them; do not swallow them.
-- Browser-only mode (`npm run dev`) has no `invoke`. Do not add code paths that depend on the browser mode working;
-  it exists for layout work only.
+- `main.jsx` mounts the app inside `React.StrictMode`, MUI Joy's `CssVarsProvider` and `CssBaseline`, and
+  `BrowserRouter`. Keep global providers here.
+- `app/App.jsx` owns the application shell, navigation, and route table. Route pages own their workflow and
+  page-specific state.
+- Use `hooks/` for reusable API-backed state and operations, as with `useActivities` and `useCategories`. Keep
+  one-off page workflows in their page unless they become reusable.
+- Configure the service base URL through `config/api.js` (`VITE_API_BASE_URL`, defaulting to
+  `http://localhost:8080`) and use Axios for HTTP requests to the Rust service. The browser app requires that service
+  to be running; Vite serves only the frontend.
+- Keep API calls out of shared components. Pass data and event handlers through props; components may use routing
+  when their UI needs navigation.
+- Keep state local to the page or hook that owns the workflow, and pass it through props. Do not add a global state
+  library or context unless a concrete cross-route sharing need justifies it.
+- Follow the existing separate `loading` and `error` state pattern in the data hooks. Guard results from overlapping
+  requests when an older response could overwrite newer state.
+- Show useful errors in the UI and retain diagnostic details in logs or operation results where appropriate.
 
 ### Adding a feature
-1. Agree the command name and payload with the backend (`src-tauri/src/commands.rs`, `models.rs`).
-2. Add state and the `invoke` call to `App.jsx`, following the async-state shape and request-ID guard where relevant.
-3. Add or extend a component under `components/`; keep it free of `invoke` and backend knowledge beyond the payload
-   shape.
-4. Add or extend tests (see Testing). Mock `invoke` for the new command.
-5. Update `docs/architecture/architecture.md` if state ownership or data flow changes.
+1. Agree on the REST endpoint and request/response payload with the backend service under
+   `src/work-pulse-service/` and the relevant core use case.
+2. Put reusable activity/category API operations in the corresponding hook; keep page-specific calls and state in
+   the owning page.
+3. Add or extend a component under `components/` and pass data and callbacks through props; keep HTTP calls out of
+   shared components.
+4. Add or extend frontend tests using the existing Jest setup.
+5. Update `doc/architecture/` documentation if application boundaries or data flow change.
 
 ## UI (MUI Joy)
 - Use `@mui/joy` components; do not add `@mui/material` or another component library.
