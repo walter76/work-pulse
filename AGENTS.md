@@ -10,13 +10,6 @@ Standard behaviors that Coding Agents should always follow.
 - **Escalate after 2 failures** - stop, analyze, try a different approach
 - **Minimize context** - read outlines first, then targeted sections
 
-## About the User
-
-- **Name:** Walter Stocker
-- **Role:** Primary maintainer. Day job at Siemens Healthineers (Senior Software Architect).
-- **Primary Stack:** Rust, React, MUI Joy, JavaScript
-- **Secondary Programming Languages:** .NET C#, C/C++
-
 ## Project Documentation
 
 All documentation can be found in the repository root under the folder `doc`. Whenever you don't know anything, try to
@@ -84,6 +77,9 @@ Before implementing any non-trivial task:
 
 **Then WAIT** — do not proceed until user explicitly approves.
 
+Approval of a plan covers all its listed steps. Do not re-ask per step; only stop again if a step fails, a risk
+materializes, or new information invalidates the plan.
+
 **Apply when:** 3+ step tasks, multi-file changes, refactoring, new features, non-obvious bugs.
 **Skip when:** single-line obvious fixes, user says "just do it", follow-up on approved plan.
 
@@ -101,7 +97,8 @@ When completing code changes:
 Only commit when user explicitly says "commit this" or includes a commit step in instructions.
 
 For each commit:
-- only use one-line commit messages
+- only use one-line commit messages — no body, no footers
+- signal breaking changes with `!` after the type/scope instead of a `BREAKING CHANGE:` footer
 - do not include that it has been created by a GenAI or similar phrases
 
 ### Use Conventional Commits
@@ -136,6 +133,10 @@ Frontend JavaScript and React conventions are maintained in
 [doc/guidelines/js-react-coding-guidelines.md](doc/guidelines/js-react-coding-guidelines.md). Follow that guide for
 code under `src/work-pulse-app/`.
 
+### Rust
+
+See [Rust coding guidelines](doc/guidelines/rust-coding-guidelines.md).
+
 ### Code Comments
 
 Minimize comments. Self-documenting code preferred.
@@ -151,7 +152,8 @@ type overrides, TODO with context).
 
 ### Code Search
 
-Prefer grepika MCP tools over built-in search tools:
+Prefer grepika MCP tools over built-in search tools. If grepika is not available in the current toolset, use the
+built-in search tools (grep, glob, semantic search) instead — do not attempt to install or configure it.
 
 | Task | Use This Tool | Instead Of |
 |------|---------------|------------|
@@ -205,7 +207,7 @@ When you learn something that updates/contradicts an earlier finding, explicitly
 - Use the format from the template defined in `tasks/template.md`
 - Task files live in status-based subfolders:
   - `tasks/backlog/` — tasks not yet started
-  - `tasks/in-progress/` — tasks currently being worked on
+  - `tasks/in-progress/` — tasks currently being worked on (created on demand; may not exist when empty)
   - `tasks/done/` — completed tasks
 - Update `tasks/BOARD.md`:
   - New tasks should be added to the **Backlog** section with link to `backlog/<task-id>.md`
@@ -224,7 +226,13 @@ When you learn something that updates/contradicts an earlier finding, explicitly
 - Update the session log's `## Log` section as work progresses — record what was done, decisions made, and issues encountered.
 - When marking `status: completed`, fill in the `## Outcome` section and remove the `## Current state` section.
 - When `status: blocked`, fill in `## Current state` with open questions and next steps.
+- Active logs (`in-progress`, `blocked`) stay in `sessions/`. When a log reaches `status: completed`, move it to
+  `sessions/done/` and update its row in `sessions/INDEX.md`: link to `done/<file>.md`, set status to `completed`, and
+  fill in the summary. Moving is a user decision at the end of a unit of work, not something the script does.
+- `sessions/INDEX.md` must mirror the frontmatter `status` of every log. When changing a log's status, update its INDEX
+  row in the same change.
 - See `sessions/template.md` for the log structure.
+- **Don't initialize a new session for simple tasks, e.g. creating a new task, one line fixes etc.**
 
 ## Subtask Workflow
 
@@ -249,4 +257,4 @@ Before claiming "complete":
 ### Learnings Flow
 
 - Apply learnings immediately if they affect current work
-- Pass relevant learnings to subsequent subtasks (don't inject full QUIRKS.md — too large)
+- Pass relevant learnings to subsequent subtasks (keep it brief — only what the subtask needs)
