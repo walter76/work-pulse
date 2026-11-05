@@ -4,22 +4,26 @@ These guidelines apply to the frontend in `src/`. **MUST** indicates a hard rule
 deviated from when there is a clear reason.
 
 ## Commands
-Run npm commands from the repository root.
+Run npm commands from `src/work-pulse-app/`, the standalone frontend package.
 
 ```text
-npm run dev          # Vite dev server, http://localhost:1420, no Rust bridge
-npm run tauri:dev    # desktop application with hot reload
-npm test             # vitest run
-npm run build        # production frontend build
+npm install
+npm run dev           # Vite dev server, http://localhost:5173
+npm test              # Jest tests
+npm run test:watch    # Jest watch mode
+npm run test:coverage # Jest coverage
+npm run lint          # ESLint
+npm run build         # production frontend build
 ```
 
-See `README.md` for prerequisites and packaging.
+The frontend calls the Rust API at `http://localhost:8080` by default. Set `VITE_API_BASE_URL` when it runs elsewhere.
 
 ## Tooling
-- **JavaScript, not TypeScript.** Components and tests use `.jsx`; plain modules use `.js`.
+- **JavaScript, not TypeScript.** Components use `.jsx`; plain modules use `.js`.
 - ES modules only (`"type": "module"` in `package.json`).
-- Vite 7 with `@vitejs/plugin-react`; Vitest 5 with `jsdom` and `@testing-library/react`.
-- There is no linter or formatter configuration yet. Match the existing style by hand (see Style).
+- React 19, Vite 6 with `@vitejs/plugin-react`, and Jest 30 with `babel-jest` and `jsdom`.
+- Use `@testing-library/react` for component tests. ESLint 9 is configured in `eslint.config.js`; formatting conventions
+  are in `.prettierrc`.
 
 ## Style
 - Single quotes, no semicolons, trailing commas in multi-line literals, 2-space indent, 100-character lines.
@@ -85,28 +89,16 @@ index.html -> main.jsx
 - Dialogs use `Modal` + `ModalDialog` + `ModalClose`, controlled by the parent via `open` and `onClose`.
 
 ## Testing
-- Test files are co-located with the module under test and named `<Module>.test.jsx`.
-- Vitest with `environment: 'jsdom'`; `src/test/setup.js` registers `@testing-library/jest-dom/vitest` matchers.
-- **MUST** mock the Tauri bridge in every test that renders `App`:
-
-  ```js
-  const mockInvoke = vi.fn()
-  vi.mock('@tauri-apps/api/core', () => ({ invoke: (...args) => mockInvoke(...args) }))
-  beforeEach(() => mockInvoke.mockReset())
-  afterEach(() => cleanup())
-  ```
-
-  Dispatch on the command name inside `mockInvoke.mockImplementation((command, args) => …)` and return
-  `Promise.resolve(payload)` for known commands. Fail loudly on unknown commands rather than silently resolving, so a
-  renamed command cannot pass by accident.
-- Use payloads that match the Rust models exactly (`RepositoryOpen`, `BundleScan`, `MedicalDevicesMappingFile`).
-- Query with `screen.getByRole` / `getByLabelText`; avoid test IDs and CSS selectors.
-- Use `waitFor` for state that follows an awaited `invoke`; use deferred promises (`new Promise((resolve) => …)`) to
-  test ordering and stale-request behavior.
-- **SHOULD** assert what the backend received (`expect(mockInvoke).toHaveBeenCalledWith('save_mapping', { mapping })`)
-  in addition to what the UI shows.
-- Presentational components may be tested directly without mocking `invoke`.
-- Tests must not depend on the desktop runtime, the filesystem, or `data/md_mapping.json`.
+- Jest configuration is in `jest.config.js`: tests run in `jsdom`, `src/setupTests.js` registers
+  `@testing-library/jest-dom`, and Babel transforms JavaScript/JSX. Test files may use `*.test.js`, `*.test.jsx`,
+  `*.spec.js`, `*.spec.jsx`, or live under `__tests__/` within `src/`.
+- Use `screen.getByRole` / `getByLabelText` for accessible queries; avoid test IDs and CSS selectors where possible.
+- Use `waitFor` for UI state that follows an asynchronous request. Use controlled promises when testing request ordering
+  or responses that may arrive out of order.
+- For HTTP-backed workflows, mock the Axios/API boundary as needed; unit and component tests should not require a
+  running service or database. Use test payloads matching the REST API's JSON contract.
+- Presentational components can be tested directly without network mocks. The existing test suite currently covers
+  date utilities in `src/lib/dateUtils.test.js`.
 
 ## Dependencies
 - Frontend dependencies belong in `package.json`; keep Rust-only concerns out of it.
