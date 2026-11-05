@@ -21,7 +21,6 @@ The repository contains three main Rust crates and a React app:
   - `infra/`: Infrastructure implementations (in-memory and PostgreSQL repositories, CSV importer)
 
 - `src/work-pulse-service/`: REST API service using Axum
-  - Serves OpenAPI/Swagger UI at `/swagger-ui`
   - Routes under `/api/v1/` for activities, categories, and reports
   - Supports both PostgreSQL and in-memory repositories via `--use-in-memory-repositories` flag
 
@@ -39,89 +38,8 @@ See [doc/guidelines/rust-coding-guidelines.md](doc/guidelines/rust-coding-guidel
 rules, and testing.
 
 ### Frontend (React)
-Install dependencies:
-```cmd
-cd src/work-pulse-app
-npm install
-```
-
-Development server:
-```cmd
-cd src/work-pulse-app
-npm run dev
-```
-
-Build for production:
-```cmd
-cd src/work-pulse-app
-npm run build
-```
-
-Lint:
-```cmd
-cd src/work-pulse-app
-npm run lint
-```
-
-Run tests:
-```cmd
-cd src/work-pulse-app
-npm test
-```
-
-Run tests in watch mode:
-```cmd
-cd src/work-pulse-app
-npm run test:watch
-```
-
-Test coverage:
-```cmd
-cd src/work-pulse-app
-npm run test:coverage
-```
-
-### Database
-Start PostgreSQL database:
-```cmd
-.\scripts\work-pulse-db.cmd
-```
-
-Run migrations (local DbMate):
-```cmd
-.\scripts\db-migrate.cmd up
-```
-
-Run migrations (Docker):
-```cmd
-.\scripts\db-migrate-docker.cmd up
-```
-
-Create new migration:
-```cmd
-.\db-migrate.cmd new migration_name
-```
-
-Check migration status:
-```cmd
-.\db-migrate.cmd status
-```
-
-### Docker
-Build service container (with custom CA certificates support):
-```cmd
-docker build -t work-pulse-service --build-arg INCLUDE_CA=true -f src/work-pulse-service.Dockerfile .
-```
-
-Run full stack with docker-compose:
-```cmd
-docker compose up -d
-```
-
-Run migrations in docker environment:
-```cmd
-.\db-migrate-docker.cmd up
-```
+Install dependencies and run frontend checks from `src/work-pulse-app/`:
+`npm install`, `npm run lint`, `npm test`, `npm run test:watch`, and `npm run test:coverage`.
 
 ## Architecture Patterns
 
@@ -137,15 +55,6 @@ React app uses:
 - **API config**: Centralized in `src/config/api.js`
 
 ## Database Schema
-Main tables (see `db/migrations/`):
-- `accounting_categories`: Categories for time tracking (billable/non-billable)
-- `activities`: Time log entries with date, duration, category, description
-
-Connection string format:
-```
-postgres://workpulse:supersecret@localhost:5432/workpulse
-```
-
 ## Testing
 - **React**: Jest with Testing Library, run with `npm test` in `work-pulse-app/`
 - **Rust**: see [doc/guidelines/rust-coding-guidelines.md](doc/guidelines/rust-coding-guidelines.md)
@@ -157,9 +66,6 @@ postgres://workpulse:supersecret@localhost:5432/workpulse
 - `VITE_API_BASE_URL`: API endpoint for frontend (docker-compose only)
 
 ## Certificate Handling
-The `INCLUDE_CA=true` build argument in Docker builds copies certificates from `src/certificates/` into the container.
-This supports corporate networks with custom root CAs. The `certificates/` directory must exist even if empty.
-
 ## Repository Layout
 ```
 work-pulse/           ← git root (NOT the Cargo workspace root)
@@ -191,34 +97,10 @@ work-pulse/           ← git root (NOT the Cargo workspace root)
 ## Critical: Workspace Roots
 - **Frontend**: `src/work-pulse-app/` is a standalone npm package — no pnpm/yarn workspaces.
 
-## Dev Commands
-
-### Frontend (from `src/work-pulse-app/`)
-```cmd
-npm install
-npm run dev          # Vite dev server
-npm test             # Jest (single pass)
-npm run test:watch
-npm run test:coverage
-npm run lint         # ESLint 9 flat config
-npm run build        # production Vite build
-```
-
-No `typecheck` script — the project is plain JavaScript, not TypeScript.
-
-### Database (from repo root)
-```cmd
-.\scripts\work-pulse-db.cmd          # start postgres:16 container on :5432
-.\scripts\db-migrate.cmd up          # apply pending migrations (local dbmate)
-.\scripts\db-migrate.cmd down        # rollback one migration
-.\scripts\db-migrate.cmd status
-.\scripts\db-migrate.cmd new <name>  # create new migration file
-.\scripts\db-migrate.cmd reset       # wipe and re-apply all migrations
-```
+The frontend is plain JavaScript and has no `typecheck` script.
 
 ### Service Wiring
-- Port: always `0.0.0.0:8080`.
-- Swagger UI: `/swagger-ui`; OpenAPI JSON: `/api-docs/openapi.json`.
+- The service binds to `0.0.0.0:8080`.
 - CORS is fully open (`Any` origin/method/headers).
 - The service reads `DATABASE_URL` from the environment if set; otherwise falls back to the hardcoded
   `CONNECTION_STRING` constant (`postgres://workpulse:supersecret@localhost:5432/workpulse`) in
@@ -247,16 +129,6 @@ No `typecheck` script — the project is plain JavaScript, not TypeScript.
 
 ## Code Style (Frontend)
 Prettier config (`.prettierrc`): single quotes, no semicolons, trailing commas, 100-char line width, 2-space indent.
-
-## Docker
-```cmd
-.\scripts\build.cmd                        # build container images
-docker compose up -d                       # run the full stack
-.\scripts\db-migrate-docker.cmd up         # run migrations against the Docker stack
-```
-
-- `src/certificates/` **must exist** (even if empty) — the service Dockerfile has an unconditional `COPY` of it.
-- `./data/` is the PostgreSQL data volume on the host; delete it with `.\scripts\clean-data-folder.cmd` to wipe the DB.
 
 ## CI
 - Workflow: `.github/workflows/ci.yml`. Triggers: push/PR to `main` only.
