@@ -30,6 +30,7 @@ The frontend calls the Rust API at `http://localhost:8080` by default. Set `VITE
 - Components are declared as `const Name = (...) => ...` and exported with `export default Name` at the end of the
   file. Keep one component per file. Component names use UpperCamelCase; component filenames use lower camel case
   (for example, `ActivitiesTable` in `activitiesTable.jsx`).
+- **SHOULD** document public JavaScript APIs with JSDoc.
 - **MUST** add a JSDoc header to each component describing its purpose, input props with `@param` tags, and rendered
   return value with an `@returns` tag.
 - Destructure props in the parameter list and give optional arrays a default (`availableBundles = []`).

@@ -132,16 +132,16 @@ The commit contains the following structural elements, to communicate intent:
 
 ### JavaScript / TypeScript
 
-- **Prefer JavaScript** - prefer JavaScript over TypeScript, e.g. for React
-- Code style follows Prettier config (`.prettierrc`): single quotes, no semicolons, trailing commas,
-  100-char line width, 2-space indent.
+Frontend JavaScript and React conventions are maintained in
+[doc/guidelines/js-react-coding-guidelines.md](doc/guidelines/js-react-coding-guidelines.md). Follow that guide for
+code under `src/work-pulse-app/`.
 
 ### Code Comments
 
 Minimize comments. Self-documenting code preferred.
 
 **OK:** Complex algorithm explanations, non-obvious business logic rationale, required annotations (eslint directives,
-type overrides, TODO with context), JSDoc for public APIs in JavaScript.
+type overrides, TODO with context).
 
 **NOT OK:** Comments that restate what code does (`// Import statements`, `// Handle error`, `// Return result`).
 
