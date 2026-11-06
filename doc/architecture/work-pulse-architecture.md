@@ -1,7 +1,7 @@
 # Work Pulse — Comprehensive Architecture Review
 
 **Repository:** `D:\WS\src\work-pulse`
-**Review Date:** 2026-06-22
+**Review Date:** 2026-11-06
 
 ---
 
@@ -22,24 +22,25 @@
 9. [Configuration](#9-configuration)
 10. [Build & Deploy](#10-build--deploy)
 11. [External Integrations](#11-external-integrations)
-12. [Observations & Recommendations](#12-observations--recommendations)
+12. [Current Constraints](#12-current-constraints)
 
 ---
 
 ## 1. Executive Summary
 
-Work Pulse is a personal work-hours tracking application that allows a user to record daily activities against accounting categories and generate daily and weekly time reports. The system is built as a three-tier web application plus a supplementary CLI tool.
+Work Pulse is a personal work-hours tracking application that records activities against accounting categories and generates daily and weekly reports. It consists of a React SPA, an Axum API, PostgreSQL, and an HTTP-based CLI.
 
-The architecture is deliberately modest in scope but technically careful: the Rust backend enforces Clean Architecture layering with a strict dependency direction from infrastructure to domain. The frontend is a lightweight React SPA using MUI Joy components. PostgreSQL stores data in a two-table schema. All components can run locally in minutes or be deployed together with Docker Compose.
+The Rust core follows Clean Architecture boundaries and provides both PostgreSQL and in-memory repositories. Docker Compose can run the web stack and database together.
 
 **Key characteristics:**
 - **Clean Architecture** in the Rust core library — entities → adapters (traits) → use cases → infrastructure
 - **Dual repository backend** — every repository trait has both a PostgreSQL and an in-memory implementation; the service selects at startup via a CLI flag
 - **OpenAPI-first service** — utoipa generates and serves Swagger UI from inline annotations
 - **CORS fully open** — the service allows any origin, method, and header
-- **Hardcoded connection string** — the service binary does not read `DATABASE_URL` from the environment; Docker Compose injects it but the service code never reads it (see Observations)
+- **Database configuration** — the service reads `DATABASE_URL` and falls back to a local connection string when it is unset
+- **Health endpoint** — `/api/v1/health` reports service and database status; in-memory mode reports the database as disabled
 - **No authentication** — the API has no auth layer
-- **Minimal test surface** — Rust unit tests are thorough for the domain; the frontend has one test file covering `dateUtils`
+- **Test coverage** — Rust unit tests, a Cucumber service test target, and one frontend test file for `dateUtils`; CI runs Rust build/tests only
 
 ---
 
@@ -179,14 +180,19 @@ work-pulse/                       ← git root
     │
     ├── work-pulse-service/       ← Axum REST API binary
     │   ├── Cargo.toml
-    │   └── src/
-    │       ├── main.rs           ← Startup, routing, dependency injection
-    │       └── services/
-    │           ├── mod.rs
-    │           ├── activities_list_service.rs   ← /api/v1/activities
-    │           ├── accounting_categories_service.rs ← /api/v1/accounting-categories
-    │           ├── daily_report_service.rs       ← /api/v1/daily-report
-    │           └── weekly_report_service.rs      ← /api/v1/weekly-report
+    │   ├── src/
+    │   │   ├── main.rs           ← Startup, routing, dependency injection
+    │   │   ├── lib.rs            ← Module exports and API tag constants
+    │   │   └── services/
+    │   │       ├── mod.rs
+    │   │       ├── activities_list_service.rs   ← /api/v1/activities
+    │   │       ├── accounting_categories_service.rs ← /api/v1/accounting-categories
+    │   │       ├── daily_report_service.rs      ← /api/v1/daily-report
+    │   │       ├── weekly_report_service.rs     ← /api/v1/weekly-report
+    │   │       └── health_check_service.rs      ← /api/v1/health
+    │   └── tests/
+    │       ├── services.rs                       ← Cucumber test runner
+    │       └── features/health_check_service.feature
     │
     ├── work-pulse-cli/           ← CLI binary (HTTP client only)
     │   ├── Cargo.toml
@@ -256,40 +262,7 @@ infra/           → concrete implementations of adapter traits
 
 #### 4.1.1 Entities
 
-**`Activity`** (`entities/activity.rs`)
-
-The central domain object. Fields:
-
-| Field | Type | Notes |
-|---|---|---|
-| `id` | `ActivityId(Uuid)` | newtype wrapper; generated with `Uuid::new_v4()` |
-| `date` | `NaiveDate` | calendar date of work |
-| `start_time` | `NaiveTime` | wall-clock start |
-| `end_time` | `Option<NaiveTime>` | `None` for in-progress; duration is zero when absent |
-| `accounting_category_id` | `AccountingCategoryId(Uuid)` | FK to category |
-| `task` | `String` | free-form description |
-| `comment` | `Option<String>` | present in DB and entity; not surfaced in daily/weekly report DTOs |
-
-`duration()` computes `end_time - start_time`; returns `Duration::zero()` if `end_time` is `None`.
-
-```rust
-pub fn duration(&self) -> Duration {
-    if let Some(end_time) = self.end_time() {
-        *end_time - *self.start_time()
-    } else {
-        Duration::zero()
-    }
-}
-```
-
-**`AccountingCategory`** (`entities/accounting.rs`)
-
-| Field | Type |
-|---|---|
-| `id` | `AccountingCategoryId(Uuid)` |
-| `name` | `String` |
-
-Both entity IDs are UUID newtypes with `parse_str` factory methods that return typed errors (`ActivityIdError`, `AccountingCategoryIdError`).
+The core centers on `Activity` and `AccountingCategory`, with UUID newtype identifiers. Their attributes, constructors, and domain behavior are documented in the [domain model](../features/work-pulse-domain-model.md).
 
 #### 4.1.2 Adapters (Trait Contracts)
 
@@ -325,7 +298,7 @@ Error variants use `thiserror`:
 Generic struct wrapping `Arc<Mutex<R>>`. Methods:
 - `record(date, start_time, end_time, category_id, task, comment)` — creates and persists
 - `activities()` — returns all
-- `get_by_id(id)` — linear scan via `get_all()` (see Observations)
+- `get_by_id(id)` — linear scan via `get_all()` (see Current Constraints)
 - `update(activity)`, `delete(id)`
 - `delete_by_date_range(start, end)`
 - `import<I, D>(importer, reader, year, replace_mode)` — orchestrates parse + optional pre-delete + batch insert, with structured tracing logs
@@ -339,12 +312,12 @@ pub enum ReplaceMode { None, All, ImportDateRange }
 
 **`DailyReport`** — value object built by fetching `repository.get_by_date(date)` and summing durations. Exposes `activities()` and `total_duration()`.
 
-**`WeeklyReport`** — fetches a 7-day window (`week_start` to `week_start + 7 days`). Computes:
+**`WeeklyReport`** — requests activities from `week_start` through `week_start + 7 days` (inclusive in the repositories). It computes:
 - `total_duration`
 - `duration_per_category`: `Vec<(AccountingCategoryId, Duration)>` — aggregated totals
 - `daily_durations_per_category`: `Vec<(NaiveDate, Vec<(AccountingCategoryId, Duration)>)>` — per-day breakdowns
 
-**Note:** `WeeklyReport` uses a `HashMap` internally, so ordering in `duration_per_category` is non-deterministic. The service serializes to a JSON `HashMap<String, String>` so the client receives an unordered object.
+**Note:** Category aggregation uses a `HashMap`, so category ordering is non-deterministic. The inclusive range also admits the following Monday into total/category aggregates, while daily rows cover Monday through Sunday; see Current Constraints.
 
 #### 4.1.4 Infrastructure — Postgres Repositories
 
@@ -413,19 +386,18 @@ The importer maintains an in-memory cache of categories fetched at the start of 
 **Startup flow in `main.rs`:**
 
 1. Parse `RUST_LOG` and initialize `tracing_subscriber`
-2. Parse `--use-in-memory-repositories` CLI flag via `clap`
-3. Create the appropriate pair of repository `Arc<Mutex<_>>` instances
-4. Build the `OpenApiRouter` using `utoipa_axum`
-5. Merge Swagger UI at `/swagger-ui`
-6. Apply CORS (`Any` origin/methods/headers) and `TraceLayer`
-7. Bind `0.0.0.0:8080` and start `axum::serve`
+2. Parse `--use-in-memory-repositories` via `clap`
+3. Create in-memory repositories or connect to PostgreSQL using `DATABASE_URL` (fallback: local default)
+4. Register the health route with database-aware state in PostgreSQL mode, or database-disabled state in memory mode
+5. Build the `OpenApiRouter`, merge Swagger UI at `/swagger-ui`, and apply open CORS plus `TraceLayer`
+6. Bind `0.0.0.0:8080` and start `axum::serve`
 
-**Connection string is hardcoded:**
+**Database URL configuration:**
 ```rust
 const CONNECTION_STRING: &str =
     "postgres://workpulse:supersecret@localhost:5432/workpulse";
 ```
-The service does **not** read `DATABASE_URL` from the environment. Docker Compose injects it but the service ignores it (see Observations).
+The service uses `std::env::var("DATABASE_URL")` when set and otherwise falls back to this local default. Docker Compose supplies the database-container URL through that variable.
 
 **Route table:**
 
@@ -444,6 +416,7 @@ The service does **not** read `DATABASE_URL` from the environment. Docker Compos
 | `DELETE` | `/api/v1/accounting-categories/{id}` | `delete_accounting_category` | Delete (cascades to activities in DB) |
 | `GET` | `/api/v1/daily-report` | `generate_daily_report` | `?report_date=YYYY-MM-DD` |
 | `GET` | `/api/v1/weekly-report` | `generate_weekly_report` | `?week_start_date=YYYY-MM-DD` |
+| `GET` | `/api/v1/health` | `health_check` | Returns service and database status; 503 when the configured database ping fails |
 
 **Service state threading model:**
 
@@ -454,7 +427,7 @@ struct ActivitiesServiceState<R, T> {
     accounting_categories_repository: Arc<Mutex<T>>,
 }
 ```
-This state is itself wrapped in `Arc<Mutex<_>>`, meaning the entire activities service state is locked for the duration of each request handler. Concurrent requests serialize completely (see Observations).
+This state is itself wrapped in `Arc<Mutex<_>>`, meaning the entire activities service state is locked for the duration of each request handler. Concurrent requests serialize completely (see Current Constraints).
 
 **DTO layer:**
 
@@ -529,18 +502,7 @@ No global state management library (no Redux, Zustand, Context); state is coloca
 
 #### 4.4.3 Routing
 
-| Path | Component | Purpose |
-|---|---|---|
-| `/` | `TodaysActivities` | Default — today's activity list + create form |
-| `/activities` | `TodaysActivities` | Same |
-| `/activities/edit/:id` | `EditActivity` | Edit an existing activity |
-| `/activities/log` | `ActivityLog` | Date-range browseable log, grouped by week |
-| `/categories` | `CategoriesConfiguration` | CRUD for accounting categories |
-| `/import` | `ImportActivities` | Upload a CSV file for import |
-| `/daily-report` | `DailyReport` | Daily time summary table |
-| `/weekly-report` | `WeeklyReport` | Weekly time summary matrix by category |
-
-A "Yearly Report" button is visible in the navigation but has no route wired up — it is non-functional.
+The SPA routes and user-visible page behavior are documented in [feature analysis](../features/feature-analysis.md).
 
 #### 4.4.4 Data Hooks
 
@@ -562,24 +524,11 @@ A "Yearly Report" button is visible in the navigation but has no route wired up 
 ```js
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 ```
-
-In development, `VITE_API_BASE_URL` is unset, so requests go to `localhost:8080`. In Docker, Vite bakes this value into the bundle at build time — the Docker Compose `VITE_API_BASE_URL` env var is a run-time env var and has no effect after the build (see Observations).
+In development, `VITE_API_BASE_URL` is unset, so requests go to `localhost:8080`. In Docker, Vite substitutes this value at build time; see Current Constraints for the runtime configuration caveat.
 
 #### 4.4.6 Pages
 
-**TodaysActivities** — inline activity creation form (date, start/end time, category select, task, comment) + `ActivitiesTable`. Default date is today. Activities sorted descending by `start_time`.
-
-**ActivityLog** — date-range picker defaulting to the current month. Activities grouped by ISO week using `groupActivitiesByWeek()`. Sorted by date then start_time within each week.
-
-**EditActivity** — fetches the activity by ID on mount, pre-populates form fields, saves via `PUT /api/v1/activities` (ID in body), navigates back to `/activities` on success.
-
-**DailyReport** — date picker, calls `GET /api/v1/daily-report?report_date=`. Renders a table of activities sorted by start_time. Total duration colored by threshold: green 8–10h, orange < 8h, red > 10h.
-
-**WeeklyReport** — HTML `<input type="week">` defaulting to current ISO week. Calls `GET /api/v1/weekly-report?week_start_date=`. Renders a category × day matrix. Totals colored: green 40–50h, orange < 40h, red > 50h.
-
-**ImportActivities** — file picker + year input. Submits `multipart/form-data` to `POST /api/v1/activities/upload-csv?activities_year=<year>`. Does not support `replace_mode` — always uses default (none).
-
-**CategoriesConfiguration** — full CRUD inline table with inline editing. Uses `PUT /api/v1/accounting-categories` with `{ id, name }` in the body.
+Page workflows and their controls are documented in [feature analysis](../features/feature-analysis.md).
 
 #### 4.4.7 Components
 
@@ -682,12 +631,12 @@ WeeklyReport::new()
   │  repository.get_by_date_range(week_start, week_start + 7 days)
   │  sums total_duration
   │  builds duration_per_category HashMap
-  │  builds daily_durations_per_category per day
+  │  builds daily_durations_per_category for Monday through Sunday
   ▼
 work-pulse-service: maps to WeeklyReport DTO
   │  converts AccountingCategoryId → string keys
   │  converts Duration → ISO 8601 string (e.g., "PT10800S")
-  │  returns HTTP 200 JSON
+  │  returns HTTP 200 JSON; aggregate totals can include the following Monday
   ▼
 Browser: renders category × day matrix
   │  resolves category IDs to names via useCategories hook
@@ -712,28 +661,7 @@ CLI: csv-import --file activities.csv
 
 ### 6.1 Domain Entities (Rust)
 
-```rust
-// Entity — core work item
-pub struct Activity {
-    id: ActivityId,                           // newtype UUID
-    date: NaiveDate,
-    start_time: NaiveTime,
-    end_time: Option<NaiveTime>,              // None = in-progress
-    accounting_category_id: AccountingCategoryId,
-    task: String,
-    comment: Option<String>,
-}
-
-// Category — time-booking bucket
-pub struct AccountingCategory {
-    id: AccountingCategoryId,                 // newtype UUID
-    name: String,
-}
-
-// ID newtypes (pattern repeated for both entity types)
-pub struct ActivityId(pub Uuid);
-pub struct AccountingCategoryId(pub Uuid);
-```
+Entity fields and domain behavior are defined in the [domain model](../features/work-pulse-domain-model.md).
 
 ### 6.2 Repository Traits (Rust)
 
@@ -831,7 +759,7 @@ CW | Date   | Check In | Check Out | PAM Category | Topic        | Comment
 ```
 
 - `Date` is `dd.mm.` — year supplied externally
-- The `Duration` column shown in the frontend's file format docs does not exist in the actual `ActivityTableRecord` deserialization struct and is silently ignored if present
+- The UI documents a `Duration` column, but the service-side `ActivityTableRecord` has no corresponding field.
 
 ---
 
@@ -914,11 +842,11 @@ try {
 const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/
 ```
 
-This is a coupling between Rust's chrono formatting and a frontend regex. The regex handles all valid ISO 8601 duration formats correctly.
+This couples Rust's chrono duration formatting to a frontend parser that extracts hour, minute, and second components from API duration strings; it is not a general ISO 8601 duration parser.
 
 ### 7.7 Colocation of Tests
 
-All Rust unit tests are `#[cfg(test)]` modules inside the source files they test. No separate `tests/` directory — idiomatic Rust with white-box test access.
+Core and service unit tests are co-located in `#[cfg(test)]` modules. Service-level Cucumber scenarios live under `work-pulse-service/tests/`; the frontend currently has a single Jest test file for date utilities.
 
 ---
 
@@ -945,10 +873,14 @@ All Rust unit tests are `#[cfg(test)]` modules inside the source files they test
 | `src/work-pulse-core/src/infra/repositories/in_memory/accounting_categories_list.rs` | In-memory categories repo |
 | `src/work-pulse-core/src/infra/importers/csv_activities_importer.rs` | CSV importer |
 | `src/work-pulse-service/src/main.rs` | Startup, DI, routing, CORS |
+| `src/work-pulse-service/src/lib.rs` | Public service module exports and OpenAPI tags |
+| `src/work-pulse-service/src/services/health_check_service.rs` | `/api/v1/health` endpoint |
 | `src/work-pulse-service/src/services/activities_list_service.rs` | Activities CRUD + CSV upload endpoints |
 | `src/work-pulse-service/src/services/accounting_categories_service.rs` | Category CRUD endpoints |
 | `src/work-pulse-service/src/services/daily_report_service.rs` | Daily report endpoint |
 | `src/work-pulse-service/src/services/weekly_report_service.rs` | Weekly report endpoint |
+| `src/work-pulse-service/tests/services.rs` | Cucumber service test runner |
+| `src/work-pulse-service/tests/features/health_check_service.feature` | Health-check scenarios |
 | `src/work-pulse-cli/src/main.rs` | CLI entry point |
 | `src/work-pulse-cli/src/csv_import.rs` | CSV import logic |
 | `src/work-pulse-cli/src/category_mapper.rs` | Name normalization table |
@@ -1017,9 +949,9 @@ All Rust unit tests are `#[cfg(test)]` modules inside the source files they test
 | Variable | Where consumed | Effect |
 |---|---|---|
 | `RUST_LOG` | `work-pulse-service` (env var at runtime) | Logging level; default `"debug"` |
+| `RUST_LOG` | `work-pulse-service` (env var at runtime) | Logging level; default "debug" |
 | `--use-in-memory-repositories` | `work-pulse-service` (CLI flag) | Switches from Postgres to in-memory repos |
-| `CONNECTION_STRING` (hardcoded) | `work-pulse-service/src/main.rs` | Always `postgres://workpulse:supersecret@localhost:5432/workpulse` |
-| `DATABASE_URL` | DbMate only (`.env` + Docker Compose) | Used only for migrations; the service does not read this |
+| `DATABASE_URL` | Service and DbMate | PostgreSQL connection; service falls back to the local default if unset |
 | `VITE_API_BASE_URL` | Vite (build-time env) | Frontend API base URL; default `http://localhost:8080` |
 
 ### 9.2 Prettier (Frontend)
@@ -1081,8 +1013,8 @@ Docker Compose services:
 | Service | Image | Port | Notes |
 |---|---|---|---|
 | `work-pulse-db` | `postgres:16` | 5432 | Health-checked; volume at `./data/` |
-| `work-pulse-backend` | `work-pulse-service:latest` | 8080 | Depends on healthy DB; `DATABASE_URL` injected but not read by service |
-| `work-pulse-frontend` | `work-pulse-app:latest` | 3000 | nginx serving Vite build; `VITE_API_BASE_URL` injected but baked at build time |
+| `work-pulse-backend` | `work-pulse-service:latest` | 8080 | Depends on healthy DB; reads the injected `DATABASE_URL` |
+| `work-pulse-frontend` | `work-pulse-app:latest` | 3000 | nginx serves the Vite build; runtime `VITE_API_BASE_URL` is not consumed by the built bundle |
 | `work-pulse-migrate` | `amacneil/dbmate` | — | Profile `migration`; shares `./db/` volume |
 
 ### 10.3 Rust Build Details
@@ -1095,8 +1027,9 @@ Docker Compose services:
 ### 10.4 Frontend Build Details
 
 - Node 18 Alpine: `npm ci` then `npm run build` (Vite)
+- Node 18 Alpine: `npm ci` then `npm run build` (Vite); the Dockerfile does not provide a Vite API URL build argument
 - Output placed at `/app/dist`, served by `nginx:alpine`
-- No custom nginx config
+- No custom nginx config or runtime environment injection; absent a build-time override, the browser bundle uses `http://localhost:8080`
 
 ### 10.5 CI (GitHub Actions)
 
@@ -1113,7 +1046,7 @@ steps:
   - cargo test --workspace --verbose     # from ./src
 ```
 
-The CI pipeline covers only the Rust backend. The frontend has no CI steps.
+The CI pipeline builds and tests the Rust workspace only. Frontend lint, tests, and build are not CI steps. The Cucumber health-check target includes a PostgreSQL-dependent scenario; see [Rust testing guidance](../guidelines/rust-coding-guidelines.md#integration-tests-bdd) for its local-database and runner limitations.
 
 ---
 
@@ -1121,7 +1054,7 @@ The CI pipeline covers only the Rust backend. The frontend has no CI steps.
 
 | Integration | Mechanism | Details |
 |---|---|---|
-| PostgreSQL | `sqlx` async pool | Connection string hardcoded; TLS via `runtime-tokio-rustls` feature |
+| PostgreSQL | `sqlx` async pool | `DATABASE_URL` with a local fallback; TLS via `runtime-tokio-rustls` feature |
 | Swagger UI | `utoipa-swagger-ui` | Bundled static assets at `/swagger-ui`; spec at `/api-docs/openapi.json` |
 | DbMate | External CLI / Docker image | Used only for schema migrations; reads `DATABASE_URL` |
 | nginx | Docker image | Serves the built React SPA; no custom config |
@@ -1130,68 +1063,17 @@ No external SaaS services, no OAuth, no email, no message queues.
 
 ---
 
-## 12. Observations & Recommendations
+## 12. Current Constraints
 
-### Critical Issues
+- **Repository error handling:** PostgreSQL repository operations and pool construction contain `.unwrap()` calls. Recoverable database failures can panic instead of becoming typed errors and useful HTTP responses.
+- **Request validation:** Several service DTO conversions and report query parsers use `expect`/`unwrap`; malformed client input can panic a handler rather than return 400.
+- **Activities service locking:** `ActivitiesServiceState` is held behind an outer `Arc<Mutex<_>>`, serializing handlers that share this state in addition to the repository locks.
+- **Activity lookup:** `ActivitiesList::get_by_id` retrieves all activities and scans in memory; there is no repository-level activity lookup by ID.
+- **Date filtering:** `GET /api/v1/activities` fetches all activities before applying the optional date range in the service.
+- **Weekly report boundary:** `WeeklyReport` requests an inclusive range through `week_start + 7 days`; aggregate totals can include the next Monday, while daily rows are generated for seven days only.
+- **Frontend runtime configuration:** Vite substitutes `VITE_API_BASE_URL` at build time. Compose sets it at runtime, which does not change the already-built JavaScript; the default URL is localhost from the browser's perspective.
+- **Security boundary:** The API has no authentication and allows any CORS origin, method, and header. It is intended for a trusted local environment, not direct network exposure.
+- **CLI limitations:** CSV import hardcodes year 2025 and drops comments; CSV export is a stub. The UI also advertises a `Duration` CSV column that the service importer does not define or use.
+- **Test/CI gap:** CI does not run frontend checks. The Cucumber health-check test includes a PostgreSQL-dependent scenario; see [Rust testing guidance](../guidelines/rust-coding-guidelines.md#integration-tests-bdd) for its local-database and runner limitations.
 
-**1. Hardcoded connection string vs. Docker Compose `DATABASE_URL`**
-The service reads `CONNECTION_STRING` from a Rust `const` pointing to `localhost:5432`. Running the pre-built Docker image in the compose stack will attempt to connect to `localhost:5432` *inside the container*, which fails. The service should read `std::env::var("DATABASE_URL")` and fall back to the hardcoded default.
-
-**2. Panics on DB errors in read paths**
-`PsqlActivitiesListRepository::get_all`, `get_by_date`, `get_by_date_range`, and `add` all call `.unwrap()` on the sqlx future. Any database error panics the Tokio task and returns a 500 with no useful body. All repository methods should return `Result<_, ActivitiesListRepositoryError>`.
-
-**3. `VITE_API_BASE_URL` baked at build time, not runtime**
-Vite replaces `import.meta.env.VITE_*` values at build time. The Docker Compose `VITE_API_BASE_URL` is set at container run time, after the build — so it has no effect. Additionally, the browser makes requests from the user's machine, not inside the Docker network, so `work-pulse-backend` is not resolvable from the browser anyway. A build arg needs to be passed at `docker build` time, or a runtime config injection technique (e.g., writing a `window.ENV` script via nginx) should be used.
-
-**4. Entire activities service state locked per request**
-`ActivitiesServiceState<R, T>` is wrapped in `Arc<Mutex<_>>`. This single lock gates all concurrent requests to every activities endpoint. The repositories themselves are already `Arc<Mutex<_>>`; the outer state lock is unnecessary and should be removed.
-
-### Design Issues
-
-**5. `get_by_id` linear scan via `get_all`**
-`ActivitiesList::get_by_id` fetches all activities then filters in-process. For Postgres this is a full table scan for every single-item lookup (e.g., the edit page). A `get_by_id` method should be added to the trait and implemented with `WHERE id = $1`.
-
-**6. `list_activities` in-process date filtering**
-`GET /api/v1/activities?start_date=&end_date=` fetches all activities from the DB and filters in Rust. The repository trait already has `get_by_date_range`; the service handler should call it instead.
-
-**7. CLI year hardcoded to 2025**
-`csv_import.rs` has `const ACTIVITIES_YEAR: &str = "2025"`. This should be a `--year` CLI argument, mirroring the service's `activities_year` query parameter.
-
-**8. `csv_export` is a complete stub**
-`csv_export.rs` prints a message and returns `Ok(())` with no implementation. Users who try `work-pulse-cli csv-export` will get no output and no error.
-
-**9. Non-functional "Yearly Report" navigation button**
-`Navigation.jsx` renders a "Yearly Report" `Button` with no `component={Link}` and no `to=` prop. Clicking it does nothing.
-
-**10. Inconsistent error handling in service handlers**
-Several parsing calls use `.expect("Invalid ... format")` instead of returning HTTP 400 responses. Malformed UUID or date strings in request bodies will panic the handler.
-
-### Minor / Quality Issues
-
-**11. No authentication or authorization**
-Fully open CORS and no auth layer. Acceptable for a local personal tool; needs addressing before any network exposure.
-
-**12. `comment` field note in AGENTS.md is inaccurate**
-AGENTS.md states `activities.comment` is "not mapped in the Rust `Activity` entity." The field is fully mapped in both the entity and the Postgres repository. It is only absent from the `DailyReportActivity` DTO.
-
-**13. Frontend CI gap**
-The CI pipeline has no frontend steps. Adding `npm run lint` and `npm test` would catch regressions.
-
-**14. `WeeklyReport` week_end boundary**
-The weekly report fetches `week_start` to `week_start + 7 days` inclusive. Since the DB range uses `BETWEEN`, the 8th day (same weekday as `week_start`) is included, meaning a Monday-started week inadvertently includes the following Monday.
-
-**15. Import page documents a `Duration` column that does not exist**
-`importActivities.jsx` lists `Duration (format: HH:MM:SS)` as a required CSV column, but `ActivityTableRecord` has no `Duration` field — it is silently ignored. The documentation should be corrected.
-
-**16. Workspace resolver discrepancy in AGENTS.md**
-AGENTS.md says `resolver = "1"` but `src/Cargo.toml` uses `resolver = "2"`.
-
-### Positive Observations
-
-- The Clean Architecture layering is well-executed. The dependency rule is never violated, and the dual-repo pattern makes all domain logic unit-testable without a database.
-- The in-memory repositories are thorough implementations, enabling realistic use-case tests.
-- Unit tests are comprehensive for all domain entities, use cases, and the CSV importer.
-- `dateUtils.js` is exceptionally well-tested — 30+ test cases covering ISO week boundaries, leap years, and cross-year spanning.
-- The `ReplaceMode` enum for CSV import is a clean design expressing three distinct semantics without boolean flags.
-- Tracing instrumentation in `ActivitiesList::import` logs timing for parse and DB phases.
-- The Docker Compose `healthcheck` on Postgres ensures the backend only starts after the DB is ready.
+For user-facing page and workflow behavior, see [feature analysis](../features/feature-analysis.md). For entity attributes and domain rules, see [domain model](../features/work-pulse-domain-model.md) and its [diagrams](../features/work-pulse-domain-model-diagrams.md).

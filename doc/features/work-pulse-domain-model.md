@@ -4,6 +4,8 @@
 
 WorkPulse is a time tracking and activity management system designed to track work activities and associate them with accounting categories. The domain model follows Domain-Driven Design (DDD) principles with clear separation between entities, value objects, and repository abstractions.
 
+For system boundaries, runtime configuration, and persistence implementation, see the [architecture review](../architecture/work-pulse-architecture.md).
+
 ---
 
 ## Domain Entities
@@ -19,6 +21,7 @@ WorkPulse is a time tracking and activity management system designed to track wo
 - `end_time: Option<NaiveTime>` - When the activity ended (optional, None for ongoing activities)
 - `accounting_category_id: AccountingCategoryId` - Reference to the accounting category
 - `task: String` - Description of the task
+- `comment: Option<String>` - Optional activity note
 
 **Behaviors**:
 - `new()` - Creates a new activity with a random ID
@@ -33,17 +36,7 @@ WorkPulse is a time tracking and activity management system designed to track wo
 - Every activity must have a task description
 
 **Database Mapping** (`activities` table):
-```sql
-id          uuid PRIMARY KEY
-date        date NOT NULL
-start_time  time NOT NULL
-end_time    time (nullable)
-category_id uuid NOT NULL (FK to accounting_categories)
-task        text NOT NULL
-comment     text (nullable - not in domain model yet)
-created_at  timestamp with time zone
-updated_at  timestamp with time zone
-```
+The persistence schema is documented in the [architecture review](../architecture/work-pulse-architecture.md#64-database-schema-postgresql).
 
 ---
 
@@ -65,12 +58,7 @@ updated_at  timestamp with time zone
 - Every category must have a name
 
 **Database Mapping** (`accounting_categories` table):
-```sql
-id          uuid PRIMARY KEY
-name        varchar(255) NOT NULL UNIQUE
-created_at  timestamp with time zone
-updated_at  timestamp with time zone
-```
+The persistence schema is documented in the [architecture review](../architecture/work-pulse-architecture.md#64-database-schema-postgresql).
 
 ---
 
@@ -166,78 +154,18 @@ Cascade: ON DELETE CASCADE (deleting a category deletes all associated activitie
 ---
 
 ## Repository Interfaces
-
-### 1. AccountingCategoriesListRepository
-
-**Purpose**: Abstract interface for persisting and retrieving accounting categories.
-
-**Operations**:
-- `get_all()` → `Vec<AccountingCategory>` - Retrieve all categories
-- `get_by_id(id)` → `Option<AccountingCategory>` - Retrieve by ID
-- `add(category)` - Add a new category
-- `update(category)` → `Result<(), Error>` - Update existing category
-- `delete(id)` → `Result<(), Error>` - Delete a category
-- `get_or_create_by_name(name)` → `Result<AccountingCategory, Error>` - Get or create by name
-
-**Error Types**:
-- `NotFound(AccountingCategoryId)` - Category not found
-- `DatabaseError(String)` - Database-related issues
-
-**Implementations**:
-- `InMemoryAccountingCategoriesListRepository` - In-memory storage for testing
-- `PostgresAccountingCategoriesListRepository` - PostgreSQL persistence
-
----
-
-### 2. ActivitiesListRepository
-
-**Purpose**: Abstract interface for persisting and retrieving activities.
-
-**Operations**:
-- `get_all()` → `Vec<Activity>` - Retrieve all activities
-- `get_by_date(date)` → `Vec<Activity>` - Retrieve activities for a specific date
-- `get_by_date_range(start, end)` → `Vec<Activity>` - Retrieve activities within date range
-- `add(activity)` - Add a new activity
-- `update(activity)` → `Result<(), Error>` - Update existing activity
-- `delete(id)` → `Result<(), Error>` - Delete an activity
-- `delete_all()` → `Result<(), Error>` - Delete all activities
-
-**Error Types**:
-- `NotFound(ActivityId)` - Activity not found
-- `DatabaseError(String)` - Database-related issues
-
-**Implementations**:
-- `InMemoryActivitiesListRepository` - In-memory storage for testing
-- `PostgresActivitiesListRepository` - PostgreSQL persistence
+Repository trait operations, error types, and in-memory/PostgreSQL implementations are documented in the [architecture review](../architecture/work-pulse-architecture.md#412-adapters-trait-contracts).
 
 ---
 
 ## Domain Services
-
-### ActivitiesImporter
-
-**Purpose**: Abstract interface for importing activities from external sources.
-
-**Operations**:
-- `import<R: Read>(reader, year)` → `Result<Vec<Activity>, Error>` - Import activities from a reader
-
-**Error Types**:
-- `ParseError` - Could not parse activities from source
-- `RepositoryError(String)` - Error accessing the repository
-
-**Implementations**:
-- `CsvActivitiesImporter` - Import from CSV files
+The importer contract and CSV implementation are described in the [architecture review](../architecture/work-pulse-architecture.md#416-infrastructure--csv-importer).
 
 ---
 
 ## Use Cases
 
-The domain model supports the following use cases (application layer):
-
-1. **ActivitiesList** - Manage the list of activities (CRUD operations)
-2. **AccountingCategoriesList** - Manage accounting categories (CRUD operations)
-3. **DailyReport** - Generate reports for a specific day
-4. **WeeklyReport** - Generate reports for a week
+Use-case responsibilities are documented in the [architecture review](../architecture/work-pulse-architecture.md#413-use-cases).
 
 ---
 
@@ -258,57 +186,19 @@ Potential domain events for future implementation:
 
 ## Architecture Layers
 
-The domain model follows Clean Architecture / Hexagonal Architecture:
-
-```
-┌─────────────────────────────────────────┐
-│         Application Layer               │
-│  (Use Cases: daily_report,              │
-│   weekly_report, activities_list, etc.) │
-└─────────────────────────────────────────┘
-              ↓ uses
-┌─────────────────────────────────────────┐
-│         Domain Layer                    │
-│  (Entities: Activity,                   │
-│   AccountingCategory)                   │
-│  (Value Objects: ActivityId,            │
-│   AccountingCategoryId)                 │
-└─────────────────────────────────────────┘
-              ↑ implements
-┌─────────────────────────────────────────┐
-│         Adapter Layer                   │
-│  (Repository Traits)                    │
-└─────────────────────────────────────────┘
-              ↑ implements
-┌─────────────────────────────────────────┐
-│         Infrastructure Layer            │
-│  (Postgres/InMemory Implementations,    │
-│   CSV Importer)                         │
-└─────────────────────────────────────────┘
-```
+Layer boundaries and dependency direction are documented in the [architecture review](../architecture/work-pulse-architecture.md#71-clean-architecture-dependency-rule).
 
 ---
 
 ## Database Indices
 
-The database schema includes the following indices for query optimization:
-
-- `idx_accounting_categories_name` - B-tree index on accounting_categories.name
-- `idx_activities_category_id` - B-tree index on activities.category_id
-- `idx_activities_date` - B-tree index on activities.date
-- `idx_activities_date_category` - Composite B-tree index on (date, category_id)
+The authoritative schema and indexes are documented in the [architecture review](../architecture/work-pulse-architecture.md#64-database-schema-postgresql).
 
 ---
 
 ## Design Patterns Applied
 
-1. **Repository Pattern** - Abstracts data persistence
-2. **Value Object Pattern** - ActivityId, AccountingCategoryId
-3. **Entity Pattern** - Activity, AccountingCategory with identity
-4. **Aggregate Pattern** - Activity and AccountingCategory as aggregate roots
-5. **Factory Pattern** - `new()` and `with_id()` constructors
-6. **Adapter Pattern** - Repository traits serve as adapters
-7. **Dependency Inversion** - Use cases depend on repository abstractions, not implementations
+Architectural patterns are documented in the [architecture review](../architecture/work-pulse-architecture.md#7-architectural-patterns).
 
 ---
 
@@ -324,14 +214,9 @@ The domain model leverages Rust's type system for domain correctness:
 
 ---
 
-## Missing Domain Concepts
+## Persistence-Only Metadata
 
-Based on the database schema, the following fields exist in persistence but are not yet modeled in the domain layer:
-
-1. **Activity.comment** (text, nullable) - Additional comments for activities
-2. **Timestamps** (created_at, updated_at) - Audit trail information
-
-These could be added to enrich the domain model.
+`created_at` and `updated_at` are stored in the database but are not modeled as domain attributes. `Activity.comment` is part of the domain entity and is persisted and exposed by the API.
 
 ---
 
@@ -365,12 +250,4 @@ These could be added to enrich the domain model.
 
 ## Summary
 
-The WorkPulse domain model is a clean, well-structured implementation following DDD principles. It has:
-
-- **2 main entities**: Activity and AccountingCategory
-- **2 value objects**: ActivityId and AccountingCategoryId
-- **2 repository abstractions**: For persistence independence
-- **1 domain service**: ActivitiesImporter for importing from external sources
-- **Clear separation of concerns**: Domain logic is isolated from infrastructure
-
-The model is type-safe, well-tested (based on the test code in entities), and follows Rust best practices with async/await support and proper error handling.
+The domain consists of `Activity` and `AccountingCategory`, identified by `ActivityId` and `AccountingCategoryId`. Persistence and application boundaries are documented in the [architecture review](../architecture/work-pulse-architecture.md).

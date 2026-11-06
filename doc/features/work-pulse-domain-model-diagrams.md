@@ -189,8 +189,8 @@ graph TB
     end
 
     subgraph "Infrastructure Layer"
-        PG1[PostgresActivitiesListRepository]
-        PG2[PostgresAccountingCategoriesListRepository]
+        PG1[PsqlActivitiesListRepository]
+        PG2[PsqlAccountingCategoriesListRepository]
         MEM1[InMemoryActivitiesListRepository]
         MEM2[InMemoryAccountingCategoriesListRepository]
         CSV1[CsvActivitiesImporter]

@@ -15,6 +15,8 @@ Standard behaviors that Coding Agents should always follow.
 All documentation can be found in the repository root under the folder `doc`. Whenever you don't know anything, try to
 look it up in this folder. If any information is missing, stop what you are doing and inform the user.
 
+See the [Work Pulse architecture overview](doc/architecture/work-pulse-architecture.md) for the current system structure.
+
 <git root>/    ← git root (NOT the Cargo workspace root)
 ├── doc/              ← documentation
 ├── doc/architecture/ ← architecture documentation
