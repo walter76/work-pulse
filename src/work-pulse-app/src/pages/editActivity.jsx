@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Save } from '@mui/icons-material'
 import axios from 'axios'
@@ -12,6 +12,7 @@ import { API_BASE_URL } from '../config/api'
 
 const EditActivity = () => {
   const { id: activityId } = useParams()
+  const location = useLocation()
 
   const { categories, refreshCategories } = useCategories()
 
@@ -81,7 +82,7 @@ const EditActivity = () => {
       return
     }
 
-    await updateActivity(activityId, {
+    const result = await updateActivity(activityId, {
       id: activityId,
       date: activityDate,
       start_time: startTime,
@@ -91,7 +92,8 @@ const EditActivity = () => {
       comment: comment || null,
     })
 
-    // Reset the input field after updating the activity
+    if (!result.success) return
+
     setCategoryId('')
     setActivityDate('')
     setStartTime('')
@@ -99,7 +101,7 @@ const EditActivity = () => {
     setTask('')
     setComment('')
 
-    navigate('/activities')
+    navigate('/activities', { state: { selectedDate: location.state?.selectedDate } })
   }
 
   return (

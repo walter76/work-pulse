@@ -1,4 +1,12 @@
-import { formatDuration, getWeekNumber, getWeekRange } from './dateUtils'
+import { describe, expect, it } from '@jest/globals'
+
+import {
+  calculateDurationInMinutes,
+  formatDateForDisplay,
+  formatDuration,
+  getWeekNumber,
+  getWeekRange,
+} from './dateUtils'
 
 describe('getWeekNumber', () => {
   describe('accepts different input formats', () => {
@@ -310,5 +318,27 @@ describe('getWeekRange', () => {
 describe('formatDuration', () => {
   it('should format duration correctly for standard cases', () => {
     expect(formatDuration('PT10800S')).toBe('03:00')
+  })
+})
+
+describe('calculateDurationInMinutes', () => {
+  it('calculates durations from ISO time strings', () => {
+    expect(calculateDurationInMinutes('09:15:00', '10:45:00')).toBe(90)
+    expect(calculateDurationInMinutes('09:15', '10:45')).toBe(90)
+  })
+
+  it('returns zero for open or invalid intervals', () => {
+    expect(calculateDurationInMinutes('09:15:00', null)).toBe(0)
+    expect(calculateDurationInMinutes('10:00:00', '09:00:00')).toBe(0)
+    expect(calculateDurationInMinutes('invalid', '10:00:00')).toBe(0)
+  })
+})
+
+describe('formatDateForDisplay', () => {
+  it('keeps the input calendar date in local time', () => {
+    const options = { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' }
+    expect(formatDateForDisplay('2026-03-15')).toBe(
+      new Date(2026, 2, 15).toLocaleDateString(undefined, options),
+    )
   })
 })

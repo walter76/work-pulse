@@ -29,11 +29,13 @@ axios. Base URL configurable via `VITE_API_BASE_URL` env var (default `http://lo
 
 ### Today's Activities (`/activities`)
 
-- Inline form to create a new activity: date (defaults to today), start time, end time (optional),
-  category dropdown, task text, comment text. Keyboard shortcut: Enter in the task field submits.
-- Displays activities for today in a table sorted by start time (descending).
-- Per-row Edit (navigates to edit page) and Delete buttons.
-- Optimistic delete with record count display and a manual Refresh button.
+- Date selector defaults to the local current date and controls both the displayed activities and
+  the date assigned to quick-entry activities. The form includes start time, optional end time,
+  category, task, and comment. Enter in the task field submits.
+- Displays the selected day's activities in descending start-time order, with per-activity durations
+  and a daily total. The total is orange below 8 hours, green from 8 to 10 hours, and red above 10.
+- Per-row Edit (returns to the same selected date) and Delete buttons, record count, and manual
+  Refresh button. Empty dates show a zero total and an empty-state message.
 
 ### Activity Log (`/activities/log`)
 
@@ -47,7 +49,8 @@ axios. Base URL configurable via `VITE_API_BASE_URL` env var (default `http://lo
 - Fetches existing activity by ID on mount.
 - Same form fields as the create form, pre-populated.
 - Validates end time > start time.
-- Saves via `PUT /api/v1/activities`, then navigates back to `/activities`.
+- Saves via `PUT /api/v1/activities`, then navigates back to `/activities` while retaining the
+  selected date when launched from Today's Activities.
 
 ### Daily Report (`/daily-report`)
 

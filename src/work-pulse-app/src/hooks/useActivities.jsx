@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import axios from 'axios'
 
 import { API_BASE_URL } from '../config/api'
@@ -7,8 +7,10 @@ export const useActivities = () => {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const refreshRequestId = useRef(0)
 
   const refreshActivities = useCallback(async (startDate, endDate) => {
+    const requestId = ++refreshRequestId.current
     console.log('Refreshing activities...')
 
     setError('')
@@ -19,14 +21,16 @@ export const useActivities = () => {
         `${API_BASE_URL}/api/v1/activities?start_date=${startDate}&end_date=${endDate}`,
       )
 
-      setActivities(response.data)
+      if (requestId === refreshRequestId.current) setActivities(response.data)
 
       console.log('Activities refreshed successfully!')
     } catch (error) {
       console.error('Error fetching activities:', error)
-      setError('Failed to fetch activities. Please try again.')
+      if (requestId === refreshRequestId.current) {
+        setError('Failed to fetch activities. Please try again.')
+      }
     } finally {
-      setLoading(false)
+      if (requestId === refreshRequestId.current) setLoading(false)
     }
   }, [])
 
@@ -37,8 +41,6 @@ export const useActivities = () => {
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/v1/activities`, activityData)
-
-      setActivities((prev) => [...prev, response.data])
 
       console.log(`Activity created successfully!`)
 
@@ -72,32 +74,25 @@ export const useActivities = () => {
     }
   }, [])
 
-  const deleteActivity = useCallback(
-    async (activityId) => {
-      console.log(`Deleting activity with ID: ${activityId}`)
+  const deleteActivity = useCallback(async (activityId) => {
+    console.log(`Deleting activity with ID: ${activityId}`)
 
-      setError('')
+    setError('')
 
-      const originalActivities = [...activities]
+    try {
+      await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
       setActivities((prev) => prev.filter((act) => act.id !== activityId))
 
-      try {
-        await axios.delete(`${API_BASE_URL}/api/v1/activities/${activityId}`)
+      console.log(`Activity with ID ${activityId} deleted successfully!`)
 
-        console.log(`Activity with ID ${activityId} deleted successfully!`)
+      return true
+    } catch (error) {
+      console.error(`Error deleting activity with ID ${activityId}:`, error)
+      setError('Failed to delete activity. Please try again.')
 
-        return true
-      } catch (error) {
-        setActivities(originalActivities) // Revert optimistic update
-
-        console.error(`Error deleting activity with ID ${activityId}:`, error)
-        setError('Failed to delete activity. Please try again.')
-
-        return false
-      }
-    },
-    [activities],
-  )
+      return false
+    }
+  }, [])
 
   return {
     activities,

@@ -213,6 +213,27 @@ export const formatDuration = (isoDuration) => {
 }
 
 /**
+ * Calculates the whole-minute duration between two ISO time strings.
+ *
+ * @param {string} startTime - Start time in HH:MM or HH:MM:SS format.
+ * @param {string|null} endTime - End time in HH:MM or HH:MM:SS format, or null for an open activity.
+ * @returns {number} The duration in whole minutes; open or invalid intervals return zero.
+ */
+export const calculateDurationInMinutes = (startTime, endTime) => {
+  if (!startTime || !endTime) return 0
+
+  const toSeconds = (time) => {
+    const [hours, minutes, seconds = 0] = time.split(':').map(Number)
+    return hours * 3600 + minutes * 60 + seconds
+  }
+
+  const durationSeconds = toSeconds(endTime) - toSeconds(startTime)
+  return Number.isFinite(durationSeconds) && durationSeconds > 0
+    ? Math.floor(durationSeconds / 60)
+    : 0
+}
+
+/**
  * Formats a date string (YYYY-MM-DD) into a more readable format.
  *
  * @param {string} dateString - The date string to format.
@@ -222,7 +243,8 @@ export const formatDuration = (isoDuration) => {
  * formatDateForDisplay("2025-10-15") // Returns "Wednesday, October 15, 2025"
  */
 export const formatDateForDisplay = (dateString) => {
-  const date = new Date(dateString)
+  const [year, month, day] = dateString.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
   const options = {
     weekday: 'long',
     year: 'numeric',

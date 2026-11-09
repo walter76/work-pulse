@@ -1,5 +1,4 @@
 ## In Progress
-- rework-todays-activities (medium) - owner: Walter Stocker - [session](../sessions/2026-11-09-rework-todays-activities.md)
 - <task as slug> (<task priority>) - owner: <task owner> - <link to session log>
 - ...
 
@@ -14,6 +13,7 @@
 - yearly-report (medium) - owner: Walter Stocker - [yearly-report](backlog/yearly-report.md)
 
 ## Done
+- rework-todays-activities - [Rework Today's Activities](done/rework-todays-activities.md)
 - implement-health-check - [session](../sessions/2026-07-20-implement-health-check-for-backend-service.md)
 - <task as slug> -  <link to session log>
 - ...

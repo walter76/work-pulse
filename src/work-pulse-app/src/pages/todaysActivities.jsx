@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button, CircularProgress, Input, Option, Select, Sheet, Typography } from '@mui/joy'
 import { Add, Refresh } from '@mui/icons-material'
 
@@ -8,11 +8,17 @@ import ErrorMessage from '../components/errorMessage'
 
 import { useActivities } from '../hooks/useActivities'
 import { useCategories } from '../hooks/useCategories'
+import {
+  calculateDurationInMinutes,
+  formatDateForDisplay,
+  formatDuration,
+} from '../lib/dateUtils'
 
+/**
+ * Lets users review and manage activities for a selected calendar day.
+ * @returns {JSX.Element} The selected-day activity workflow.
+ */
 const TodaysActivities = () => {
-  const today = new Date()
-  const formattedDate = today.toISOString().split('T')[0] // Format date as YYYY-MM-DD
-
   const {
     activities,
     loading,
@@ -24,23 +30,51 @@ const TodaysActivities = () => {
   } = useActivities()
 
   const { categories, refreshCategories } = useCategories()
+  const location = useLocation()
 
   const [categoryId, setCategoryId] = useState('')
-  const [activityDate, setActivityDate] = useState(formattedDate)
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (location.state?.selectedDate) return location.state.selectedDate
+
+    const today = new Date()
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+      today.getDate(),
+    ).padStart(2, '0')}`
+  })
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [task, setTask] = useState('')
   const [comment, setComment] = useState('')
 
   const startTimeRef = useRef(null)
+  const selectedDateRef = useRef(selectedDate)
 
   useEffect(() => {
     refreshCategories()
-    refreshActivities(formattedDate, formattedDate)
-  }, [refreshActivities, refreshCategories])
+  }, [refreshCategories])
+
+  useEffect(() => {
+    refreshActivities(selectedDate, selectedDate)
+  }, [refreshActivities, selectedDate])
+
+  const dailyTotalMinutes = activities.reduce(
+    (total, activity) =>
+      total + calculateDurationInMinutes(activity.start_time, activity.end_time),
+    0,
+  )
+  const dailyTotalHours = dailyTotalMinutes / 60
+  const dailyTotalColor = dailyTotalHours < 8 ? 'warning' : dailyTotalHours <= 10 ? 'success' : 'danger'
+
+  const handleDateChanged = (event) => {
+    const nextDate = event.target.value
+    if (!nextDate) return
+
+    selectedDateRef.current = nextDate
+    setSelectedDate(nextDate)
+  }
 
   const handleCreateActivity = async () => {
-    if (!activityDate) {
+    if (!selectedDate) {
       setError('Please enter a valid date for the activity.')
       return
     }
@@ -65,7 +99,8 @@ const TodaysActivities = () => {
       return
     }
 
-    await createActivity({
+    const activityDate = selectedDate
+    const result = await createActivity({
       date: activityDate,
       start_time: startTime,
       end_time: endTime,
@@ -73,15 +108,20 @@ const TodaysActivities = () => {
       task: task,
       comment: comment || null,
     })
+
+    if (result.success) {
+      setStartTime('')
+      setEndTime('')
+      setTask('')
+      setComment('')
+      if (selectedDateRef.current === activityDate) {
+        refreshActivities(activityDate, activityDate)
+      }
+    }
   }
 
   const handleDeleteActivity = async (activityId) => {
-    const success = await deleteActivity(activityId)
-
-    if (success) {
-      // Refresh the activities list after deletion
-      refreshActivities(formattedDate, formattedDate)
-    }
+    await deleteActivity(activityId)
   }
 
   const navigate = useNavigate()
@@ -90,7 +130,7 @@ const TodaysActivities = () => {
     console.log(`Editing activity with ID: ${activity.id}`)
     setError('')
 
-    navigate(`/activities/edit/${activity.id}`)
+    navigate(`/activities/edit/${activity.id}`, { state: { selectedDate } })
   }
 
   return (
@@ -104,9 +144,9 @@ const TodaysActivities = () => {
           required
           id="activity-date"
           type="date"
-          placeholder="Date"
-          value={activityDate}
-          onChange={(e) => setActivityDate(e.target.value)}
+          aria-label="Selected date"
+          value={selectedDate}
+          onChange={handleDateChanged}
           size="sm"
         />
         <Input
@@ -171,7 +211,7 @@ const TodaysActivities = () => {
       </Sheet>
 
       <Sheet variant="outlined" sx={{ gap: 2, padding: 2 }}>
-        <Typography level="h3">Activities List on {formattedDate}</Typography>
+        <Typography level="h3">Activities List on {formatDateForDisplay(selectedDate)}</Typography>
 
         <Sheet
           sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2, marginBottom: 2 }}
@@ -179,7 +219,7 @@ const TodaysActivities = () => {
           <Typography>Number of Records: {activities.length}</Typography>
           <Button
             startDecorator={loading ? <CircularProgress size="sm" /> : <Refresh />}
-            onClick={() => refreshActivities(formattedDate, formattedDate)}
+            onClick={() => refreshActivities(selectedDate, selectedDate)}
             size="sm"
             loading={loading}
           >
@@ -199,15 +239,17 @@ const TodaysActivities = () => {
         ) : (
           <>
             <ActivitiesTable
-              activities={activities.sort((a, b) => b.start_time.localeCompare(a.start_time))}
+              activities={[...activities].sort((a, b) => b.start_time.localeCompare(a.start_time))}
               categories={categories}
               onEditActivity={handleEditActivity}
               onDeleteActivity={handleDeleteActivity}
+              totalDuration={formatDuration(`PT${dailyTotalMinutes}M`)}
+              totalDurationColor={dailyTotalColor}
             />
 
             {activities.length === 0 && (
               <Typography level="body-md" color="neutral" sx={{ padding: 1 }}>
-                No activities found for today.
+                No activities found for the selected date.
               </Typography>
             )}
           </>

@@ -1,10 +1,32 @@
 import { useNavigate } from 'react-router-dom'
-import { IconButton, Table } from '@mui/joy'
+import { IconButton, Table, Typography } from '@mui/joy'
 import { Delete, Edit } from '@mui/icons-material'
 
-import { formatDateForDisplay } from '../lib/dateUtils'
+import {
+  calculateDurationInMinutes,
+  formatDateForDisplay,
+  formatDuration,
+} from '../lib/dateUtils'
 
-const ActivitiesTable = ({ activities, categories, onEditActivity, onDeleteActivity }) => {
+/**
+ * Renders activity records with their duration and an optional daily total.
+ * @param {Object} props - Component inputs.
+ * @param {Array<Object>} props.activities - Activity records to render.
+ * @param {Array<Object>} props.categories - Available accounting categories.
+ * @param {Function} props.onEditActivity - Edit action callback.
+ * @param {Function} props.onDeleteActivity - Delete action callback.
+ * @param {string} [props.totalDuration] - Optional formatted daily total.
+ * @param {string} [props.totalDurationColor] - Optional Joy UI color for the daily total.
+ * @returns {JSX.Element} The activity table.
+ */
+const ActivitiesTable = ({
+  activities,
+  categories,
+  onEditActivity,
+  onDeleteActivity,
+  totalDuration,
+  totalDurationColor,
+}) => {
   const navigate = useNavigate()
 
   const handleEditActivity = (activity) => {
@@ -25,6 +47,7 @@ const ActivitiesTable = ({ activities, categories, onEditActivity, onDeleteActiv
           <th>Date</th>
           <th>Check-In</th>
           <th>Check-Out</th>
+          <th>Duration</th>
           <th>Category</th>
           <th>Task</th>
           <th>Comment</th>
@@ -41,6 +64,11 @@ const ActivitiesTable = ({ activities, categories, onEditActivity, onDeleteActiv
               <td>{formatDateForDisplay(activity.date)}</td>
               <td>{activity.start_time}</td>
               <td>{activity.end_time}</td>
+              <td>
+                {formatDuration(
+                  `PT${calculateDurationInMinutes(activity.start_time, activity.end_time)}M`,
+                )}
+              </td>
               <td>{categoryName}</td>
               <td>{activity.task}</td>
               <td>{activity.comment}</td>
@@ -68,6 +96,19 @@ const ActivitiesTable = ({ activities, categories, onEditActivity, onDeleteActiv
           )
         })}
       </tbody>
+      {totalDuration !== undefined && (
+        <tfoot>
+          <tr>
+            <td colSpan={3}>Daily total</td>
+            <td>
+              <Typography color={totalDurationColor} fontWeight="bold">
+                {totalDuration}
+              </Typography>
+            </td>
+            <td colSpan={4}></td>
+          </tr>
+        </tfoot>
+      )}
     </Table>
   )
 }
