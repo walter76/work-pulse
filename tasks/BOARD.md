@@ -1,9 +1,9 @@
 ## In Progress
+- rework-todays-activities (medium) - owner: Walter Stocker - [session](../sessions/2026-11-09-rework-todays-activities.md)
 - <task as slug> (<task priority>) - owner: <task owner> - <link to session log>
 - ...
 
 ## Backlog
-- rework-todays-activities (medium) - owner: Walter Stocker - [rework-todays-activities](backlog/rework-todays-activities.md)
 - prevent-cascade-delete-activities (medium) - owner: Walter Stocker - [prevent-cascade-delete-activities](backlog/prevent-cascade-delete-activities.md)
 - cli-csv-import-comment (medium) - owner: Walter Stocker - [cli-csv-import-comment](backlog/cli-csv-import-comment.md)
 - csv-encoding-detection (low) - owner: Walter Stocker - [csv-encoding-detection](backlog/csv-encoding-detection.md)

@@ -1,6 +1,6 @@
 ---
 id: rework-todays-activities
-status: backlog
+status: in-progress
 priority: medium
 created: 2026-11-09
 owner: Walter Stocker

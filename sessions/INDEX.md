@@ -1,5 +1,6 @@
 | Date | Session | Status | Summary |
 |------|---------|--------|---------|
+| 2026-11-09 | [rework-todays-activities](2026-11-09-rework-todays-activities.md) | in-progress |  |
 | 2026-11-05 | [Consolidate JavaScript guidelines](2026-11-05-consolidate-javascript-guidelines.md) | completed |  |
 | 2026-11-05 | [Align frontend architecture guidelines](2026-11-05-align-frontend-architecture-guidelines.md) | in-progress |  |
 | 2026-07-28 | [update backend acceptance test skill](2026-07-28-update-backend-acceptance-test-skill.md) | in-progress |  |
